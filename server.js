@@ -10,8 +10,16 @@ const express = require('express');
 const session = require('express-session');
 const flash = require('connect-flash');
 const bcrypt = require('bcryptjs');
+const multer = require('multer');
+const ExcelJS = require('exceljs');
 
 const { q, pool, init } = require('./database');
+
+// Excel yüklemesi için bellekte tutan multer (max 10 MB, sadece .xlsx)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }
+});
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -481,6 +489,115 @@ app.post('/yonetim/mesaj-gonder', adminGerekli, ah(async (req, res) => {
     req.flash('basari', 'Mesaj gönderildi.');
   }
   res.redirect('/yonetim/mesaj-gonder');
+}));
+
+// --- Site sakinleri (blok bazlı kişi bilgileri) ---
+const SAKIN_ALANLAR = [
+  'blok', 'daire', 'eksik', 'isim_soyisim', 'ptt', 'ptt2',
+  'adres', 'iletisim', 'bilgi', 'yakinlik', 'bilgi_iletisim'
+];
+
+app.get('/yonetim/sakinler', adminGerekli, ah(async (req, res) => {
+  const sakinler = (await q(
+    `SELECT * FROM sakinler
+     ORDER BY blok ASC, NULLIF(regexp_replace(daire, '\\D', '', 'g'), '')::int ASC NULLS LAST, id ASC`
+  )).rows;
+
+  // Bloklara göre grupla
+  const bloklar = {};
+  for (const s of sakinler) {
+    const b = s.blok && s.blok.trim() ? s.blok.trim() : 'Diğer';
+    if (!bloklar[b]) bloklar[b] = [];
+    bloklar[b].push(s);
+  }
+  res.render('admin/sakinler', { aktifSayfa: 'sakinler', bloklar, toplam: sakinler.length });
+}));
+
+app.post('/yonetim/sakinler/ekle', adminGerekli, ah(async (req, res) => {
+  const d = SAKIN_ALANLAR.map((a) => (req.body[a] || '').trim());
+  await q(
+    `INSERT INTO sakinler (blok, daire, eksik, isim_soyisim, ptt, ptt2, adres, iletisim, bilgi, yakinlik, bilgi_iletisim)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+    d
+  );
+  req.flash('basari', 'Yeni kayıt eklendi.');
+  res.redirect('/yonetim/sakinler');
+}));
+
+app.post('/yonetim/sakinler/guncelle/:id', adminGerekli, ah(async (req, res) => {
+  const d = SAKIN_ALANLAR.map((a) => (req.body[a] || '').trim());
+  d.push(req.params.id);
+  await q(
+    `UPDATE sakinler SET blok=$1, daire=$2, eksik=$3, isim_soyisim=$4, ptt=$5, ptt2=$6,
+     adres=$7, iletisim=$8, bilgi=$9, yakinlik=$10, bilgi_iletisim=$11 WHERE id=$12`,
+    d
+  );
+  req.flash('basari', 'Kayıt güncellendi.');
+  res.redirect('/yonetim/sakinler');
+}));
+
+app.post('/yonetim/sakinler/sil/:id', adminGerekli, ah(async (req, res) => {
+  await q('DELETE FROM sakinler WHERE id = $1', [req.params.id]);
+  req.flash('basari', 'Kayıt silindi.');
+  res.redirect('/yonetim/sakinler');
+}));
+
+// Excel (.xlsx) içe aktarma — "Adresler" benzeri 11 kolonlu sayfa
+app.post('/yonetim/sakinler/import', adminGerekli, upload.single('dosya'), ah(async (req, res) => {
+  if (!req.file) {
+    req.flash('hata', 'Lütfen bir .xlsx dosyası seçin.');
+    return res.redirect('/yonetim/sakinler');
+  }
+
+  const wb = new ExcelJS.Workbook();
+  try {
+    await wb.xlsx.load(req.file.buffer);
+  } catch (e) {
+    req.flash('hata', 'Excel dosyası okunamadı. Geçerli bir .xlsx yükleyin.');
+    return res.redirect('/yonetim/sakinler');
+  }
+
+  // "Adresler" sayfası varsa onu, yoksa ilk sayfayı kullan
+  const ws = wb.getWorksheet('Adresler') || wb.worksheets[0];
+  if (!ws) {
+    req.flash('hata', 'Excel içinde okunacak sayfa bulunamadı.');
+    return res.redirect('/yonetim/sakinler');
+  }
+
+  if (req.body.temizle) {
+    await q('DELETE FROM sakinler');
+  }
+
+  const hucre = (row, i) => {
+    const v = row.getCell(i).value;
+    if (v === null || v === undefined) return '';
+    if (typeof v === 'object') {
+      if (v.text) return String(v.text).trim();
+      if (v.result !== undefined) return String(v.result).trim();
+      if (v.richText) return v.richText.map((t) => t.text).join('').trim();
+      return '';
+    }
+    return String(v).trim();
+  };
+
+  let eklenen = 0;
+  const satirSayisi = ws.rowCount;
+  for (let r = 2; r <= satirSayisi; r++) {
+    const row = ws.getRow(r);
+    const d = [];
+    for (let c = 1; c <= 11; c++) d.push(hucre(row, c));
+    // Tamamen boş satırları atla
+    if (d.every((x) => x === '')) continue;
+    await q(
+      `INSERT INTO sakinler (blok, daire, eksik, isim_soyisim, ptt, ptt2, adres, iletisim, bilgi, yakinlik, bilgi_iletisim)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+      d
+    );
+    eklenen++;
+  }
+
+  req.flash('basari', `${eklenen} kayıt Excel'den içe aktarıldı.`);
+  res.redirect('/yonetim/sakinler');
 }));
 
 // =====================================================================

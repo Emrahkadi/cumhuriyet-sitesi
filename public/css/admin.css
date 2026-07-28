@@ -164,6 +164,72 @@
 .mesaj-iletisim { display: flex; gap: 16px; margin-bottom: 10px; font-size: 0.85rem; color: var(--metin-acik); }
 .mesaj-metin { margin-bottom: 14px; color: #3d4152; }
 
+/* ---------- Site sakinleri (blok bazlı düzenlenebilir tablo) ---------- */
+.sakin-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.sakin-form-grid label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.8rem;
+  color: var(--metin-acik);
+  gap: 4px;
+}
+.sakin-form-grid input {
+  padding: 8px 10px;
+  border: 1px solid var(--kenarlik);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+.blok-detay {
+  border: 1px solid var(--kenarlik);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+.blok-detay summary {
+  cursor: pointer;
+  padding: 14px 18px;
+  background: #f0f2f7;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  list-style: none;
+}
+.blok-detay summary::-webkit-details-marker { display: none; }
+.blok-baslik { font-size: 1.05rem; }
+.blok-sayi { color: var(--metin-acik); font-size: 0.85rem; font-weight: 500; }
+
+.sakin-table { width: 100%; border-collapse: collapse; min-width: 1400px; }
+.sakin-table th {
+  background: #fafbfc;
+  padding: 8px 6px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  color: var(--metin-acik);
+  border-bottom: 1px solid var(--kenarlik);
+  white-space: nowrap;
+  text-align: left;
+}
+.sakin-table td { padding: 4px 5px; border-bottom: 1px solid var(--kenarlik); }
+.sakin-table input {
+  width: 110px;
+  padding: 6px 8px;
+  border: 1px solid var(--kenarlik);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.85rem;
+}
+.sakin-table input.genis { width: 200px; }
+.sakin-table input:focus { outline: none; border-color: var(--renk-ana); background: #f5f9ff; }
+.sakin-islem { display: flex; gap: 6px; white-space: nowrap; }
+
 /* ---------- Responsive ---------- */
 @media (max-width: 768px) {
   .admin-sidebar {

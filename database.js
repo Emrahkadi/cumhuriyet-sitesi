@@ -94,6 +94,22 @@ async function createTables() {
       okundu INTEGER NOT NULL DEFAULT 0,
       olusturma_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
     );
+
+    CREATE TABLE IF NOT EXISTS sakinler (
+      id SERIAL PRIMARY KEY,
+      blok TEXT DEFAULT '',
+      daire TEXT DEFAULT '',
+      eksik TEXT DEFAULT '',
+      isim_soyisim TEXT DEFAULT '',
+      ptt TEXT DEFAULT '',
+      ptt2 TEXT DEFAULT '',
+      adres TEXT DEFAULT '',
+      iletisim TEXT DEFAULT '',
+      bilgi TEXT DEFAULT '',
+      yakinlik TEXT DEFAULT '',
+      bilgi_iletisim TEXT DEFAULT '',
+      olusturma_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
+    );
   `);
 }
 
