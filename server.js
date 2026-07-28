@@ -600,12 +600,14 @@ app.post('/yonetim/sakinler/import', adminGerekli, upload.single('dosya'), ah(as
     return String(v).trim();
   };
 
-  // Satırları topla (başlık satırını atla, boş satırları atla)
+  // Satırları topla (başlık satırını atla, boş/toplam satırları atla)
   const kayitlar = [];
   ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
     if (rowNumber === 1) return; // başlık
     const d = [];
     for (let c = 1; c <= 11; c++) d.push(hucre(row, c));
+    const blokDeg = (d[0] || '').toLocaleUpperCase('tr-TR');
+    if (blokDeg === 'TOPLAM' || blokDeg === 'BLOK') return; // toplam/başlık satırı
     if (d.some((x) => x !== '')) kayitlar.push(d);
   });
 
