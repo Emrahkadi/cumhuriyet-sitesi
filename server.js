@@ -592,21 +592,25 @@ app.post('/yonetim/sakinler/import', adminGerekli, upload.single('dosya'), ah(as
     if (v === null || v === undefined) return '';
     if (typeof v === 'object') {
       if (v.text) return String(v.text).trim();
-      if (v.result !== undefined) return String(v.result).trim();
-      if (v.richText) return v.richText.map((t) => t.text).join('').trim();
+      if (v.result !== undefined && v.result !== null) return String(v.result).trim();
+      if (Array.isArray(v.richText)) return v.richText.map((t) => t.text).join('').trim();
+      if (v.hyperlink) return String(v.text || v.hyperlink).trim();
       return '';
     }
     return String(v).trim();
   };
 
-  let eklenen = 0;
-  const satirSayisi = ws.rowCount;
-  for (let r = 2; r <= satirSayisi; r++) {
-    const row = ws.getRow(r);
+  // Satırları topla (başlık satırını atla, boş satırları atla)
+  const kayitlar = [];
+  ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    if (rowNumber === 1) return; // başlık
     const d = [];
     for (let c = 1; c <= 11; c++) d.push(hucre(row, c));
-    // Tamamen boş satırları atla
-    if (d.every((x) => x === '')) continue;
+    if (d.some((x) => x !== '')) kayitlar.push(d);
+  });
+
+  let eklenen = 0;
+  for (const d of kayitlar) {
     await q(
       `INSERT INTO sakinler (blok, daire, eksik, isim_soyisim, ptt, ptt2, adres, iletisim, bilgi, yakinlik, bilgi_iletisim)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,

@@ -233,8 +233,8 @@
 /* ---------- Bina ızgarası (3B görünüm) ---------- */
 .bina-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 12px;
 }
 .bina-kart {
   display: flex;
@@ -242,31 +242,36 @@
   align-items: center;
   background: linear-gradient(180deg, #eaf1fb 0%, #dbe6f5 100%);
   border: 1px solid var(--kenarlik);
-  border-radius: var(--radius);
-  padding: 14px 10px 12px;
+  border-radius: 12px;
+  padding: 10px 6px 8px;
   transition: transform 0.18s, box-shadow 0.18s;
   cursor: pointer;
 }
 .bina-kart:hover {
-  transform: translateY(-6px) scale(1.03);
+  transform: translateY(-4px) scale(1.04);
   box-shadow: var(--golge-buyuk);
 }
-.bina-gorsel { width: 100%; }
-.bina-svg { width: 100%; height: auto; display: block; filter: drop-shadow(0 6px 8px rgba(0,0,0,0.18)); }
-.bina-bilgi { text-align: center; margin-top: 6px; }
+.bina-gorsel { width: 100%; display: flex; justify-content: center; }
+.bina-svg {
+  width: 62px;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.18));
+}
+.bina-bilgi { text-align: center; margin-top: 4px; }
 .bina-harf {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px; height: 40px;
+  width: 28px; height: 28px;
   background: var(--renk-ana);
   color: #fff;
-  font-size: 1.3rem;
+  font-size: 0.95rem;
   font-weight: 700;
-  border-radius: 10px;
+  border-radius: 8px;
   text-transform: uppercase;
 }
-.bina-adet { display: block; margin-top: 6px; color: var(--metin-acik); font-size: 0.85rem; }
+.bina-adet { display: block; margin-top: 3px; color: var(--metin-acik); font-size: 0.75rem; }
 
 /* ---------- Blok detay üst çubuğu ---------- */
 .blok-detay-ust {
