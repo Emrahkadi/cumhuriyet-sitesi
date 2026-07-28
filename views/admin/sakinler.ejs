@@ -1,99 +1,161 @@
 <%- include('partials/header', { sayfaBaslik: 'Site Sakinleri' }) %>
 
-<div class="admin-panel-box">
-  <h2>Excel'den İçe Aktar</h2>
-  <p class="admin-hint">
-    "Adresler" sayfasındaki 11 kolonlu (.xlsx) dosyayı yükleyin:
-    BLOK, DAİRE, EKSİK, İSİM SOYİSİM, PTT, PTT 2, ADRES, İLETİŞİM, BİLGİ, YAKINLIK, BİLGİ İLETİŞİM.
-  </p>
-  <form action="/yonetim/sakinler/import" method="POST" enctype="multipart/form-data" class="form">
-    <div class="form-row">
-      <div class="form-group">
-        <label for="dosya">Excel Dosyası (.xlsx)</label>
-        <input type="file" id="dosya" name="dosya" accept=".xlsx" required />
-      </div>
-      <div class="form-group form-check" style="align-self: end;">
-        <label><input type="checkbox" name="temizle" value="1" /> Önce mevcut tüm kayıtları sil (tam senkron)</label>
-      </div>
+<% if (mod === 'grid') { %>
+
+  <div class="admin-panel-box">
+    <div class="section-head">
+      <h2>Site Sakinleri — Bloklar</h2>
     </div>
-    <button type="submit" class="btn btn-primary">İçe Aktar</button>
-  </form>
-</div>
+    <p class="admin-hint">Bilgilerini görmek istediğiniz binaya (bloğa) tıklayın. Her blokta kayıt sayısı gösterilir.</p>
 
-<div class="admin-panel-box">
-  <div class="section-head">
-    <h2>Yeni Kayıt Ekle</h2>
-  </div>
-  <form action="/yonetim/sakinler/ekle" method="POST" class="form sakin-form">
-    <div class="sakin-form-grid">
-      <label>Blok<input type="text" name="blok" /></label>
-      <label>Daire<input type="text" name="daire" /></label>
-      <label>Eksik<input type="text" name="eksik" /></label>
-      <label>İsim Soyisim<input type="text" name="isim_soyisim" /></label>
-      <label>PTT<input type="text" name="ptt" /></label>
-      <label>PTT 2<input type="text" name="ptt2" /></label>
-      <label>Adres<input type="text" name="adres" /></label>
-      <label>İletişim<input type="text" name="iletisim" /></label>
-      <label>Bilgi<input type="text" name="bilgi" /></label>
-      <label>Yakınlık<input type="text" name="yakinlik" /></label>
-      <label>Bilgi İletişim<input type="text" name="bilgi_iletisim" /></label>
-    </div>
-    <button type="submit" class="btn btn-primary">Ekle</button>
-  </form>
-</div>
-
-<div class="admin-panel-box">
-  <h2>Kayıtlı Sakinler (<%= toplam %>)</h2>
-
-  <% var blokAdlari = Object.keys(bloklar).sort(); %>
-  <% if (toplam === 0) { %>
-    <p class="empty-state">Henüz kayıt yok. Yukarıdan Excel yükleyin veya elle ekleyin.</p>
-  <% } else { %>
-    <% blokAdlari.forEach(function(b) { %>
-      <details class="blok-detay" open>
-        <summary><span class="blok-baslik">🏢 <%= b %> Blok</span> <span class="blok-sayi"><%= bloklar[b].length %> kayıt</span></summary>
-
-        <%# Güncelleme ve silme formları (tablo dışında, form özniteliği ile bağlanır) %>
-        <% bloklar[b].forEach(function(s) { %>
-          <form id="guncelle-<%= s.id %>" action="/yonetim/sakinler/guncelle/<%= s.id %>" method="POST"></form>
-          <form id="sil-<%= s.id %>" action="/yonetim/sakinler/sil/<%= s.id %>" method="POST" onsubmit="return confirm('Bu kayıt silinsin mi?');"></form>
+    <% if (toplam === 0) { %>
+      <p class="empty-state">Henüz kayıt yok. Aşağıdan Excel'i bir kez içe aktarın.</p>
+    <% } else { %>
+      <div class="bina-grid">
+        <% gruplar.forEach(function(g) { %>
+          <a class="bina-kart" href="/yonetim/sakinler?blok=<%= encodeURIComponent(g.blok) %>">
+            <div class="bina-gorsel">
+              <svg viewBox="0 0 200 210" xmlns="http://www.w3.org/2000/svg" class="bina-svg">
+                <!-- sağ yan yüz -->
+                <polygon points="130,60 162,44 162,174 130,190" fill="#3a4a60" />
+                <!-- çatı -->
+                <polygon points="40,60 72,44 162,44 130,60" fill="#c0392b" />
+                <!-- ön yüz -->
+                <rect x="40" y="60" width="90" height="130" fill="#5b7291" />
+                <!-- ön yüz pencereleri -->
+                <rect x="50" y="72" width="16" height="18" fill="#ffd766" />
+                <rect x="76" y="72" width="16" height="18" fill="#ffd766" />
+                <rect x="102" y="72" width="16" height="18" fill="#ffd766" />
+                <rect x="50" y="100" width="16" height="18" fill="#ffd766" />
+                <rect x="76" y="100" width="16" height="18" fill="#ffd766" />
+                <rect x="102" y="100" width="16" height="18" fill="#ffd766" />
+                <rect x="50" y="128" width="16" height="18" fill="#ffd766" />
+                <rect x="102" y="128" width="16" height="18" fill="#ffd766" />
+                <!-- kapı -->
+                <rect x="74" y="150" width="22" height="40" fill="#2c3648" />
+                <!-- yan yüz pencereleri -->
+                <polygon points="138,74 154,66 154,84 138,92" fill="#e9c765" />
+                <polygon points="138,104 154,96 154,114 138,122" fill="#e9c765" />
+                <polygon points="138,134 154,126 154,144 138,152" fill="#e9c765" />
+              </svg>
+            </div>
+            <div class="bina-bilgi">
+              <span class="bina-harf"><%= g.blok %></span>
+              <span class="bina-adet"><%= g.adet %> kayıt</span>
+            </div>
+          </a>
         <% }); %>
+      </div>
+    <% } %>
+  </div>
 
-        <div class="table-wrap">
-          <table class="sakin-table">
-            <thead>
-              <tr>
-                <th>Blok</th><th>Daire</th><th>Eksik</th><th>İsim Soyisim</th>
-                <th>PTT</th><th>PTT 2</th><th>Adres</th><th>İletişim</th>
-                <th>Bilgi</th><th>Yakınlık</th><th>Bilgi İletişim</th><th>İşlem</th>
-              </tr>
-            </thead>
-            <tbody>
-              <% bloklar[b].forEach(function(s) { %>
-                <tr>
-                  <td><input type="text" form="guncelle-<%= s.id %>" name="blok" value="<%= s.blok %>" /></td>
-                  <td><input type="text" form="guncelle-<%= s.id %>" name="daire" value="<%= s.daire %>" /></td>
-                  <td><input type="text" form="guncelle-<%= s.id %>" name="eksik" value="<%= s.eksik %>" /></td>
-                  <td><input type="text" form="guncelle-<%= s.id %>" name="isim_soyisim" value="<%= s.isim_soyisim %>" class="genis" /></td>
-                  <td><input type="text" form="guncelle-<%= s.id %>" name="ptt" value="<%= s.ptt %>" /></td>
-                  <td><input type="text" form="guncelle-<%= s.id %>" name="ptt2" value="<%= s.ptt2 %>" /></td>
-                  <td><input type="text" form="guncelle-<%= s.id %>" name="adres" value="<%= s.adres %>" class="genis" /></td>
-                  <td><input type="text" form="guncelle-<%= s.id %>" name="iletisim" value="<%= s.iletisim %>" /></td>
-                  <td><input type="text" form="guncelle-<%= s.id %>" name="bilgi" value="<%= s.bilgi %>" /></td>
-                  <td><input type="text" form="guncelle-<%= s.id %>" name="yakinlik" value="<%= s.yakinlik %>" /></td>
-                  <td><input type="text" form="guncelle-<%= s.id %>" name="bilgi_iletisim" value="<%= s.bilgi_iletisim %>" /></td>
-                  <td class="sakin-islem">
-                    <button type="submit" form="guncelle-<%= s.id %>" class="btn-onayla">Kaydet</button>
-                    <button type="submit" form="sil-<%= s.id %>" class="btn-sil">Sil</button>
-                  </td>
-                </tr>
-              <% }); %>
-            </tbody>
-          </table>
+  <details class="admin-panel-box import-kutu">
+    <summary><strong>📥 İlk kurulum: Excel'den bir kez içe aktar</strong></summary>
+    <p class="admin-hint">
+      Verileri tek seferlik yüklemek için "Adresler" sayfasını içeren .xlsx dosyasını seçin.
+      Sonrasında düzenlemeleri doğrudan bloklardan yapabilirsiniz.
+    </p>
+    <form action="/yonetim/sakinler/import" method="POST" enctype="multipart/form-data" class="form">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="dosya">Excel Dosyası (.xlsx)</label>
+          <input type="file" id="dosya" name="dosya" accept=".xlsx" required />
         </div>
-      </details>
-    <% }); %>
-  <% } %>
-</div>
+        <div class="form-group form-check" style="align-self: end;">
+          <label><input type="checkbox" name="temizle" value="1" /> Önce mevcut tüm kayıtları sil</label>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary">İçe Aktar</button>
+    </form>
+  </details>
+
+<% } else { %>
+
+  <%# ---------------- BLOK DETAY ---------------- %>
+  <div class="admin-panel-box">
+    <div class="blok-detay-ust">
+      <a href="/yonetim/sakinler" class="btn btn-outline">← Bloklara Dön</a>
+      <h2><%= blok %> Blok <span class="blok-adet-rozet"><%= sakinler.length %> kayıt</span></h2>
+    </div>
+
+    <form action="/yonetim/sakinler" method="GET" class="blok-arama">
+      <input type="hidden" name="blok" value="<%= blok %>" />
+      <input type="text" name="ara" value="<%= ara %>" placeholder="Bu blokta ara: isim, daire, telefon, adres..." />
+      <button type="submit" class="btn btn-primary">Ara</button>
+      <% if (ara) { %>
+        <a href="/yonetim/sakinler?blok=<%= encodeURIComponent(blok) %>" class="btn btn-outline">Temizle</a>
+      <% } %>
+    </form>
+  </div>
+
+  <details class="admin-panel-box import-kutu">
+    <summary><strong>➕ Bu bloğa yeni kayıt ekle</strong></summary>
+    <form action="/yonetim/sakinler/ekle" method="POST" class="form">
+      <div class="sakin-form-grid">
+        <label>Blok<input type="text" name="blok" value="<%= blok %>" /></label>
+        <label>Daire<input type="text" name="daire" /></label>
+        <label>Eksik<input type="text" name="eksik" /></label>
+        <label>İsim Soyisim<input type="text" name="isim_soyisim" /></label>
+        <label>PTT<input type="text" name="ptt" /></label>
+        <label>PTT 2<input type="text" name="ptt2" /></label>
+        <label>Adres<input type="text" name="adres" /></label>
+        <label>İletişim<input type="text" name="iletisim" /></label>
+        <label>Bilgi<input type="text" name="bilgi" /></label>
+        <label>Yakınlık<input type="text" name="yakinlik" /></label>
+        <label>Bilgi İletişim<input type="text" name="bilgi_iletisim" /></label>
+      </div>
+      <button type="submit" class="btn btn-primary">Ekle</button>
+    </form>
+  </details>
+
+  <div class="admin-panel-box">
+    <% if (sakinler.length === 0) { %>
+      <p class="empty-state">
+        <% if (ara) { %>"<%= ara %>" için sonuç bulunamadı.<% } else { %>Bu blokta kayıt yok.<% } %>
+      </p>
+    <% } else { %>
+      <% sakinler.forEach(function(s) { %>
+        <form id="guncelle-<%= s.id %>" action="/yonetim/sakinler/guncelle/<%= s.id %>" method="POST"></form>
+        <form id="sil-<%= s.id %>" action="/yonetim/sakinler/sil/<%= s.id %>" method="POST" onsubmit="return confirm('Bu kayıt silinsin mi?');">
+          <input type="hidden" name="donus_blok" value="<%= blok %>" />
+        </form>
+      <% }); %>
+
+      <div class="table-wrap">
+        <table class="sakin-table">
+          <thead>
+            <tr>
+              <th>Blok</th><th>Daire</th><th>Eksik</th><th>İsim Soyisim</th>
+              <th>PTT</th><th>PTT 2</th><th>Adres</th><th>İletişim</th>
+              <th>Bilgi</th><th>Yakınlık</th><th>Bilgi İletişim</th><th>İşlem</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% sakinler.forEach(function(s) { %>
+              <tr>
+                <td><input type="text" form="guncelle-<%= s.id %>" name="blok" value="<%= s.blok %>" /></td>
+                <td><input type="text" form="guncelle-<%= s.id %>" name="daire" value="<%= s.daire %>" /></td>
+                <td><input type="text" form="guncelle-<%= s.id %>" name="eksik" value="<%= s.eksik %>" /></td>
+                <td><input type="text" form="guncelle-<%= s.id %>" name="isim_soyisim" value="<%= s.isim_soyisim %>" class="genis" /></td>
+                <td><input type="text" form="guncelle-<%= s.id %>" name="ptt" value="<%= s.ptt %>" /></td>
+                <td><input type="text" form="guncelle-<%= s.id %>" name="ptt2" value="<%= s.ptt2 %>" /></td>
+                <td><input type="text" form="guncelle-<%= s.id %>" name="adres" value="<%= s.adres %>" class="genis" /></td>
+                <td><input type="text" form="guncelle-<%= s.id %>" name="iletisim" value="<%= s.iletisim %>" /></td>
+                <td><input type="text" form="guncelle-<%= s.id %>" name="bilgi" value="<%= s.bilgi %>" /></td>
+                <td><input type="text" form="guncelle-<%= s.id %>" name="yakinlik" value="<%= s.yakinlik %>" /></td>
+                <td><input type="text" form="guncelle-<%= s.id %>" name="bilgi_iletisim" value="<%= s.bilgi_iletisim %>" /></td>
+                <td class="sakin-islem">
+                  <button type="submit" form="guncelle-<%= s.id %>" class="btn-onayla">Kaydet</button>
+                  <button type="submit" form="sil-<%= s.id %>" class="btn-sil">Sil</button>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+
+<% } %>
 
 <%- include('partials/footer') %>

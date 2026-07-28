@@ -498,19 +498,38 @@ const SAKIN_ALANLAR = [
 ];
 
 app.get('/yonetim/sakinler', adminGerekli, ah(async (req, res) => {
-  const sakinler = (await q(
-    `SELECT * FROM sakinler
-     ORDER BY blok ASC, NULLIF(regexp_replace(daire, '\\D', '', 'g'), '')::int ASC NULLS LAST, id ASC`
-  )).rows;
+  const blok = (req.query.blok || '').trim();
+  const ara = (req.query.ara || '').trim();
+  const siraSql = "ORDER BY NULLIF(regexp_replace(daire, '\\D', '', 'g'), '')::int ASC NULLS LAST, id ASC";
 
-  // Bloklara göre grupla
-  const bloklar = {};
-  for (const s of sakinler) {
-    const b = s.blok && s.blok.trim() ? s.blok.trim() : 'Diğer';
-    if (!bloklar[b]) bloklar[b] = [];
-    bloklar[b].push(s);
+  // Bina ızgarası (blok seçilmemiş)
+  if (!blok) {
+    const gruplar = (await q(
+      `SELECT COALESCE(NULLIF(TRIM(blok), ''), 'Diğer') AS blok, COUNT(*)::int AS adet
+       FROM sakinler GROUP BY 1 ORDER BY 1`
+    )).rows;
+    const toplam = gruplar.reduce((a, g) => a + g.adet, 0);
+    return res.render('admin/sakinler', { aktifSayfa: 'sakinler', mod: 'grid', gruplar, toplam });
   }
-  res.render('admin/sakinler', { aktifSayfa: 'sakinler', bloklar, toplam: sakinler.length });
+
+  // Blok detayı (isteğe bağlı arama ile)
+  let sakinler;
+  if (ara) {
+    const like = '%' + ara + '%';
+    sakinler = (await q(
+      `SELECT * FROM sakinler
+       WHERE COALESCE(NULLIF(TRIM(blok), ''), 'Diğer') = $1
+       AND (isim_soyisim ILIKE $2 OR daire ILIKE $2 OR adres ILIKE $2 OR iletisim ILIKE $2 OR ptt ILIKE $2 OR bilgi ILIKE $2 OR yakinlik ILIKE $2)
+       ${siraSql}`,
+      [blok, like]
+    )).rows;
+  } else {
+    sakinler = (await q(
+      `SELECT * FROM sakinler WHERE COALESCE(NULLIF(TRIM(blok), ''), 'Diğer') = $1 ${siraSql}`,
+      [blok]
+    )).rows;
+  }
+  res.render('admin/sakinler', { aktifSayfa: 'sakinler', mod: 'detay', blok, ara, sakinler });
 }));
 
 app.post('/yonetim/sakinler/ekle', adminGerekli, ah(async (req, res) => {
@@ -521,7 +540,7 @@ app.post('/yonetim/sakinler/ekle', adminGerekli, ah(async (req, res) => {
     d
   );
   req.flash('basari', 'Yeni kayıt eklendi.');
-  res.redirect('/yonetim/sakinler');
+  res.redirect('/yonetim/sakinler?blok=' + encodeURIComponent((req.body.blok || '').trim()));
 }));
 
 app.post('/yonetim/sakinler/guncelle/:id', adminGerekli, ah(async (req, res) => {
@@ -533,13 +552,13 @@ app.post('/yonetim/sakinler/guncelle/:id', adminGerekli, ah(async (req, res) => 
     d
   );
   req.flash('basari', 'Kayıt güncellendi.');
-  res.redirect('/yonetim/sakinler');
+  res.redirect('/yonetim/sakinler?blok=' + encodeURIComponent((req.body.blok || '').trim()));
 }));
 
 app.post('/yonetim/sakinler/sil/:id', adminGerekli, ah(async (req, res) => {
   await q('DELETE FROM sakinler WHERE id = $1', [req.params.id]);
   req.flash('basari', 'Kayıt silindi.');
-  res.redirect('/yonetim/sakinler');
+  res.redirect('/yonetim/sakinler?blok=' + encodeURIComponent((req.body.donus_blok || '').trim()));
 }));
 
 // Excel (.xlsx) içe aktarma — "Adresler" benzeri 11 kolonlu sayfa
