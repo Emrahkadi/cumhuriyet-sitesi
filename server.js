@@ -11,13 +11,13 @@ const session = require('express-session');
 const flash = require('connect-flash');
 const bcrypt = require('bcryptjs');
 
-const { db, init } = require('./database');
-
-// Veritabanını hazırla (tablolar + varsayılan admin + örnek içerik)
-init();
+const { q, pool, init } = require('./database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Async rota sarmalayıcı (hataları merkezi yakalar)
+const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
 // --- Görünüm motoru ---
 app.set('view engine', 'ejs');
@@ -70,27 +70,25 @@ function adminGerekli(req, res, next) {
 // =====================================================================
 
 // Ana sayfa - güncel duyurular
-app.get('/', (req, res) => {
-  const duyurular = db
-    .prepare('SELECT * FROM duyurular ORDER BY onemli DESC, id DESC LIMIT 6')
-    .all();
+app.get('/', ah(async (req, res) => {
+  const duyurular = (await q('SELECT * FROM duyurular ORDER BY onemli DESC, id DESC LIMIT 6')).rows;
   res.render('index', { aktifSayfa: 'anasayfa', duyurular });
-});
+}));
 
 // Tüm duyurular
-app.get('/duyurular', (req, res) => {
-  const duyurular = db.prepare('SELECT * FROM duyurular ORDER BY onemli DESC, id DESC').all();
+app.get('/duyurular', ah(async (req, res) => {
+  const duyurular = (await q('SELECT * FROM duyurular ORDER BY onemli DESC, id DESC')).rows;
   res.render('duyurular', { aktifSayfa: 'duyurular', duyurular });
-});
+}));
 
 // Duyuru detayı
-app.get('/duyuru/:id', (req, res) => {
-  const duyuru = db.prepare('SELECT * FROM duyurular WHERE id = ?').get(req.params.id);
+app.get('/duyuru/:id', ah(async (req, res) => {
+  const duyuru = (await q('SELECT * FROM duyurular WHERE id = $1', [req.params.id])).rows[0];
   if (!duyuru) {
     return res.status(404).render('404', { aktifSayfa: '' });
   }
   res.render('duyuru-detay', { aktifSayfa: 'duyurular', duyuru });
-});
+}));
 
 // Hakkımızda
 app.get('/hakkinda', (req, res) => {
@@ -98,10 +96,10 @@ app.get('/hakkinda', (req, res) => {
 });
 
 // Kentsel dönüşüm
-app.get('/kentsel-donusum', (req, res) => {
-  const maddeler = db.prepare('SELECT * FROM kentsel_donusum ORDER BY id DESC').all();
+app.get('/kentsel-donusum', ah(async (req, res) => {
+  const maddeler = (await q('SELECT * FROM kentsel_donusum ORDER BY id DESC')).rows;
   res.render('kentsel-donusum', { aktifSayfa: 'kentsel-donusum', maddeler });
-});
+}));
 
 // İletişim (form gösterimi)
 app.get('/iletisim', (req, res) => {
@@ -109,18 +107,19 @@ app.get('/iletisim', (req, res) => {
 });
 
 // İletişim formu gönderimi
-app.post('/iletisim', (req, res) => {
+app.post('/iletisim', ah(async (req, res) => {
   const { ad_soyad, email, telefon, konu, mesaj } = req.body;
   if (!ad_soyad || !mesaj) {
     req.flash('hata', 'Ad soyad ve mesaj alanları zorunludur.');
     return res.redirect('/iletisim');
   }
-  db.prepare(
-    'INSERT INTO mesajlar (ad_soyad, email, telefon, konu, mesaj) VALUES (?, ?, ?, ?, ?)'
-  ).run(ad_soyad.trim(), (email || '').trim(), (telefon || '').trim(), (konu || '').trim(), mesaj.trim());
+  await q(
+    'INSERT INTO mesajlar (ad_soyad, email, telefon, konu, mesaj) VALUES ($1, $2, $3, $4, $5)',
+    [ad_soyad.trim(), (email || '').trim(), (telefon || '').trim(), (konu || '').trim(), mesaj.trim()]
+  );
   req.flash('basari', 'Mesajınız alındı. En kısa sürede size dönüş yapılacaktır.');
   res.redirect('/iletisim');
-});
+}));
 
 // =====================================================================
 //  ÜYE KİMLİK DOĞRULAMA
@@ -132,7 +131,7 @@ app.get('/kayit', (req, res) => {
 });
 
 // Kayıt işlemi
-app.post('/kayit', (req, res) => {
+app.post('/kayit', ah(async (req, res) => {
   const { ad_soyad, daire_no, telefon, sifre, sifre_tekrar } = req.body;
 
   if (!ad_soyad || !daire_no || !telefon || !sifre) {
@@ -149,23 +148,24 @@ app.post('/kayit', (req, res) => {
   }
 
   const temizTelefon = telefon.replace(/\s+/g, '');
-  const mevcut = db.prepare('SELECT id FROM uyeler WHERE telefon = ?').get(temizTelefon);
+  const mevcut = (await q('SELECT id FROM uyeler WHERE telefon = $1', [temizTelefon])).rows[0];
   if (mevcut) {
     req.flash('hata', 'Bu telefon numarası ile daha önce kayıt yapılmış.');
     return res.redirect('/kayit');
   }
 
   const hash = bcrypt.hashSync(sifre, 10);
-  db.prepare(
-    'INSERT INTO uyeler (ad_soyad, daire_no, telefon, sifre_hash, onayli) VALUES (?, ?, ?, ?, 0)'
-  ).run(ad_soyad.trim(), daire_no.trim(), temizTelefon, hash);
+  await q(
+    'INSERT INTO uyeler (ad_soyad, daire_no, telefon, sifre_hash, onayli) VALUES ($1, $2, $3, $4, 0)',
+    [ad_soyad.trim(), daire_no.trim(), temizTelefon, hash]
+  );
 
   req.flash(
     'basari',
     'Kaydınız alındı. Yönetici onayından sonra giriş yapabilirsiniz.'
   );
   res.redirect('/giris');
-});
+}));
 
 // Giriş formu
 app.get('/giris', (req, res) => {
@@ -173,12 +173,12 @@ app.get('/giris', (req, res) => {
 });
 
 // Giriş işlemi (hem yönetici hem site sakini aynı formdan giriş yapar)
-app.post('/giris', (req, res) => {
+app.post('/giris', ah(async (req, res) => {
   const { kullanici, sifre } = req.body;
   const giris = (kullanici || '').trim();
 
   // 1) Önce yönetici olarak dene (kullanıcı adı ile)
-  const admin = db.prepare('SELECT * FROM yoneticiler WHERE kullanici_adi = ?').get(giris);
+  const admin = (await q('SELECT * FROM yoneticiler WHERE kullanici_adi = $1', [giris])).rows[0];
   if (admin && bcrypt.compareSync(sifre || '', admin.sifre_hash)) {
     req.session.yonetici = { id: admin.id, kullanici_adi: admin.kullanici_adi };
     return res.redirect('/yonetim');
@@ -186,7 +186,7 @@ app.post('/giris', (req, res) => {
 
   // 2) Site sakini (üye) olarak dene (telefon ile)
   const temizTelefon = giris.replace(/\s+/g, '');
-  const uye = db.prepare('SELECT * FROM uyeler WHERE telefon = ?').get(temizTelefon);
+  const uye = (await q('SELECT * FROM uyeler WHERE telefon = $1', [temizTelefon])).rows[0];
 
   if (!uye || !bcrypt.compareSync(sifre || '', uye.sifre_hash)) {
     req.flash('hata', 'Kullanıcı adı/telefon veya şifre hatalı.');
@@ -205,15 +205,13 @@ app.post('/giris', (req, res) => {
   };
   req.flash('basari', `Hoş geldiniz, ${uye.ad_soyad}!`);
   res.redirect('/panel');
-});
+}));
 
 // Üye paneli
-app.get('/panel', uyeGerekli, (req, res) => {
-  const duyurular = db
-    .prepare('SELECT * FROM duyurular ORDER BY onemli DESC, id DESC LIMIT 5')
-    .all();
+app.get('/panel', uyeGerekli, ah(async (req, res) => {
+  const duyurular = (await q('SELECT * FROM duyurular ORDER BY onemli DESC, id DESC LIMIT 5')).rows;
   res.render('panel', { aktifSayfa: 'panel', duyurular });
-});
+}));
 
 // Çıkış
 app.get('/cikis', (req, res) => {
@@ -238,106 +236,122 @@ app.get('/yonetim/cikis', (req, res) => {
 });
 
 // Yönetim ana paneli (özet)
-app.get('/yonetim', adminGerekli, (req, res) => {
+app.get('/yonetim', adminGerekli, ah(async (req, res) => {
   const istatistik = {
-    uyeSayisi: db.prepare('SELECT COUNT(*) AS c FROM uyeler').get().c,
-    bekleyenUye: db.prepare('SELECT COUNT(*) AS c FROM uyeler WHERE onayli = 0').get().c,
-    duyuruSayisi: db.prepare('SELECT COUNT(*) AS c FROM duyurular').get().c,
-    okunmamisMesaj: db.prepare('SELECT COUNT(*) AS c FROM mesajlar WHERE okundu = 0').get().c
+    uyeSayisi: (await q('SELECT COUNT(*)::int AS c FROM uyeler')).rows[0].c,
+    bekleyenUye: (await q('SELECT COUNT(*)::int AS c FROM uyeler WHERE onayli = 0')).rows[0].c,
+    duyuruSayisi: (await q('SELECT COUNT(*)::int AS c FROM duyurular')).rows[0].c,
+    okunmamisMesaj: (await q('SELECT COUNT(*)::int AS c FROM mesajlar WHERE okundu = 0')).rows[0].c
   };
   res.render('admin/panel', { aktifSayfa: 'ozet', istatistik });
-});
+}));
 
 // --- Duyuru yönetimi ---
-app.get('/yonetim/duyurular', adminGerekli, (req, res) => {
-  const duyurular = db.prepare('SELECT * FROM duyurular ORDER BY id DESC').all();
+app.get('/yonetim/duyurular', adminGerekli, ah(async (req, res) => {
+  const duyurular = (await q('SELECT * FROM duyurular ORDER BY id DESC')).rows;
   res.render('admin/duyurular', { aktifSayfa: 'duyurular', duyurular });
-});
+}));
 
-app.post('/yonetim/duyurular/ekle', adminGerekli, (req, res) => {
+app.post('/yonetim/duyurular/ekle', adminGerekli, ah(async (req, res) => {
   const { baslik, icerik, kategori, onemli } = req.body;
   if (!baslik || !icerik) {
     req.flash('hata', 'Başlık ve içerik zorunludur.');
     return res.redirect('/yonetim/duyurular');
   }
-  db.prepare(
-    'INSERT INTO duyurular (baslik, icerik, kategori, onemli) VALUES (?, ?, ?, ?)'
-  ).run(baslik.trim(), icerik.trim(), (kategori || 'Genel').trim(), onemli ? 1 : 0);
+  await q(
+    'INSERT INTO duyurular (baslik, icerik, kategori, onemli) VALUES ($1, $2, $3, $4)',
+    [baslik.trim(), icerik.trim(), (kategori || 'Genel').trim(), onemli ? 1 : 0]
+  );
   req.flash('basari', 'Duyuru eklendi.');
   res.redirect('/yonetim/duyurular');
-});
+}));
 
-app.post('/yonetim/duyurular/sil/:id', adminGerekli, (req, res) => {
-  db.prepare('DELETE FROM duyurular WHERE id = ?').run(req.params.id);
+app.post('/yonetim/duyurular/sil/:id', adminGerekli, ah(async (req, res) => {
+  await q('DELETE FROM duyurular WHERE id = $1', [req.params.id]);
   req.flash('basari', 'Duyuru silindi.');
   res.redirect('/yonetim/duyurular');
-});
+}));
 
 // --- Üye yönetimi ---
-app.get('/yonetim/uyeler', adminGerekli, (req, res) => {
-  const uyeler = db.prepare('SELECT * FROM uyeler ORDER BY onayli ASC, id DESC').all();
+app.get('/yonetim/uyeler', adminGerekli, ah(async (req, res) => {
+  const uyeler = (await q('SELECT * FROM uyeler ORDER BY onayli ASC, id DESC')).rows;
   res.render('admin/uyeler', { aktifSayfa: 'uyeler', uyeler });
-});
+}));
 
-app.post('/yonetim/uyeler/onayla/:id', adminGerekli, (req, res) => {
-  db.prepare('UPDATE uyeler SET onayli = 1 WHERE id = ?').run(req.params.id);
+app.post('/yonetim/uyeler/onayla/:id', adminGerekli, ah(async (req, res) => {
+  await q('UPDATE uyeler SET onayli = 1 WHERE id = $1', [req.params.id]);
   req.flash('basari', 'Üye onaylandı.');
   res.redirect('/yonetim/uyeler');
-});
+}));
 
-app.post('/yonetim/uyeler/sil/:id', adminGerekli, (req, res) => {
-  db.prepare('DELETE FROM uyeler WHERE id = ?').run(req.params.id);
+app.post('/yonetim/uyeler/sil/:id', adminGerekli, ah(async (req, res) => {
+  await q('DELETE FROM uyeler WHERE id = $1', [req.params.id]);
   req.flash('basari', 'Üye silindi.');
   res.redirect('/yonetim/uyeler');
-});
+}));
 
 // --- İletişim mesajları ---
-app.get('/yonetim/mesajlar', adminGerekli, (req, res) => {
-  const mesajlar = db.prepare('SELECT * FROM mesajlar ORDER BY id DESC').all();
+app.get('/yonetim/mesajlar', adminGerekli, ah(async (req, res) => {
+  const mesajlar = (await q('SELECT * FROM mesajlar ORDER BY id DESC')).rows;
   // Görüntülenince okundu işaretle
-  db.prepare('UPDATE mesajlar SET okundu = 1 WHERE okundu = 0').run();
+  await q('UPDATE mesajlar SET okundu = 1 WHERE okundu = 0');
   res.render('admin/mesajlar', { aktifSayfa: 'mesajlar', mesajlar });
-});
+}));
 
-app.post('/yonetim/mesajlar/sil/:id', adminGerekli, (req, res) => {
-  db.prepare('DELETE FROM mesajlar WHERE id = ?').run(req.params.id);
+app.post('/yonetim/mesajlar/sil/:id', adminGerekli, ah(async (req, res) => {
+  await q('DELETE FROM mesajlar WHERE id = $1', [req.params.id]);
   req.flash('basari', 'Mesaj silindi.');
   res.redirect('/yonetim/mesajlar');
-});
+}));
 
 // --- Kentsel dönüşüm yönetimi ---
-app.get('/yonetim/kentsel-donusum', adminGerekli, (req, res) => {
-  const maddeler = db.prepare('SELECT * FROM kentsel_donusum ORDER BY id DESC').all();
+app.get('/yonetim/kentsel-donusum', adminGerekli, ah(async (req, res) => {
+  const maddeler = (await q('SELECT * FROM kentsel_donusum ORDER BY id DESC')).rows;
   res.render('admin/kentsel-donusum', { aktifSayfa: 'kentsel-donusum', maddeler });
-});
+}));
 
-app.post('/yonetim/kentsel-donusum/ekle', adminGerekli, (req, res) => {
+app.post('/yonetim/kentsel-donusum/ekle', adminGerekli, ah(async (req, res) => {
   const { baslik, icerik, durum } = req.body;
   if (!baslik || !icerik) {
     req.flash('hata', 'Başlık ve içerik zorunludur.');
     return res.redirect('/yonetim/kentsel-donusum');
   }
-  db.prepare(
-    'INSERT INTO kentsel_donusum (baslik, icerik, durum) VALUES (?, ?, ?)'
-  ).run(baslik.trim(), icerik.trim(), (durum || 'Planlama').trim());
+  await q(
+    'INSERT INTO kentsel_donusum (baslik, icerik, durum) VALUES ($1, $2, $3)',
+    [baslik.trim(), icerik.trim(), (durum || 'Planlama').trim()]
+  );
   req.flash('basari', 'Kayıt eklendi.');
   res.redirect('/yonetim/kentsel-donusum');
-});
+}));
 
-app.post('/yonetim/kentsel-donusum/sil/:id', adminGerekli, (req, res) => {
-  db.prepare('DELETE FROM kentsel_donusum WHERE id = ?').run(req.params.id);
+app.post('/yonetim/kentsel-donusum/sil/:id', adminGerekli, ah(async (req, res) => {
+  await q('DELETE FROM kentsel_donusum WHERE id = $1', [req.params.id]);
   req.flash('basari', 'Kayıt silindi.');
   res.redirect('/yonetim/kentsel-donusum');
-});
+}));
 
 // =====================================================================
-//  404
+//  404 ve HATA YÖNETİMİ
 // =====================================================================
 app.use((req, res) => {
   res.status(404).render('404', { aktifSayfa: '' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Cumhuriyet Sitesi çalışıyor: http://localhost:${PORT}`);
-  console.log(`Yönetim paneli: http://localhost:${PORT}/yonetim/giris`);
+// Merkezi hata yakalayıcı
+app.use((err, req, res, next) => {
+  console.error('Sunucu hatası:', err);
+  res.status(500).send('Sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin.');
 });
+
+// Veritabanını hazırlayıp sunucuyu başlat
+init()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Cumhuriyet Sitesi çalışıyor: http://localhost:${PORT}`);
+      console.log(`Yönetim paneli: http://localhost:${PORT}/giris`);
+    });
+  })
+  .catch((err) => {
+    console.error('Veritabanı başlatılamadı:', err.message);
+    process.exit(1);
+  });
