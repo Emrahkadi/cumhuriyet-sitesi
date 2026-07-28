@@ -12,6 +12,9 @@ const flash = require('connect-flash');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const ExcelJS = require('exceljs');
+const helmet = require('helmet');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
 
 const { q, pool, init } = require('./database');
 
@@ -31,16 +34,77 @@ const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// --- Middleware ---
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
+// Ters proxy (Hostinger/Render) arkasında gerçek IP ve güvenli çerez için
+app.set('trust proxy', 1);
+app.disable('x-powered-by');
+
+// --- Güvenlik başlıkları (helmet) + CSP (tawk.to ve Google Fonts izinli) ---
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", 'https://*.tawk.to', 'https://embed.tawk.to'],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://*.tawk.to'],
+        fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com', 'https://*.tawk.to'],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: ["'self'", 'https://*.tawk.to', 'wss://*.tawk.to'],
+        frameSrc: ["'self'", 'https://*.tawk.to'],
+        mediaSrc: ["'self'", 'https://*.tawk.to'],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"]
+      }
+    },
+    crossOriginEmbedderPolicy: false,
+    hsts: { maxAge: 15552000, includeSubDomains: true }
+  })
+);
+
+// --- Performans: gzip sıkıştırma ---
+app.use(compression());
+
+// --- Genel istek hız sınırı (DoS/kaba kuvvet azaltma) ---
+const genelLimit = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 600,
+  standardHeaders: true,
+  legacyHeaders: false
+});
+app.use(genelLimit);
+
+// Giriş/kayıt gibi hassas uçlar için daha sıkı sınır
+const girisLimit = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 40,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Çok fazla deneme yapıldı. Lütfen bir süre sonra tekrar deneyin.'
+});
+
+// --- Gövde ayrıştırma (boyut sınırlı) ve statik dosyalar (önbellekli) ---
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(
+  express.static(path.join(__dirname, 'public'), {
+    maxAge: '7d',
+    etag: true
+  })
+);
 
 app.use(
   session({
+    name: 'cs.sid',
     secret: process.env.SESSION_SECRET || 'gizli-anahtar',
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 1000 * 60 * 60 * 8 } // 8 saat
+    rolling: true,
+    cookie: {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 1000 * 60 * 60 * 8 // 8 saat
+    }
   })
 );
 
@@ -132,7 +196,7 @@ app.get('/iletisim', (req, res) => {
 });
 
 // İletişim formu gönderimi
-app.post('/iletisim', ah(async (req, res) => {
+app.post('/iletisim', girisLimit, ah(async (req, res) => {
   const { ad_soyad, email, telefon, konu, mesaj } = req.body;
   if (!ad_soyad || !mesaj) {
     req.flash('hata', 'Ad soyad ve mesaj alanları zorunludur.');
@@ -156,7 +220,7 @@ app.get('/kayit', (req, res) => {
 });
 
 // Kayıt işlemi
-app.post('/kayit', ah(async (req, res) => {
+app.post('/kayit', girisLimit, ah(async (req, res) => {
   const { ad_soyad, daire_no, telefon, sifre, sifre_tekrar } = req.body;
 
   if (!ad_soyad || !daire_no || !telefon || !sifre) {
@@ -198,7 +262,7 @@ app.get('/giris', (req, res) => {
 });
 
 // Giriş işlemi (hem yönetici hem site sakini aynı formdan giriş yapar)
-app.post('/giris', ah(async (req, res) => {
+app.post('/giris', girisLimit, ah(async (req, res) => {
   const { kullanici, sifre } = req.body;
   const giris = (kullanici || '').trim();
 

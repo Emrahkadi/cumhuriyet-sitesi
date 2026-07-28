@@ -19,7 +19,15 @@ if (!process.env.DATABASE_URL) {
 const yerel = /localhost|127\.0\.0\.1/.test(process.env.DATABASE_URL || '');
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: yerel ? false : { rejectUnauthorized: false }
+  ssl: yerel ? false : { rejectUnauthorized: false },
+  max: 8,                       // ücretsiz PostgreSQL için makul havuz boyutu
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000
+});
+
+// Beklenmeyen havuz hatalarında uygulamanın çökmemesi için
+pool.on('error', (err) => {
+  console.error('Beklenmeyen veritabanı havuzu hatası:', err.message);
 });
 
 // Kısa sorgu yardımcısı
@@ -110,6 +118,13 @@ async function createTables() {
       bilgi_iletisim TEXT DEFAULT '',
       olusturma_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
     );
+
+    -- Performans indeksleri
+    CREATE INDEX IF NOT EXISTS idx_uye_mesajlari_uye ON uye_mesajlari (uye_id, okundu);
+    CREATE INDEX IF NOT EXISTS idx_aidatlar_uye ON aidatlar (uye_id, odendi);
+    CREATE INDEX IF NOT EXISTS idx_sakinler_blok ON sakinler (blok);
+    CREATE INDEX IF NOT EXISTS idx_duyurular_sira ON duyurular (onemli DESC, id DESC);
+    CREATE INDEX IF NOT EXISTS idx_mesajlar_okundu ON mesajlar (okundu);
   `);
 }
 
