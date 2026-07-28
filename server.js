@@ -48,6 +48,23 @@ app.use((req, res, next) => {
   next();
 });
 
+// Giriş yapan üye için okunmamış mesaj sayısı (bildirim rozeti)
+app.use(async (req, res, next) => {
+  res.locals.okunmamisMesajSayisi = 0;
+  if (req.session.uye) {
+    try {
+      const r = await q(
+        'SELECT COUNT(*)::int AS c FROM uye_mesajlari WHERE uye_id = $1 AND okundu = 0',
+        [req.session.uye.id]
+      );
+      res.locals.okunmamisMesajSayisi = r.rows[0].c;
+    } catch (e) {
+      res.locals.okunmamisMesajSayisi = 0;
+    }
+  }
+  next();
+});
+
 // --- Yardımcı: giriş kontrol middleware'leri ---
 function uyeGerekli(req, res, next) {
   if (!req.session.uye) {
@@ -209,8 +226,41 @@ app.post('/giris', ah(async (req, res) => {
 
 // Üye paneli
 app.get('/panel', uyeGerekli, ah(async (req, res) => {
+  const uyeId = req.session.uye.id;
   const duyurular = (await q('SELECT * FROM duyurular ORDER BY onemli DESC, id DESC LIMIT 5')).rows;
-  res.render('panel', { aktifSayfa: 'panel', duyurular });
+  const aidatlar = (await q('SELECT * FROM aidatlar WHERE uye_id = $1 ORDER BY odendi ASC, id DESC', [uyeId])).rows;
+  const borc = (await q(
+    'SELECT COALESCE(SUM(tutar), 0)::float AS toplam FROM aidatlar WHERE uye_id = $1 AND odendi = 0',
+    [uyeId]
+  )).rows[0].toplam;
+  const mesajlar = (await q('SELECT * FROM uye_mesajlari WHERE uye_id = $1 ORDER BY id DESC LIMIT 5', [uyeId])).rows;
+  res.render('panel', {
+    aktifSayfa: 'panel',
+    duyurular,
+    aidatlar,
+    borc,
+    mesajlar,
+    okunmamis: res.locals.okunmamisMesajSayisi
+  });
+}));
+
+// Üyenin mesajları (görüntülenince okundu işaretlenir)
+app.get('/mesajlarim', uyeGerekli, ah(async (req, res) => {
+  const uyeId = req.session.uye.id;
+  const mesajlar = (await q('SELECT * FROM uye_mesajlari WHERE uye_id = $1 ORDER BY id DESC', [uyeId])).rows;
+  await q('UPDATE uye_mesajlari SET okundu = 1 WHERE uye_id = $1 AND okundu = 0', [uyeId]);
+  res.render('mesajlarim', { aktifSayfa: 'mesajlarim', mesajlar });
+}));
+
+// Üyenin aidatları
+app.get('/aidatlarim', uyeGerekli, ah(async (req, res) => {
+  const uyeId = req.session.uye.id;
+  const aidatlar = (await q('SELECT * FROM aidatlar WHERE uye_id = $1 ORDER BY odendi ASC, id DESC', [uyeId])).rows;
+  const borc = (await q(
+    'SELECT COALESCE(SUM(tutar), 0)::float AS toplam FROM aidatlar WHERE uye_id = $1 AND odendi = 0',
+    [uyeId]
+  )).rows[0].toplam;
+  res.render('aidatlarim', { aktifSayfa: 'aidatlarim', aidatlar, borc });
 }));
 
 // Çıkış
@@ -328,6 +378,109 @@ app.post('/yonetim/kentsel-donusum/sil/:id', adminGerekli, ah(async (req, res) =
   await q('DELETE FROM kentsel_donusum WHERE id = $1', [req.params.id]);
   req.flash('basari', 'Kayıt silindi.');
   res.redirect('/yonetim/kentsel-donusum');
+}));
+
+// --- Aidat yönetimi ---
+app.get('/yonetim/aidatlar', adminGerekli, ah(async (req, res) => {
+  const uyeler = (await q('SELECT id, ad_soyad, daire_no FROM uyeler ORDER BY ad_soyad ASC')).rows;
+  const aidatlar = (await q(
+    `SELECT a.*, u.ad_soyad, u.daire_no
+     FROM aidatlar a JOIN uyeler u ON u.id = a.uye_id
+     ORDER BY a.odendi ASC, a.id DESC`
+  )).rows;
+  res.render('admin/aidatlar', { aktifSayfa: 'aidatlar', uyeler, aidatlar });
+}));
+
+app.post('/yonetim/aidatlar/ekle', adminGerekli, ah(async (req, res) => {
+  const { uye_id, donem, tutar, aciklama, tum_uyeler } = req.body;
+  if (!donem || !tutar) {
+    req.flash('hata', 'Dönem ve tutar zorunludur.');
+    return res.redirect('/yonetim/aidatlar');
+  }
+  const tutarNum = parseFloat(String(tutar).replace(',', '.'));
+  if (isNaN(tutarNum) || tutarNum < 0) {
+    req.flash('hata', 'Geçerli bir tutar girin.');
+    return res.redirect('/yonetim/aidatlar');
+  }
+
+  if (tum_uyeler) {
+    // Tüm onaylı üyelere aidat tahakkuk ettir
+    const hedef = (await q('SELECT id FROM uyeler WHERE onayli = 1')).rows;
+    for (const u of hedef) {
+      await q(
+        'INSERT INTO aidatlar (uye_id, donem, tutar, aciklama) VALUES ($1, $2, $3, $4)',
+        [u.id, donem.trim(), tutarNum, (aciklama || '').trim()]
+      );
+    }
+    req.flash('basari', `${hedef.length} üyeye aidat eklendi.`);
+  } else {
+    if (!uye_id) {
+      req.flash('hata', 'Üye seçin veya "Tüm üyeler" işaretleyin.');
+      return res.redirect('/yonetim/aidatlar');
+    }
+    await q(
+      'INSERT INTO aidatlar (uye_id, donem, tutar, aciklama) VALUES ($1, $2, $3, $4)',
+      [uye_id, donem.trim(), tutarNum, (aciklama || '').trim()]
+    );
+    req.flash('basari', 'Aidat eklendi.');
+  }
+  res.redirect('/yonetim/aidatlar');
+}));
+
+app.post('/yonetim/aidatlar/ode/:id', adminGerekli, ah(async (req, res) => {
+  await q(
+    "UPDATE aidatlar SET odendi = 1, odeme_tarihi = to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD') WHERE id = $1",
+    [req.params.id]
+  );
+  req.flash('basari', 'Aidat ödendi olarak işaretlendi.');
+  res.redirect('/yonetim/aidatlar');
+}));
+
+app.post('/yonetim/aidatlar/geri-al/:id', adminGerekli, ah(async (req, res) => {
+  await q('UPDATE aidatlar SET odendi = 0, odeme_tarihi = NULL WHERE id = $1', [req.params.id]);
+  req.flash('basari', 'Aidat ödenmedi durumuna alındı.');
+  res.redirect('/yonetim/aidatlar');
+}));
+
+app.post('/yonetim/aidatlar/sil/:id', adminGerekli, ah(async (req, res) => {
+  await q('DELETE FROM aidatlar WHERE id = $1', [req.params.id]);
+  req.flash('basari', 'Aidat kaydı silindi.');
+  res.redirect('/yonetim/aidatlar');
+}));
+
+// --- Üyeye mesaj gönderme ---
+app.get('/yonetim/mesaj-gonder', adminGerekli, ah(async (req, res) => {
+  const uyeler = (await q('SELECT id, ad_soyad, daire_no FROM uyeler WHERE onayli = 1 ORDER BY ad_soyad ASC')).rows;
+  const gonderilenler = (await q(
+    `SELECT m.*, u.ad_soyad, u.daire_no
+     FROM uye_mesajlari m JOIN uyeler u ON u.id = m.uye_id
+     ORDER BY m.id DESC LIMIT 30`
+  )).rows;
+  res.render('admin/mesaj-gonder', { aktifSayfa: 'mesaj-gonder', uyeler, gonderilenler });
+}));
+
+app.post('/yonetim/mesaj-gonder', adminGerekli, ah(async (req, res) => {
+  const { uye_id, baslik, mesaj, tum_uyeler } = req.body;
+  if (!baslik || !mesaj) {
+    req.flash('hata', 'Başlık ve mesaj zorunludur.');
+    return res.redirect('/yonetim/mesaj-gonder');
+  }
+
+  if (tum_uyeler) {
+    const hedef = (await q('SELECT id FROM uyeler WHERE onayli = 1')).rows;
+    for (const u of hedef) {
+      await q('INSERT INTO uye_mesajlari (uye_id, baslik, mesaj) VALUES ($1, $2, $3)', [u.id, baslik.trim(), mesaj.trim()]);
+    }
+    req.flash('basari', `${hedef.length} üyeye mesaj gönderildi.`);
+  } else {
+    if (!uye_id) {
+      req.flash('hata', 'Üye seçin veya "Tüm üyeler" işaretleyin.');
+      return res.redirect('/yonetim/mesaj-gonder');
+    }
+    await q('INSERT INTO uye_mesajlari (uye_id, baslik, mesaj) VALUES ($1, $2, $3)', [uye_id, baslik.trim(), mesaj.trim()]);
+    req.flash('basari', 'Mesaj gönderildi.');
+  }
+  res.redirect('/yonetim/mesaj-gonder');
 }));
 
 // =====================================================================

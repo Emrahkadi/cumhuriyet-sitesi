@@ -1,0 +1,53 @@
+<%- include('partials/header', { sayfaBaslik: 'Aidatlarım' }) %>
+
+<section class="page-hero">
+  <div class="container">
+    <h1>Aidat / Borç Durumum</h1>
+    <p>Aidat ödemeleriniz ve güncel borç durumunuz.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container container-narrow">
+    <a href="/panel" class="back-link">← Panele dön</a>
+
+    <div class="ozet-kutu <%= borc > 0 ? 'ozet-borc' : 'ozet-temiz' %>" style="margin-bottom: 24px;">
+      <span class="ozet-ikon">💳</span>
+      <div>
+        <span class="ozet-label">Toplam Ödenmemiş Borç</span>
+        <span class="ozet-deger"><%= borc.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) %> ₺</span>
+      </div>
+    </div>
+
+    <% if (aidatlar.length === 0) { %>
+      <p class="empty-state">Kayıtlı aidat bulunmuyor.</p>
+    <% } else { %>
+      <div class="table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr><th>Dönem</th><th>Tutar</th><th>Açıklama</th><th>Durum</th><th>Ödeme Tarihi</th></tr>
+          </thead>
+          <tbody>
+            <% aidatlar.forEach(function(a) { %>
+              <tr>
+                <td><%= a.donem %></td>
+                <td><%= Number(a.tutar).toLocaleString('tr-TR', { minimumFractionDigits: 2 }) %> ₺</td>
+                <td><%= a.aciklama || '-' %></td>
+                <td>
+                  <% if (a.odendi) { %>
+                    <span class="badge badge-onayli">Ödendi</span>
+                  <% } else { %>
+                    <span class="badge badge-onemli">Ödenmedi</span>
+                  <% } %>
+                </td>
+                <td><%= a.odeme_tarihi || '-' %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

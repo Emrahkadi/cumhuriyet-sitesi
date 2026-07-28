@@ -1,0 +1,35 @@
+<%- include('partials/header', { sayfaBaslik: 'Mesajlarım' }) %>
+
+<section class="page-hero">
+  <div class="container">
+    <h1>Yönetimden Mesajlar</h1>
+    <p>Site yönetiminin size gönderdiği mesajlar.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container container-narrow">
+    <a href="/panel" class="back-link">← Panele dön</a>
+
+    <% if (mesajlar.length === 0) { %>
+      <p class="empty-state">Henüz size gönderilmiş bir mesaj yok.</p>
+    <% } else { %>
+      <div class="mesaj-liste">
+        <% mesajlar.forEach(function(m) { %>
+          <div class="mesaj-item <%= m.okundu ? '' : 'mesaj-yeni' %>">
+            <div class="mesaj-head">
+              <div>
+                <strong><%= m.baslik %></strong>
+                <% if (!m.okundu) { %><span class="badge badge-onemli">Yeni</span><% } %>
+              </div>
+              <time><%= m.olusturma_tarihi %></time>
+            </div>
+            <p class="mesaj-metin"><%= m.mesaj %></p>
+          </div>
+        <% }); %>
+      </div>
+    <% } %>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

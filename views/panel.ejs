@@ -9,6 +9,37 @@
 
 <section class="section">
   <div class="container">
+
+    <% if (okunmamis > 0) { %>
+      <div class="bildirim-banner">
+        <span class="bildirim-ikon">🔔</span>
+        <div>
+          <strong>Yeni mesajınız var!</strong>
+          <p>Site yönetiminden <%= okunmamis %> okunmamış mesajınız bulunuyor.</p>
+        </div>
+        <a href="/mesajlarim" class="btn btn-primary">Mesajları Gör</a>
+      </div>
+    <% } %>
+
+    <div class="panel-ozet-grid">
+      <div class="ozet-kutu <%= borc > 0 ? 'ozet-borc' : 'ozet-temiz' %>">
+        <span class="ozet-ikon">💳</span>
+        <div>
+          <span class="ozet-label">Toplam Borç</span>
+          <span class="ozet-deger"><%= borc.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) %> ₺</span>
+        </div>
+        <a href="/aidatlarim" class="ozet-link">Detay →</a>
+      </div>
+      <div class="ozet-kutu">
+        <span class="ozet-ikon">✉️</span>
+        <div>
+          <span class="ozet-label">Okunmamış Mesaj</span>
+          <span class="ozet-deger"><%= okunmamis %></span>
+        </div>
+        <a href="/mesajlarim" class="ozet-link">Mesajlarım →</a>
+      </div>
+    </div>
+
     <div class="panel-grid">
       <div class="panel-info-card">
         <h2>Üyelik Bilgileriniz</h2>
@@ -22,7 +53,62 @@
 
       <div class="panel-duyuru-card">
         <div class="section-head">
-          <h2>Size Özel Duyurular</h2>
+          <h2>Aidat / Borç Durumu</h2>
+          <a href="/aidatlarim" class="section-link">Tümü →</a>
+        </div>
+        <% if (aidatlar.length === 0) { %>
+          <p class="empty-state">Kayıtlı aidat bulunmuyor.</p>
+        <% } else { %>
+          <div class="table-wrap">
+            <table class="mini-table">
+              <thead><tr><th>Dönem</th><th>Tutar</th><th>Durum</th></tr></thead>
+              <tbody>
+                <% aidatlar.slice(0, 5).forEach(function(a) { %>
+                  <tr>
+                    <td><%= a.donem %></td>
+                    <td><%= Number(a.tutar).toLocaleString('tr-TR', { minimumFractionDigits: 2 }) %> ₺</td>
+                    <td>
+                      <% if (a.odendi) { %>
+                        <span class="badge badge-onayli">Ödendi</span>
+                      <% } else { %>
+                        <span class="badge badge-onemli">Ödenmedi</span>
+                      <% } %>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="panel-grid" style="margin-top: 24px;">
+      <div class="panel-duyuru-card">
+        <div class="section-head">
+          <h2>Yönetimden Mesajlar</h2>
+          <a href="/mesajlarim" class="section-link">Tümü →</a>
+        </div>
+        <% if (mesajlar.length === 0) { %>
+          <p class="empty-state">Henüz mesajınız yok.</p>
+        <% } else { %>
+          <ul class="duyuru-mini-liste">
+            <% mesajlar.forEach(function(m) { %>
+              <li>
+                <a href="/mesajlarim">
+                  <% if (!m.okundu) { %><span class="badge badge-onemli">Yeni</span><% } %>
+                  <span class="duyuru-mini-baslik"><%= m.baslik %></span>
+                  <time><%= m.olusturma_tarihi.split(' ')[0] %></time>
+                </a>
+              </li>
+            <% }); %>
+          </ul>
+        <% } %>
+      </div>
+
+      <div class="panel-duyuru-card">
+        <div class="section-head">
+          <h2>Site Duyuruları</h2>
           <a href="/duyurular" class="section-link">Tümü →</a>
         </div>
         <% if (duyurular.length === 0) { %>
@@ -42,6 +128,7 @@
         <% } %>
       </div>
     </div>
+
   </div>
 </section>
 

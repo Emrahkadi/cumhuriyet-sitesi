@@ -1,0 +1,65 @@
+<%- include('partials/header', { sayfaBaslik: 'Üyeye Mesaj Gönder' }) %>
+
+<div class="admin-panel-box">
+  <h2>Mesaj Gönder</h2>
+  <p class="admin-hint">Seçtiğiniz üyeye veya tüm üyelere bildirim mesajı gönderin. Üye panelinde "yeni mesajınız var" uyarısı görünür.</p>
+  <form action="/yonetim/mesaj-gonder" method="POST" class="form">
+    <div class="form-row">
+      <div class="form-group">
+        <label for="uye_id">Üye</label>
+        <select id="uye_id" name="uye_id">
+          <option value="">— Üye seçin —</option>
+          <% uyeler.forEach(function(u) { %>
+            <option value="<%= u.id %>"><%= u.ad_soyad %> (Daire <%= u.daire_no %>)</option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="form-group form-check" style="align-self: end;">
+        <label><input type="checkbox" name="tum_uyeler" value="1" /> Tüm onaylı üyelere gönder</label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="baslik">Başlık</label>
+      <input type="text" id="baslik" name="baslik" required />
+    </div>
+    <div class="form-group">
+      <label for="mesaj">Mesaj</label>
+      <textarea id="mesaj" name="mesaj" rows="4" required></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Gönder</button>
+  </form>
+</div>
+
+<div class="admin-panel-box">
+  <h2>Son Gönderilen Mesajlar</h2>
+  <% if (gonderilenler.length === 0) { %>
+    <p class="empty-state">Henüz mesaj gönderilmemiş.</p>
+  <% } else { %>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr><th>Üye</th><th>Daire</th><th>Başlık</th><th>Durum</th><th>Tarih</th></tr>
+        </thead>
+        <tbody>
+          <% gonderilenler.forEach(function(m) { %>
+            <tr>
+              <td><%= m.ad_soyad %></td>
+              <td><%= m.daire_no %></td>
+              <td><%= m.baslik %></td>
+              <td>
+                <% if (m.okundu) { %>
+                  <span class="badge badge-onayli">Okundu</span>
+                <% } else { %>
+                  <span class="badge badge-bekliyor">Okunmadı</span>
+                <% } %>
+              </td>
+              <td><%= m.olusturma_tarihi.split(' ')[0] %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</div>
+
+<%- include('partials/footer') %>

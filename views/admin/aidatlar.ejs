@@ -1,0 +1,84 @@
+<%- include('partials/header', { sayfaBaslik: 'Aidat Yönetimi' }) %>
+
+<div class="admin-panel-box">
+  <h2>Aidat Ekle / Tahakkuk Ettir</h2>
+  <form action="/yonetim/aidatlar/ekle" method="POST" class="form">
+    <div class="form-row">
+      <div class="form-group">
+        <label for="uye_id">Üye</label>
+        <select id="uye_id" name="uye_id">
+          <option value="">— Üye seçin —</option>
+          <% uyeler.forEach(function(u) { %>
+            <option value="<%= u.id %>"><%= u.ad_soyad %> (Daire <%= u.daire_no %>)</option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="form-group form-check" style="align-self: end;">
+        <label><input type="checkbox" name="tum_uyeler" value="1" /> Tüm onaylı üyelere uygula</label>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="donem">Dönem</label>
+        <input type="text" id="donem" name="donem" placeholder="Örn: Temmuz 2026" required />
+      </div>
+      <div class="form-group">
+        <label for="tutar">Tutar (₺)</label>
+        <input type="number" id="tutar" name="tutar" step="0.01" min="0" placeholder="Örn: 750" required />
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="aciklama">Açıklama (opsiyonel)</label>
+      <input type="text" id="aciklama" name="aciklama" placeholder="Örn: Aylık site aidatı" />
+    </div>
+    <button type="submit" class="btn btn-primary">Aidat Ekle</button>
+  </form>
+</div>
+
+<div class="admin-panel-box">
+  <h2>Aidat Kayıtları (<%= aidatlar.length %>)</h2>
+  <% if (aidatlar.length === 0) { %>
+    <p class="empty-state">Henüz aidat kaydı yok.</p>
+  <% } else { %>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr><th>Üye</th><th>Daire</th><th>Dönem</th><th>Tutar</th><th>Durum</th><th>İşlem</th></tr>
+        </thead>
+        <tbody>
+          <% aidatlar.forEach(function(a) { %>
+            <tr>
+              <td><%= a.ad_soyad %></td>
+              <td><%= a.daire_no %></td>
+              <td><%= a.donem %></td>
+              <td><%= Number(a.tutar).toLocaleString('tr-TR', { minimumFractionDigits: 2 }) %> ₺</td>
+              <td>
+                <% if (a.odendi) { %>
+                  <span class="badge badge-onayli">Ödendi</span>
+                <% } else { %>
+                  <span class="badge badge-bekliyor">Ödenmedi</span>
+                <% } %>
+              </td>
+              <td class="td-islem">
+                <% if (a.odendi) { %>
+                  <form action="/yonetim/aidatlar/geri-al/<%= a.id %>" method="POST">
+                    <button type="submit" class="btn-sil">Geri Al</button>
+                  </form>
+                <% } else { %>
+                  <form action="/yonetim/aidatlar/ode/<%= a.id %>" method="POST">
+                    <button type="submit" class="btn-onayla">Ödendi</button>
+                  </form>
+                <% } %>
+                <form action="/yonetim/aidatlar/sil/<%= a.id %>" method="POST" onsubmit="return confirm('Bu aidat kaydı silinsin mi?');">
+                  <button type="submit" class="btn-sil">Sil</button>
+                </form>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</div>
+
+<%- include('partials/footer') %>

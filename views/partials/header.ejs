@@ -29,6 +29,9 @@
         <a href="/iletisim" class="<%= aktifSayfa === 'iletisim' ? 'active' : '' %>">İletişim</a>
 
         <% if (uye) { %>
+          <a href="/mesajlarim" class="nav-bell" title="Mesajlarım">
+            🔔<% if (okunmamisMesajSayisi > 0) { %><span class="nav-badge"><%= okunmamisMesajSayisi %></span><% } %>
+          </a>
           <a href="/panel" class="nav-cta <%= aktifSayfa === 'panel' ? 'active' : '' %>">Panelim</a>
           <a href="/cikis" class="nav-logout">Çıkış</a>
         <% } else { %>

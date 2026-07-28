@@ -74,6 +74,26 @@ async function createTables() {
       durum TEXT NOT NULL DEFAULT 'Planlama',
       olusturma_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
     );
+
+    CREATE TABLE IF NOT EXISTS aidatlar (
+      id SERIAL PRIMARY KEY,
+      uye_id INTEGER NOT NULL REFERENCES uyeler(id) ON DELETE CASCADE,
+      donem TEXT NOT NULL,
+      tutar NUMERIC(10, 2) NOT NULL,
+      odendi INTEGER NOT NULL DEFAULT 0,
+      odeme_tarihi TEXT,
+      aciklama TEXT,
+      olusturma_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
+    );
+
+    CREATE TABLE IF NOT EXISTS uye_mesajlari (
+      id SERIAL PRIMARY KEY,
+      uye_id INTEGER NOT NULL REFERENCES uyeler(id) ON DELETE CASCADE,
+      baslik TEXT NOT NULL,
+      mesaj TEXT NOT NULL,
+      okundu INTEGER NOT NULL DEFAULT 0,
+      olusturma_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
+    );
   `);
 }
 
