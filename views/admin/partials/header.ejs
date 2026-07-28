@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yönetim Paneli - Cumhuriyet Sitesi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/css/admin.css" />
+</head>
+<body class="admin-body">
+  <aside class="admin-sidebar">
+    <div class="admin-logo">
+      <span>🏙️</span> Yönetim
+    </div>
+    <nav class="admin-nav">
+      <a href="/yonetim" class="<%= aktifSayfa === 'ozet' ? 'active' : '' %>">📊 Özet</a>
+      <a href="/yonetim/duyurular" class="<%= aktifSayfa === 'duyurular' ? 'active' : '' %>">📢 Duyurular</a>
+      <a href="/yonetim/uyeler" class="<%= aktifSayfa === 'uyeler' ? 'active' : '' %>">👥 Üyeler</a>
+      <a href="/yonetim/kentsel-donusum" class="<%= aktifSayfa === 'kentsel-donusum' ? 'active' : '' %>">🏗️ Kentsel Dönüşüm</a>
+      <a href="/yonetim/mesajlar" class="<%= aktifSayfa === 'mesajlar' ? 'active' : '' %>">✉️ Mesajlar</a>
+    </nav>
+    <div class="admin-sidebar-bottom">
+      <a href="/" target="_blank" class="admin-site-link">🌐 Siteyi Gör</a>
+      <a href="/yonetim/cikis" class="admin-logout">🚪 Çıkış</a>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <header class="admin-topbar">
+      <h1><%= sayfaBaslik %></h1>
+      <span class="admin-user">👤 <%= yonetici.kullanici_adi %></span>
+    </header>
+
+    <div class="admin-content">
+      <% if (basari && basari.length) { %>
+        <div class="alert alert-success"><%= basari %></div>
+      <% } %>
+      <% if (hata && hata.length) { %>
+        <div class="alert alert-error"><%= hata %></div>
+      <% } %>

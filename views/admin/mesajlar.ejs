@@ -1,0 +1,32 @@
+<%- include('partials/header', { sayfaBaslik: 'Mesajlar' }) %>
+
+<div class="admin-panel-box">
+  <h2>İletişim Mesajları (<%= mesajlar.length %>)</h2>
+  <% if (mesajlar.length === 0) { %>
+    <p class="empty-state">Henüz mesaj yok.</p>
+  <% } else { %>
+    <div class="mesaj-liste">
+      <% mesajlar.forEach(function(m) { %>
+        <div class="mesaj-item">
+          <div class="mesaj-head">
+            <div>
+              <strong><%= m.ad_soyad %></strong>
+              <% if (m.konu) { %><span class="mesaj-konu">— <%= m.konu %></span><% } %>
+            </div>
+            <time><%= m.olusturma_tarihi %></time>
+          </div>
+          <div class="mesaj-iletisim">
+            <% if (m.telefon) { %><span>📞 <%= m.telefon %></span><% } %>
+            <% if (m.email) { %><span>✉️ <%= m.email %></span><% } %>
+          </div>
+          <p class="mesaj-metin"><%= m.mesaj %></p>
+          <form action="/yonetim/mesajlar/sil/<%= m.id %>" method="POST" onsubmit="return confirm('Bu mesaj silinsin mi?');">
+            <button type="submit" class="btn-sil">Sil</button>
+          </form>
+        </div>
+      <% }); %>
+    </div>
+  <% } %>
+</div>
+
+<%- include('partials/footer') %>

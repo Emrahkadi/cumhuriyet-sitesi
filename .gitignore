@@ -1,0 +1,18 @@
+# Bağımlılıklar
+node_modules/
+
+# Ortam değişkenleri
+.env
+
+# Veritabanı dosyası
+data/
+*.db
+*.sqlite
+
+# Loglar
+*.log
+npm-debug.log*
+
+# OS dosyaları
+.DS_Store
+Thumbs.db

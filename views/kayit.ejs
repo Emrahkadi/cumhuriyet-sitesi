@@ -1,0 +1,40 @@
+<%- include('partials/header', { sayfaBaslik: 'Üye Ol' }) %>
+
+<section class="section">
+  <div class="container">
+    <div class="auth-wrap">
+      <div class="auth-card">
+        <h1>Üye Ol</h1>
+        <p class="auth-sub">Daire bilgilerinizle kayıt olun. Kaydınız yönetici onayından sonra aktifleşir.</p>
+        <form action="/kayit" method="POST" class="form">
+          <div class="form-group">
+            <label for="ad_soyad">Ad Soyad</label>
+            <input type="text" id="ad_soyad" name="ad_soyad" required />
+          </div>
+          <div class="form-group">
+            <label for="daire_no">Daire No</label>
+            <input type="text" id="daire_no" name="daire_no" placeholder="Örn: A-12" required />
+          </div>
+          <div class="form-group">
+            <label for="telefon">Telefon Numarası</label>
+            <input type="tel" id="telefon" name="telefon" placeholder="05__ ___ __ __" required />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="sifre">Şifre</label>
+              <input type="password" id="sifre" name="sifre" required />
+            </div>
+            <div class="form-group">
+              <label for="sifre_tekrar">Şifre (Tekrar)</label>
+              <input type="password" id="sifre_tekrar" name="sifre_tekrar" required />
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">Kayıt Ol</button>
+        </form>
+        <p class="auth-alt">Zaten üye misiniz? <a href="/giris">Giriş yapın</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,48 @@
+<%- include('partials/header', { sayfaBaslik: 'Kentsel Dönüşüm' }) %>
+
+<section class="page-hero">
+  <div class="container">
+    <h1>Kentsel Dönüşüm</h1>
+    <p>Sitemizin kentsel dönüşüm süreci, güncel durumu ve yol haritası.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container container-narrow">
+    <div class="content-block">
+      <p>
+        Kentsel dönüşüm; binaların deprem güvenliği başta olmak üzere sağlıklı ve güvenli
+        yaşam standartlarına kavuşturulması amacıyla yürütülen bir süreçtir. Aşağıda
+        sitemizle ilgili güncel gelişmeleri takip edebilirsiniz.
+      </p>
+    </div>
+
+    <% if (maddeler.length === 0) { %>
+      <p class="empty-state">Henüz kentsel dönüşüm kaydı bulunmuyor.</p>
+    <% } else { %>
+      <div class="timeline">
+        <% maddeler.forEach(function(m) { %>
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="timeline-content">
+              <div class="duyuru-card-top">
+                <span class="badge badge-durum"><%= m.durum %></span>
+                <time><%= m.olusturma_tarihi.split(' ')[0] %></time>
+              </div>
+              <h3><%= m.baslik %></h3>
+              <p><%= m.icerik %></p>
+            </div>
+          </div>
+        <% }); %>
+      </div>
+    <% } %>
+
+    <div class="cta-box">
+      <h3>Sorularınız mı var?</h3>
+      <p>Kentsel dönüşüm süreciyle ilgili merak ettiklerinizi bize iletin.</p>
+      <a href="/iletisim" class="btn btn-primary">İletişime Geç</a>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

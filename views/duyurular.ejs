@@ -1,0 +1,32 @@
+<%- include('partials/header', { sayfaBaslik: 'Duyurular' }) %>
+
+<section class="page-hero">
+  <div class="container">
+    <h1>Duyurular</h1>
+    <p>Cumhuriyet Sitesi'ne dair tüm güncel duyuru ve bilgilendirmeler.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <% if (duyurular.length === 0) { %>
+      <p class="empty-state">Henüz duyuru bulunmuyor.</p>
+    <% } else { %>
+      <div class="card-grid">
+        <% duyurular.forEach(function(d) { %>
+          <article class="duyuru-card">
+            <div class="duyuru-card-top">
+              <span class="badge badge-<%= d.onemli ? 'onemli' : 'genel' %>"><%= d.onemli ? 'Önemli' : d.kategori %></span>
+              <time><%= d.olusturma_tarihi.split(' ')[0] %></time>
+            </div>
+            <h3><a href="/duyuru/<%= d.id %>"><%= d.baslik %></a></h3>
+            <p><%= d.icerik.length > 160 ? d.icerik.substring(0, 160) + '...' : d.icerik %></p>
+            <a href="/duyuru/<%= d.id %>" class="card-link">Devamını oku →</a>
+          </article>
+        <% }); %>
+      </div>
+    <% } %>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,48 @@
+<%- include('partials/header', { sayfaBaslik: 'Panelim' }) %>
+
+<section class="page-hero">
+  <div class="container">
+    <h1>Hoş geldiniz, <%= uye.ad_soyad %></h1>
+    <p>Site sakini üye panelinize hoş geldiniz.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="panel-grid">
+      <div class="panel-info-card">
+        <h2>Üyelik Bilgileriniz</h2>
+        <ul class="bilgi-liste">
+          <li><span>Ad Soyad</span><strong><%= uye.ad_soyad %></strong></li>
+          <li><span>Daire No</span><strong><%= uye.daire_no %></strong></li>
+          <li><span>Telefon</span><strong><%= uye.telefon %></strong></li>
+        </ul>
+        <a href="/cikis" class="btn btn-outline btn-block">Çıkış Yap</a>
+      </div>
+
+      <div class="panel-duyuru-card">
+        <div class="section-head">
+          <h2>Size Özel Duyurular</h2>
+          <a href="/duyurular" class="section-link">Tümü →</a>
+        </div>
+        <% if (duyurular.length === 0) { %>
+          <p class="empty-state">Henüz duyuru yok.</p>
+        <% } else { %>
+          <ul class="duyuru-mini-liste">
+            <% duyurular.forEach(function(d) { %>
+              <li>
+                <a href="/duyuru/<%= d.id %>">
+                  <span class="badge badge-<%= d.onemli ? 'onemli' : 'genel' %>"><%= d.onemli ? 'Önemli' : d.kategori %></span>
+                  <span class="duyuru-mini-baslik"><%= d.baslik %></span>
+                  <time><%= d.olusturma_tarihi.split(' ')[0] %></time>
+                </a>
+              </li>
+            <% }); %>
+          </ul>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

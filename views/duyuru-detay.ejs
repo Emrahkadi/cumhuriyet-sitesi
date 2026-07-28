@@ -1,0 +1,21 @@
+<%- include('partials/header', { sayfaBaslik: duyuru.baslik }) %>
+
+<section class="section">
+  <div class="container container-narrow">
+    <a href="/duyurular" class="back-link">← Tüm duyurular</a>
+    <article class="duyuru-detay">
+      <div class="duyuru-card-top">
+        <span class="badge badge-<%= duyuru.onemli ? 'onemli' : 'genel' %>"><%= duyuru.onemli ? 'Önemli' : duyuru.kategori %></span>
+        <time><%= duyuru.olusturma_tarihi %></time>
+      </div>
+      <h1><%= duyuru.baslik %></h1>
+      <div class="duyuru-icerik">
+        <% duyuru.icerik.split('\n').forEach(function(p) { %>
+          <% if (p.trim()) { %><p><%= p %></p><% } %>
+        <% }); %>
+      </div>
+    </article>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

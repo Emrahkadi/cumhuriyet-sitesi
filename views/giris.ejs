@@ -1,0 +1,26 @@
+<%- include('partials/header', { sayfaBaslik: 'Üye Girişi' }) %>
+
+<section class="section">
+  <div class="container">
+    <div class="auth-wrap">
+      <div class="auth-card">
+        <h1>Giriş Yap</h1>
+        <p class="auth-sub">Site sakinleri telefon numarası, site yönetimi kullanıcı adı ile giriş yapar.</p>
+        <form action="/giris" method="POST" class="form">
+          <div class="form-group">
+            <label for="kullanici">Telefon Numarası / Kullanıcı Adı</label>
+            <input type="text" id="kullanici" name="kullanici" placeholder="05__ ___ __ __ veya kullanıcı adı" required autofocus />
+          </div>
+          <div class="form-group">
+            <label for="sifre">Şifre</label>
+            <input type="password" id="sifre" name="sifre" required />
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">Giriş Yap</button>
+        </form>
+        <p class="auth-alt">Hesabınız yok mu? <a href="/kayit">Üye olun</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

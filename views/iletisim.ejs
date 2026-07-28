@@ -1,0 +1,59 @@
+<%- include('partials/header', { sayfaBaslik: 'İletişim' }) %>
+
+<section class="page-hero">
+  <div class="container">
+    <h1>İletişim</h1>
+    <p>Görüş, öneri ve talepleriniz için bize ulaşın.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="iletisim-grid">
+      <div class="iletisim-bilgi">
+        <h2>Site Yönetimi</h2>
+        <ul class="iletisim-liste">
+          <li><span>📍</span> Cumhuriyet Mah. Örnek Cad. No:1, İstanbul</li>
+          <li><span>📞</span> 0 (___) ___ __ __</li>
+          <li><span>✉️</span> info@cumhuriyetsitesi.com</li>
+          <li><span>🕐</span> Hafta içi 09:00 - 18:00</li>
+        </ul>
+        <div class="iletisim-not">
+          <strong>💬 Canlı Destek</strong>
+          <p>Sayfanın sağ alt köşesindeki canlı sohbet penceresinden anlık olarak bize ulaşabilirsiniz.</p>
+        </div>
+      </div>
+
+      <div class="iletisim-form-wrap">
+        <h2>Bize Yazın</h2>
+        <form action="/iletisim" method="POST" class="form">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="ad_soyad">Ad Soyad *</label>
+              <input type="text" id="ad_soyad" name="ad_soyad" required />
+            </div>
+            <div class="form-group">
+              <label for="telefon">Telefon</label>
+              <input type="tel" id="telefon" name="telefon" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="email">E-posta</label>
+            <input type="email" id="email" name="email" />
+          </div>
+          <div class="form-group">
+            <label for="konu">Konu</label>
+            <input type="text" id="konu" name="konu" />
+          </div>
+          <div class="form-group">
+            <label for="mesaj">Mesajınız *</label>
+            <textarea id="mesaj" name="mesaj" rows="5" required></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">Gönder</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

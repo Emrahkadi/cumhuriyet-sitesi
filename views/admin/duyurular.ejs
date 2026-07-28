@@ -1,0 +1,63 @@
+<%- include('partials/header', { sayfaBaslik: 'Duyurular' }) %>
+
+<div class="admin-panel-box">
+  <h2>Yeni Duyuru Ekle</h2>
+  <form action="/yonetim/duyurular/ekle" method="POST" class="form">
+    <div class="form-group">
+      <label for="baslik">Başlık</label>
+      <input type="text" id="baslik" name="baslik" required />
+    </div>
+    <div class="form-group">
+      <label for="icerik">İçerik</label>
+      <textarea id="icerik" name="icerik" rows="4" required></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="kategori">Kategori</label>
+        <select id="kategori" name="kategori">
+          <option value="Genel">Genel</option>
+          <option value="Aidat">Aidat</option>
+          <option value="Bakım">Bakım</option>
+          <option value="Toplantı">Toplantı</option>
+          <option value="Etkinlik">Etkinlik</option>
+        </select>
+      </div>
+      <div class="form-group form-check">
+        <label><input type="checkbox" name="onemli" value="1" /> Önemli olarak işaretle</label>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary">Duyuru Ekle</button>
+  </form>
+</div>
+
+<div class="admin-panel-box">
+  <h2>Mevcut Duyurular (<%= duyurular.length %>)</h2>
+  <% if (duyurular.length === 0) { %>
+    <p class="empty-state">Henüz duyuru yok.</p>
+  <% } else { %>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr><th>Başlık</th><th>Kategori</th><th>Tarih</th><th>Önemli</th><th>İşlem</th></tr>
+        </thead>
+        <tbody>
+          <% duyurular.forEach(function(d) { %>
+            <tr>
+              <td><%= d.baslik %></td>
+              <td><span class="badge badge-genel"><%= d.kategori %></span></td>
+              <td><%= d.olusturma_tarihi.split(' ')[0] %></td>
+              <td><%= d.onemli ? '⭐' : '-' %></td>
+              <td>
+                <form action="/yonetim/duyurular/sil/<%= d.id %>" method="POST" onsubmit="return confirm('Bu duyuru silinsin mi?');">
+                  <button type="submit" class="btn-sil">Sil</button>
+                </form>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</div>
+
+<%- include('partials/footer') %>

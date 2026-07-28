@@ -1,0 +1,78 @@
+<%- include('partials/header', { sayfaBaslik: 'Ana Sayfa' }) %>
+
+<section class="hero">
+  <div class="container hero-inner">
+    <div class="hero-content">
+      <span class="hero-badge">Hoş Geldiniz</span>
+      <h1>Cumhuriyet Sitesi<br />Resmi Yönetim Portalı</h1>
+      <p>Güncel duyurular, site yönetimi hizmetleri ve site sakinlerine özel üyelik alanı tek bir çatı altında. Modern, güvenli ve huzurlu yaşamın adresi.</p>
+      <div class="hero-actions">
+        <a href="/kayit" class="btn btn-primary">Üye Ol</a>
+        <a href="/duyurular" class="btn btn-outline">Duyuruları Gör</a>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="hero-card">
+        <span class="hero-card-icon">🏢</span>
+        <h3>Site Yönetimi</h3>
+        <p>Şeffaf ve erişilebilir yönetim anlayışı</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <h2>Güncel Duyurular</h2>
+      <a href="/duyurular" class="section-link">Tümünü Gör →</a>
+    </div>
+
+    <% if (duyurular.length === 0) { %>
+      <p class="empty-state">Henüz duyuru bulunmuyor.</p>
+    <% } else { %>
+      <div class="card-grid">
+        <% duyurular.forEach(function(d) { %>
+          <article class="duyuru-card">
+            <div class="duyuru-card-top">
+              <span class="badge badge-<%= d.onemli ? 'onemli' : 'genel' %>"><%= d.onemli ? 'Önemli' : d.kategori %></span>
+              <time><%= d.olusturma_tarihi.split(' ')[0] %></time>
+            </div>
+            <h3><a href="/duyuru/<%= d.id %>"><%= d.baslik %></a></h3>
+            <p><%= d.icerik.length > 120 ? d.icerik.substring(0, 120) + '...' : d.icerik %></p>
+            <a href="/duyuru/<%= d.id %>" class="card-link">Devamını oku →</a>
+          </article>
+        <% }); %>
+      </div>
+    <% } %>
+  </div>
+</section>
+
+<section class="section section-alt">
+  <div class="container">
+    <div class="feature-grid">
+      <div class="feature-item">
+        <span class="feature-icon">📢</span>
+        <h3>Anlık Duyurular</h3>
+        <p>Site ile ilgili tüm önemli gelişmelerden ilk siz haberdar olun.</p>
+      </div>
+      <div class="feature-item">
+        <span class="feature-icon">👥</span>
+        <h3>Üyelik Sistemi</h3>
+        <p>Daire numaranız ve telefonunuzla kayıt olun, size özel alana erişin.</p>
+      </div>
+      <div class="feature-item">
+        <span class="feature-icon">🏗️</span>
+        <h3>Kentsel Dönüşüm</h3>
+        <p>Sitemizin dönüşüm sürecini adım adım takip edin.</p>
+      </div>
+      <div class="feature-item">
+        <span class="feature-icon">💬</span>
+        <h3>Canlı Destek</h3>
+        <p>Sorularınız için yönetim ile canlı sohbet üzerinden iletişime geçin.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

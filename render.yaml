@@ -1,0 +1,29 @@
+# Render.com dağıtım yapılandırması
+# https://render.com adresinde ücretsiz hesap açıp bu repoyu bağlayın.
+#
+# NOT: Ücretsiz (free) planda kalıcı disk YOKTUR; üye/duyuru verileri her
+# yeniden başlatmada sıfırlanır. Verilerin kalıcı olması için "disk" bölümünü
+# etkinleştirip planı "starter" (ücretli) yapın VEYA veritabanını ücretsiz
+# PostgreSQL'e taşıyın.
+
+services:
+  - type: web
+    name: cumhuriyet-sitesi
+    runtime: docker
+    rootDir: cumhuriyet-sitesi
+    dockerfilePath: ./Dockerfile
+    plan: free
+    envVars:
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false        # Render panelinden gizli olarak girin
+      - key: DB_DIR
+        value: /data
+    # --- Kalıcı veri için (ücretli 'starter' plan gerekir) ---
+    # disk:
+    #   name: cumhuriyet-data
+    #   mountPath: /data
+    #   sizeGB: 1

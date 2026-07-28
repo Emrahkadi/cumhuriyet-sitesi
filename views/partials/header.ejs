@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= typeof sayfaBaslik !== 'undefined' ? sayfaBaslik + ' - ' : '' %>Cumhuriyet Sitesi</title>
+  <meta name="description" content="Cumhuriyet Sitesi resmi web sitesi - duyurular, iletişim, kentsel dönüşüm ve site sakinleri üyelik portalı." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="/" class="logo">
+        <span class="logo-mark">🏙️</span>
+        <span class="logo-text">Cumhuriyet <strong>Sitesi</strong></span>
+      </a>
+
+      <button class="nav-toggle" id="navToggle" aria-label="Menü">
+        <span></span><span></span><span></span>
+      </button>
+
+      <nav class="main-nav" id="mainNav">
+        <a href="/" class="<%= aktifSayfa === 'anasayfa' ? 'active' : '' %>">Ana Sayfa</a>
+        <a href="/duyurular" class="<%= aktifSayfa === 'duyurular' ? 'active' : '' %>">Duyurular</a>
+        <a href="/hakkinda" class="<%= aktifSayfa === 'hakkinda' ? 'active' : '' %>">Hakkımızda</a>
+        <a href="/kentsel-donusum" class="<%= aktifSayfa === 'kentsel-donusum' ? 'active' : '' %>">Kentsel Dönüşüm</a>
+        <a href="/iletisim" class="<%= aktifSayfa === 'iletisim' ? 'active' : '' %>">İletişim</a>
+
+        <% if (uye) { %>
+          <a href="/panel" class="nav-cta <%= aktifSayfa === 'panel' ? 'active' : '' %>">Panelim</a>
+          <a href="/cikis" class="nav-logout">Çıkış</a>
+        <% } else { %>
+          <a href="/giris" class="nav-cta <%= aktifSayfa === 'giris' ? 'active' : '' %>">Giriş Yap</a>
+        <% } %>
+      </nav>
+    </div>
+  </header>
+
+  <% if (basari && basari.length) { %>
+    <div class="container"><div class="alert alert-success"><%= basari %></div></div>
+  <% } %>
+  <% if (hata && hata.length) { %>
+    <div class="container"><div class="alert alert-error"><%= hata %></div></div>
+  <% } %>
+
+  <main>

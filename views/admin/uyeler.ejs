@@ -1,0 +1,46 @@
+<%- include('partials/header', { sayfaBaslik: 'Üyeler' }) %>
+
+<div class="admin-panel-box">
+  <h2>Site Sakinleri (<%= uyeler.length %>)</h2>
+  <p class="admin-hint">Onay bekleyen üyeleri onaylayarak giriş yapmalarını sağlayabilirsiniz.</p>
+  <% if (uyeler.length === 0) { %>
+    <p class="empty-state">Henüz kayıtlı üye yok.</p>
+  <% } else { %>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr><th>Ad Soyad</th><th>Daire No</th><th>Telefon</th><th>Durum</th><th>Kayıt</th><th>İşlem</th></tr>
+        </thead>
+        <tbody>
+          <% uyeler.forEach(function(u) { %>
+            <tr>
+              <td><%= u.ad_soyad %></td>
+              <td><%= u.daire_no %></td>
+              <td><%= u.telefon %></td>
+              <td>
+                <% if (u.onayli) { %>
+                  <span class="badge badge-onayli">Onaylı</span>
+                <% } else { %>
+                  <span class="badge badge-bekliyor">Bekliyor</span>
+                <% } %>
+              </td>
+              <td><%= u.olusturma_tarihi.split(' ')[0] %></td>
+              <td class="td-islem">
+                <% if (!u.onayli) { %>
+                  <form action="/yonetim/uyeler/onayla/<%= u.id %>" method="POST">
+                    <button type="submit" class="btn-onayla">Onayla</button>
+                  </form>
+                <% } %>
+                <form action="/yonetim/uyeler/sil/<%= u.id %>" method="POST" onsubmit="return confirm('Bu üye silinsin mi?');">
+                  <button type="submit" class="btn-sil">Sil</button>
+                </form>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</div>
+
+<%- include('partials/footer') %>

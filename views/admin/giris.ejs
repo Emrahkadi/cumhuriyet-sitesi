@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yönetici Girişi - Cumhuriyet Sitesi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="admin-login-body">
+  <div class="admin-login-wrap">
+    <div class="admin-login-card">
+      <div class="admin-login-logo">🏙️ Cumhuriyet Sitesi</div>
+      <h1>Yönetici Girişi</h1>
+
+      <% if (hata && hata.length) { %>
+        <div class="alert alert-error"><%= hata %></div>
+      <% } %>
+
+      <form action="/yonetim/giris" method="POST" class="form">
+        <div class="form-group">
+          <label for="kullanici_adi">Kullanıcı Adı</label>
+          <input type="text" id="kullanici_adi" name="kullanici_adi" required autofocus />
+        </div>
+        <div class="form-group">
+          <label for="sifre">Şifre</label>
+          <input type="password" id="sifre" name="sifre" required />
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Giriş Yap</button>
+      </form>
+
+      <a href="/" class="admin-login-back">← Siteye dön</a>
+    </div>
+  </div>
+</body>
+</html>

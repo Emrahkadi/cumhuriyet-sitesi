@@ -1,0 +1,44 @@
+<%- include('partials/header', { sayfaBaslik: 'Özet' }) %>
+
+<div class="stat-grid">
+  <div class="stat-card stat-blue">
+    <span class="stat-icon">👥</span>
+    <div>
+      <span class="stat-value"><%= istatistik.uyeSayisi %></span>
+      <span class="stat-label">Toplam Üye</span>
+    </div>
+  </div>
+  <div class="stat-card stat-orange">
+    <span class="stat-icon">⏳</span>
+    <div>
+      <span class="stat-value"><%= istatistik.bekleyenUye %></span>
+      <span class="stat-label">Onay Bekleyen</span>
+    </div>
+  </div>
+  <div class="stat-card stat-green">
+    <span class="stat-icon">📢</span>
+    <div>
+      <span class="stat-value"><%= istatistik.duyuruSayisi %></span>
+      <span class="stat-label">Duyuru</span>
+    </div>
+  </div>
+  <div class="stat-card stat-purple">
+    <span class="stat-icon">✉️</span>
+    <div>
+      <span class="stat-value"><%= istatistik.okunmamisMesaj %></span>
+      <span class="stat-label">Okunmamış Mesaj</span>
+    </div>
+  </div>
+</div>
+
+<div class="admin-quick">
+  <h2>Hızlı İşlemler</h2>
+  <div class="quick-links">
+    <a href="/yonetim/duyurular" class="quick-link">📢 Yeni Duyuru Ekle</a>
+    <a href="/yonetim/uyeler" class="quick-link">👥 Üyeleri Yönet</a>
+    <a href="/yonetim/kentsel-donusum" class="quick-link">🏗️ Kentsel Dönüşüm</a>
+    <a href="/yonetim/mesajlar" class="quick-link">✉️ Mesajları Gör</a>
+  </div>
+</div>
+
+<%- include('partials/footer') %>
