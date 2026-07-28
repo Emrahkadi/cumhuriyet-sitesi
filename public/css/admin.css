@@ -234,8 +234,8 @@
 .harita {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 10;
-  min-height: 420px;
+  aspect-ratio: 7 / 5;
+  min-height: 440px;
   border-radius: var(--radius);
   border: 1px solid var(--kenarlik);
   overflow: hidden;
