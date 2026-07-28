@@ -69,7 +69,7 @@
                     <button type="submit" class="btn-onayla">Ödendi</button>
                   </form>
                 <% } %>
-                <form action="/yonetim/aidatlar/sil/<%= a.id %>" method="POST" onsubmit="return confirm('Bu aidat kaydı silinsin mi?');">
+                <form action="/yonetim/aidatlar/sil/<%= a.id %>" method="POST" data-confirm="Bu aidat kaydı silinsin mi?">
                   <button type="submit" class="btn-sil">Sil</button>
                 </form>
               </td>

@@ -8,3 +8,18 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 });
+
+// Onay gerektiren form gönderimleri (CSP uyumlu; inline onsubmit yerine)
+document.addEventListener(
+  'submit',
+  function (e) {
+    var f = e.target;
+    if (f && f.getAttribute) {
+      var mesaj = f.getAttribute('data-confirm');
+      if (mesaj && !window.confirm(mesaj)) {
+        e.preventDefault();
+      }
+    }
+  },
+  true
+);

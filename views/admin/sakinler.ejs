@@ -125,7 +125,7 @@
     <% } else { %>
       <% sakinler.forEach(function(s) { %>
         <form id="guncelle-<%= s.id %>" action="/yonetim/sakinler/guncelle/<%= s.id %>" method="POST"></form>
-        <form id="sil-<%= s.id %>" action="/yonetim/sakinler/sil/<%= s.id %>" method="POST" onsubmit="return confirm('Bu kayıt silinsin mi?');">
+        <form id="sil-<%= s.id %>" action="/yonetim/sakinler/sil/<%= s.id %>" method="POST" data-confirm="Bu kayıt silinsin mi?">
           <input type="hidden" name="donus_blok" value="<%= blok %>" />
         </form>
       <% }); %>

@@ -31,7 +31,7 @@
                     <button type="submit" class="btn-onayla">Onayla</button>
                   </form>
                 <% } %>
-                <form action="/yonetim/uyeler/sil/<%= u.id %>" method="POST" onsubmit="return confirm('Bu üye silinsin mi?');">
+                <form action="/yonetim/uyeler/sil/<%= u.id %>" method="POST" data-confirm="Bu üye silinsin mi?">
                   <button type="submit" class="btn-sil">Sil</button>
                 </form>
               </td>

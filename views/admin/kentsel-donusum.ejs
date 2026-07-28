@@ -42,7 +42,7 @@
               <td><span class="badge badge-durum"><%= m.durum %></span></td>
               <td><%= m.olusturma_tarihi.split(' ')[0] %></td>
               <td>
-                <form action="/yonetim/kentsel-donusum/sil/<%= m.id %>" method="POST" onsubmit="return confirm('Bu kayıt silinsin mi?');">
+                <form action="/yonetim/kentsel-donusum/sil/<%= m.id %>" method="POST" data-confirm="Bu kayıt silinsin mi?">
                   <button type="submit" class="btn-sil">Sil</button>
                 </form>
               </td>

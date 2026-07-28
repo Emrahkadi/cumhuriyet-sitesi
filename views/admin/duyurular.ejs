@@ -48,7 +48,7 @@
               <td><%= d.olusturma_tarihi.split(' ')[0] %></td>
               <td><%= d.onemli ? '⭐' : '-' %></td>
               <td>
-                <form action="/yonetim/duyurular/sil/<%= d.id %>" method="POST" onsubmit="return confirm('Bu duyuru silinsin mi?');">
+                <form action="/yonetim/duyurular/sil/<%= d.id %>" method="POST" data-confirm="Bu duyuru silinsin mi?">
                   <button type="submit" class="btn-sil">Sil</button>
                 </form>
               </td>
