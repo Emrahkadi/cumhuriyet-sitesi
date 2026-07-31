@@ -573,6 +573,9 @@ time { color: var(--metin-acik); font-size: 0.82rem; }
 .footer-col ul li { margin-bottom: 8px; }
 .footer-col ul a { font-size: 0.9rem; transition: 0.2s; }
 .footer-col ul a:hover { color: #fff; padding-left: 4px; }
+.footer-col a[href^="tel:"] { color: #c8cdd8; }
+.footer-col a[href^="tel:"]:hover { color: #fff; }
+.footer-col small { opacity: 0.7; margin-left: 4px; }
 .footer-bottom { border-top: 1px solid rgba(255, 255, 255, 0.1); padding: 20px 0; }
 .footer-bottom p { text-align: center; font-size: 0.85rem; color: #8a92a3; }
 
