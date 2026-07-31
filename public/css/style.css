@@ -158,6 +158,34 @@ img { max-width: 100%; display: block; }
 .hero-card-icon { font-size: 3rem; display: block; margin-bottom: 14px; }
 .hero-card h3 { font-size: 1.3rem; margin-bottom: 8px; }
 
+/* ---------- Hero görsel varyantı (site giriş kapısı arka planı) ---------- */
+.hero-image {
+  position: relative;
+  background-image: url('/images/site-giris.jpg');
+  background-size: cover;
+  background-position: center;
+  color: #fff;
+}
+.hero-image .hero-content h1,
+.hero-image .hero-content p { color: #fff; }
+.hero-image .hero-badge {
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+.hero-image .hero-card {
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+.hero-image .btn-outline { border-color: #fff; color: #fff; }
+.hero-image .btn-outline:hover { background: #fff; color: var(--renk-ana); }
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(30, 90, 168, 0.62) 0%, rgba(22, 67, 125, 0.55) 100%);
+  z-index: 0;
+}
+.hero-image .container { position: relative; z-index: 1; }
+
 /* ---------- Section ---------- */
 .section { padding: 70px 0; }
 .section-alt { background: var(--beyaz); }
