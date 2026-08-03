@@ -575,6 +575,8 @@ time { color: var(--metin-acik); font-size: 0.82rem; }
 .footer-col ul a:hover { color: #fff; padding-left: 4px; }
 .footer-col a[href^="tel:"] { color: #c8cdd8; }
 .footer-col a[href^="tel:"]:hover { color: #fff; }
+.footer-col a[href^="mailto:"] { color: #c8cdd8; }
+.footer-col a[href^="mailto:"]:hover { color: #fff; text-decoration: underline; }
 .footer-col small { opacity: 0.7; margin-left: 4px; }
 .footer-bottom { border-top: 1px solid rgba(255, 255, 255, 0.1); padding: 20px 0; }
 .footer-bottom p { text-align: center; font-size: 0.85rem; color: #8a92a3; }
