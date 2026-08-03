@@ -141,6 +141,13 @@ async function createTables() {
     CREATE INDEX IF NOT EXISTS idx_duyurular_sira ON duyurular (onemli DESC, id DESC);
     CREATE INDEX IF NOT EXISTS idx_mesajlar_okundu ON mesajlar (okundu);
   `);
+
+  // Mevcut tablolara yeni sütunları idempotent şekilde ekle
+  await pool.query(`
+    ALTER TABLE uyeler ADD COLUMN IF NOT EXISTS email TEXT;
+    ALTER TABLE uyeler ADD COLUMN IF NOT EXISTS email_dogrulandi INTEGER NOT NULL DEFAULT 0;
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_uyeler_email ON uyeler (email) WHERE email IS NOT NULL;
+  `);
 }
 
 // --- Varsayılan yönetici ---
