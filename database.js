@@ -43,10 +43,25 @@ async function createTables() {
       ad_soyad TEXT NOT NULL,
       daire_no TEXT NOT NULL,
       telefon TEXT NOT NULL UNIQUE,
+      email TEXT UNIQUE,
+      email_dogrulandi INTEGER NOT NULL DEFAULT 0,
       sifre_hash TEXT NOT NULL,
       onayli INTEGER NOT NULL DEFAULT 0,
       olusturma_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
     );
+
+    -- E-posta doğrulama ve şifre sıfırlama kodları (15 dk geçerli)
+    CREATE TABLE IF NOT EXISTS uye_dogrulama_kodlari (
+      id SERIAL PRIMARY KEY,
+      uye_id INTEGER REFERENCES uyeler(id) ON DELETE CASCADE,
+      email TEXT NOT NULL,
+      kod TEXT NOT NULL,
+      amac TEXT NOT NULL,
+      son_kullanma TEXT NOT NULL,
+      kullanildi INTEGER NOT NULL DEFAULT 0,
+      olusturma_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
+    );
+    CREATE INDEX IF NOT EXISTS idx_dogrulama_kod ON uye_dogrulama_kodlari (email, amac, kullanildi);
 
     CREATE TABLE IF NOT EXISTS yoneticiler (
       id SERIAL PRIMARY KEY,

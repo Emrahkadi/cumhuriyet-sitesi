@@ -5,7 +5,7 @@
     <div class="auth-wrap">
       <div class="auth-card">
         <h1>Üye Ol</h1>
-        <p class="auth-sub">Daire bilgilerinizle kayıt olun. Kaydınız yönetici onayından sonra aktifleşir.</p>
+        <p class="auth-sub">Daire bilgilerinizle kayıt olun. E-postanıza gelen kodla üyeliğinizi doğrulayın, sonra yönetici onayı beklenir.</p>
         <form action="/kayit" method="POST" class="form">
           <div class="form-group">
             <label for="ad_soyad">Ad Soyad</label>
@@ -18,6 +18,11 @@
           <div class="form-group">
             <label for="telefon">Telefon Numarası</label>
             <input type="tel" id="telefon" name="telefon" placeholder="05__ ___ __ __" required />
+          </div>
+          <div class="form-group">
+            <label for="email">E-posta <span class="zorunlu">*</span></label>
+            <input type="email" id="email" name="email" placeholder="ornek@email.com" required />
+            <small>Şifre sıfırlama bu e-postaya gönderilecek.</small>
           </div>
           <div class="form-row">
             <div class="form-group">

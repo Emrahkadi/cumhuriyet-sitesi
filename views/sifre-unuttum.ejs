@@ -1,0 +1,54 @@
+<%- include('partials/header', { sayfaBaslik: 'Şifremi Unuttum' }) %>
+
+<section class="section">
+  <div class="container">
+    <div class="auth-wrap">
+      <div class="auth-card">
+        <h1>🔑 Şifremi Unuttum</h1>
+
+        <% if (adim === 'telefon') { %>
+          <p class="auth-sub">Telefon numaranızı ve e-postanızı girin. Eşleşirse e-postanıza sıfırlama kodu göndeririz.</p>
+          <form action="/sifremi-unuttum" method="POST" class="form">
+            <div class="form-group">
+              <label for="telefon">Telefon Numarası</label>
+              <input type="tel" id="telefon" name="telefon" placeholder="05__ ___ __ __" required autofocus />
+            </div>
+            <div class="form-group">
+              <label for="email">E-posta</label>
+              <input type="email" id="email" name="email" placeholder="ornek@email.com" required />
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Kod Gönder</button>
+          </form>
+        <% } else if (adim === 'kod') { %>
+          <p class="auth-sub">
+            <strong><%= email %></strong> adresine 6 haneli sıfırlama kodu gönderdik.
+          </p>
+          <form action="/sifremi-unuttum/kod" method="POST" class="form">
+            <div class="form-group">
+              <label for="kod">Sıfırlama Kodu</label>
+              <input type="text" id="kod" name="kod" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="6 haneli kod" required autofocus style="letter-spacing: 8px; font-size: 1.4rem; text-align: center;" />
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Kodu Doğrula</button>
+          </form>
+        <% } else if (adim === 'yeni') { %>
+          <p class="auth-sub">Kod doğrulandı. Yeni şifrenizi belirleyin.</p>
+          <form action="/sifremi-unuttum/yeni-sifre" method="POST" class="form">
+            <div class="form-group">
+              <label for="sifre">Yeni Şifre</label>
+              <input type="password" id="sifre" name="sifre" minlength="4" required autofocus />
+            </div>
+            <div class="form-group">
+              <label for="sifre_tekrar">Yeni Şifre (Tekrar)</label>
+              <input type="password" id="sifre_tekrar" name="sifre_tekrar" minlength="4" required />
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Şifreyi Güncelle</button>
+          </form>
+        <% } %>
+
+        <p class="auth-alt"><a href="/giris">← Girişe dön</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

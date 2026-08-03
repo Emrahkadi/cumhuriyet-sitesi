@@ -415,6 +415,9 @@ time { color: var(--metin-acik); font-size: 0.82rem; }
 .auth-sub { color: var(--metin-acik); margin-bottom: 24px; font-size: 0.92rem; }
 .auth-alt { text-align: center; margin-top: 18px; color: var(--metin-acik); font-size: 0.92rem; }
 .auth-alt a { color: var(--renk-ana); font-weight: 600; }
+.auth-alt-row { display: flex; justify-content: center; gap: 10px; margin-top: 18px; font-size: 0.92rem; color: var(--metin-acik); }
+.auth-alt-row a { color: var(--renk-ana); font-weight: 600; }
+.zorunlu { color: #c1303f; }
 
 /* ---------- Üye paneli ---------- */
 .panel-grid {

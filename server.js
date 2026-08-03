@@ -17,6 +17,7 @@ const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 
 const { q, pool, init } = require('./database');
+const { gonder: mailGonder, kodUret } = require('./services/mailer');
 
 // Excel yüklemesi için bellekte tutan multer (max 10 MB, sadece .xlsx)
 const upload = multer({
@@ -29,6 +30,13 @@ const PORT = process.env.PORT || 3000;
 
 // Async rota sarmalayıcı (hataları merkezi yakalar)
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
+// Basit HTML escape yardımcısı (e-posta şablonlarında kullanıcı adı için)
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
 
 // --- Görünüm motoru ---
 app.set('view engine', 'ejs');
@@ -65,8 +73,8 @@ app.use(
   })
 );
 
-// --- Performans: gzip sıkıştırma ---
-app.use(compression());
+// --- Performans: gzip sıkıştırma (en yüksek seviye) ---
+app.use(compression({ level: 9, threshold: 512 }));
 
 // --- Genel istek hız sınırı (DoS/kaba kuvvet azaltma) ---
 const genelLimit = rateLimit({
@@ -91,9 +99,36 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(
   express.static(path.join(__dirname, 'public'), {
     maxAge: '7d',
-    etag: true
+    etag: true,
+    setHeaders(res, dosyaYolu) {
+      // Görseller için daha uzun önbellek
+      if (/\.(jpe?g|png|webp|gif|svg|ico)$/i.test(dosyaYolu)) {
+        res.setHeader('Cache-Control', 'public, max-age=2592000, immutable');
+      }
+    }
   })
 );
+
+// SEO: robots.txt ve sitemap.xml
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain').send('User-agent: *\nAllow: /\nDisallow: /yonetim/\nDisallow: /giris\nDisallow: /kayit\nDisallow: /sifremi-unuttum\nSitemap: https://cumhuriyetsitesi.org/sitemap.xml\n');
+});
+
+app.get('/sitemap.xml', (req, res) => {
+  const bugun = new Date().toISOString().split('T')[0];
+  const sayfalar = [
+    { loc: '/', oncelik: '1.0' },
+    { loc: '/duyurular', oncelik: '0.8' },
+    { loc: '/hakkinda', oncelik: '0.6' },
+    { loc: '/kentsel-donusum', oncelik: '0.7' },
+    { loc: '/iletisim', oncelik: '0.6' },
+    { loc: '/kayit', oncelik: '0.4' }
+  ];
+  const xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+    sayfalar.map(s => `  <url><loc>https://cumhuriyetsitesi.org${s.loc}</loc><lastmod>${bugun}</lastmod><changefreq>weekly</changefreq><priority>${s.oncelik}</priority></url>`).join('\n') +
+    '\n</urlset>';
+  res.type('application/xml').send(xml);
+});
 
 app.use(
   session({
@@ -222,12 +257,16 @@ app.get('/kayit', (req, res) => {
   res.render('kayit', { aktifSayfa: 'kayit' });
 });
 
-// Kayıt işlemi
+// Kayıt işlemi (e-posta + telefon doğrulama kodu)
 app.post('/kayit', girisLimit, ah(async (req, res) => {
-  const { ad_soyad, daire_no, telefon, sifre, sifre_tekrar } = req.body;
+  const { ad_soyad, daire_no, telefon, email, sifre, sifre_tekrar } = req.body;
 
-  if (!ad_soyad || !daire_no || !telefon || !sifre) {
-    req.flash('hata', 'Lütfen tüm alanları doldurun.');
+  if (!ad_soyad || !daire_no || !telefon || !email || !sifre) {
+    req.flash('hata', 'Lütfen tüm zorunlu alanları doldurun.');
+    return res.redirect('/kayit');
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    req.flash('hata', 'Geçerli bir e-posta adresi girin.');
     return res.redirect('/kayit');
   }
   if (sifre.length < 4) {
@@ -240,29 +279,211 @@ app.post('/kayit', girisLimit, ah(async (req, res) => {
   }
 
   const temizTelefon = telefon.replace(/\s+/g, '');
-  const mevcut = (await q('SELECT id FROM uyeler WHERE telefon = $1', [temizTelefon])).rows[0];
-  if (mevcut) {
+  const temizEmail = email.trim().toLowerCase();
+
+  const mevcutTel = (await q('SELECT id FROM uyeler WHERE telefon = $1', [temizTelefon])).rows[0];
+  if (mevcutTel) {
     req.flash('hata', 'Bu telefon numarası ile daha önce kayıt yapılmış.');
+    return res.redirect('/kayit');
+  }
+  const mevcutMail = (await q('SELECT id FROM uyeler WHERE email = $1', [temizEmail])).rows[0];
+  if (mevcutMail) {
+    req.flash('hata', 'Bu e-posta adresi ile kayıt mevcut. Şifrenizi unuttuysanız sıfırlayabilirsiniz.');
     return res.redirect('/kayit');
   }
 
   const hash = bcrypt.hashSync(sifre, 10);
-  await q(
-    'INSERT INTO uyeler (ad_soyad, daire_no, telefon, sifre_hash, onayli) VALUES ($1, $2, $3, $4, 0)',
-    [ad_soyad.trim(), daire_no.trim(), temizTelefon, hash]
+  const sonuc = await q(
+    'INSERT INTO uyeler (ad_soyad, daire_no, telefon, email, sifre_hash, onayli) VALUES ($1, $2, $3, $4, $5, 0) RETURNING id',
+    [ad_soyad.trim(), daire_no.trim(), temizTelefon, temizEmail, hash]
   );
+  const yeniUyeId = sonuc.rows[0].id;
+
+  // 6 haneli doğrulama kodu gönder
+  const kod = kodUret();
+  await q(
+    "INSERT INTO uye_dogrulama_kodlari (uye_id, email, kod, amac, son_kullanma) VALUES ($1, $2, $3, 'email_dogrulama', to_char(now() + interval '15 minutes' AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS'))",
+    [yeniUyeId, temizEmail, kod]
+  );
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:24px;border:1px solid #e4e8ee;border-radius:12px;">
+      <h2 style="color:#1e5aa8;margin:0 0 12px;">Cumhuriyet Sitesi</h2>
+      <p>Merhaba <strong>${escapeHtml(ad_soyad)}</strong>,</p>
+      <p>Üyeliğinizi doğrulamak için aşağıdaki 6 haneli kodu kullanın:</p>
+      <div style="font-size:32px;letter-spacing:8px;font-weight:bold;color:#1e5aa8;text-align:center;padding:18px;background:#f0f4fa;border-radius:10px;margin:18px 0;">${kod}</div>
+      <p style="color:#6c757d;font-size:13px;">Bu kod 15 dakika geçerlidir. Eğer bu kaydı siz yapmadıysanız bu e-postayı yok sayabilirsiniz.</p>
+    </div>
+  `;
+  const mailSonuc = await mailGonder(temizEmail, 'Cumhuriyet Sitesi - E-posta Doğrulama Kodu', html);
 
   req.flash(
     'basari',
-    'Kaydınız alındı. Yönetici onayından sonra giriş yapabilirsiniz.'
+    mailSonuc.ok
+      ? (mailSonuc.dev
+          ? 'Geliştirme modu: doğrulama kodu sunucu konsoluna yazıldı (SMTP ayarlı değil).'
+          : 'Doğrulama kodu e-postanıza gönderildi. Lütfen e-postanızı kontrol edin.')
+      : 'Kayıt oluşturuldu fakat doğrulama e-postası gönderilemedi. Yöneticiyle iletişime geçin.'
   );
+  req.session.bekleyenEmail = temizEmail;
+  res.redirect('/kayit/dogrula');
+}));
+
+// E-posta doğrulama sayfası (GET)
+app.get('/kayit/dogrula', (req, res) => {
+  if (!req.session.bekleyenEmail) return res.redirect('/giris');
+  res.render('dogrula', { aktifSayfa: '', email: req.session.bekleyenEmail, mod: 'kayit' });
+});
+
+// E-posta doğrulama işlemi (POST)
+app.post('/kayit/dogrula', girisLimit, ah(async (req, res) => {
+  const email = req.session.bekleyenEmail;
+  if (!email) return res.redirect('/giris');
+  const kod = (req.body.kod || '').trim();
+
+  const bulunan = (await q(
+    "SELECT id, son_kullanma FROM uye_dogrulama_kodlari WHERE email = $1 AND amac = 'email_dogrulama' AND kullanildi = 0 ORDER BY id DESC LIMIT 1",
+    [email]
+  )).rows[0];
+
+  if (!bulunan || bulunan.kod !== kod) {
+    req.flash('hata', 'Kod hatalı veya süresi dolmuş.');
+    return res.redirect('/kayit/dogrula');
+  }
+  const sonKullanma = new Date(bulunan.son_kullanma.replace(' ', 'T'));
+  if (sonKullanma < new Date()) {
+    req.flash('hata', 'Doğrulama kodunun süresi dolmuş. Yeni kod talep edin.');
+    return res.redirect('/kayit/dogrula');
+  }
+
+  await q("UPDATE uye_dogrulama_kodlari SET kullanildi = 1 WHERE id = $1", [bulunan.id]);
+  await q("UPDATE uyeler SET email_dogrulandi = 1 WHERE email = $1", [email]);
+  delete req.session.bekleyenEmail;
+
+  req.flash('basari', 'E-postanız doğrulandı! Hesabınız admin onayına düştü. Onaylandığında giriş yapabilirsiniz.');
   res.redirect('/giris');
+}));
+
+// Doğrulama kodunu yeniden gönder
+app.post('/kayit/dogrula/yeniden', girisLimit, ah(async (req, res) => {
+  const email = req.session.bekleyenEmail;
+  if (!email) return res.redirect('/giris');
+  const uye = (await q('SELECT id, ad_soyad FROM uyeler WHERE email = $1', [email])).rows[0];
+  if (!uye) return res.redirect('/kayit');
+
+  const kod = kodUret();
+  await q(
+    "INSERT INTO uye_dogrulama_kodlari (uye_id, email, kod, amac, son_kullanma) VALUES ($1, $2, $3, 'email_dogrulama', to_char(now() + interval '15 minutes' AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS'))",
+    [uye.id, email, kod]
+  );
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:24px;border:1px solid #e4e8ee;border-radius:12px;">
+      <h2 style="color:#1e5aa8;margin:0 0 12px;">Cumhuriyet Sitesi</h2>
+      <p>Merhaba <strong>${escapeHtml(uye.ad_soyad)}</strong>,</p>
+      <p>Yeni doğrulama kodunuz:</p>
+      <div style="font-size:32px;letter-spacing:8px;font-weight:bold;color:#1e5aa8;text-align:center;padding:18px;background:#f0f4fa;border-radius:10px;margin:18px 0;">${kod}</div>
+      <p style="color:#6c757d;font-size:13px;">Bu kod 15 dakika geçerlidir.</p>
+    </div>
+  `;
+  await mailGonder(email, 'Cumhuriyet Sitesi - Yeni Doğrulama Kodu', html);
+  req.flash('basari', 'Yeni kod e-postanıza gönderildi.');
+  res.redirect('/kayit/dogrula');
 }));
 
 // Giriş formu
 app.get('/giris', (req, res) => {
   res.render('giris', { aktifSayfa: 'giris' });
 });
+
+// --- Şifremi unuttum (telefon + e-posta eşleşmesi ile kod) ---
+app.get('/sifremi-unuttum', (req, res) => {
+  res.render('sifre-unuttum', { aktifSayfa: '', adim: 'telefon' });
+});
+
+app.post('/sifremi-unuttum', girisLimit, ah(async (req, res) => {
+  const telefon = (req.body.telefon || '').replace(/\s+/g, '');
+  const email = (req.body.email || '').trim().toLowerCase();
+  if (!telefon || !email) {
+    req.flash('hata', 'Telefon ve e-posta zorunludur.');
+    return res.redirect('/sifremi-unuttum');
+  }
+  const uye = (await q(
+    'SELECT id, ad_soyad, email_dogrulandi FROM uyeler WHERE telefon = $1 AND email = $2',
+    [telefon, email]
+  )).rows[0];
+
+  // Bilgi sızdırmamak için her durumda aynı mesajı göster
+  req.flash('basari', 'Telefon ve e-posta eşleşiyorsa sıfırlama kodu e-postanıza gönderildi.');
+  if (!uye || !uye.email_dogrulandi) return res.redirect('/giris');
+
+  const kod = kodUret();
+  await q(
+    "INSERT INTO uye_dogrulama_kodlari (uye_id, email, kod, amac, son_kullanma) VALUES ($1, $2, $3, 'sifre_sifirlama', to_char(now() + interval '15 minutes' AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS'))",
+    [uye.id, email, kod]
+  );
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:24px;border:1px solid #e4e8ee;border-radius:12px;">
+      <h2 style="color:#1e5aa8;margin:0 0 12px;">Cumhuriyet Sitesi</h2>
+      <p>Merhaba <strong>${escapeHtml(uye.ad_soyad)}</strong>,</p>
+      <p>Şifrenizi sıfırlamak için aşağıdaki 6 haneli kodu kullanın:</p>
+      <div style="font-size:32px;letter-spacing:8px;font-weight:bold;color:#1e5aa8;text-align:center;padding:18px;background:#f0f4fa;border-radius:10px;margin:18px 0;">${kod}</div>
+      <p style="color:#6c757d;font-size:13px;">Bu kod 15 dakika geçerlidir. Şifre sıfırlama talebi sizden gelmediyse bu e-postayı yok sayın.</p>
+    </div>
+  `;
+  await mailGonder(email, 'Cumhuriyet Sitesi - Şifre Sıfırlama Kodu', html);
+  req.session.sifreSifirlama = { uyeId: uye.id, email };
+  res.redirect('/sifremi-unuttum/kod');
+}));
+
+app.get('/sifremi-unuttum/kod', (req, res) => {
+  if (!req.session.sifreSifirlama) return res.redirect('/sifremi-unuttum');
+  res.render('sifre-unuttum', { aktifSayfa: '', adim: 'kod', email: req.session.sifreSifirlama.email });
+});
+
+app.post('/sifremi-unuttum/kod', girisLimit, ah(async (req, res) => {
+  const bilgi = req.session.sifreSifirlama;
+  if (!bilgi) return res.redirect('/sifremi-unuttum');
+  const kod = (req.body.kod || '').trim();
+  const bulunan = (await q(
+    "SELECT id, son_kullanma FROM uye_dogrulama_kodlari WHERE uye_id = $1 AND amac = 'sifre_sifirlama' AND kullanildi = 0 ORDER BY id DESC LIMIT 1",
+    [bilgi.uyeId]
+  )).rows[0];
+
+  if (!bulunan || bulunan.kod !== kod) {
+    req.flash('hata', 'Kod hatalı veya süresi dolmuş.');
+    return res.redirect('/sifremi-unuttum/kod');
+  }
+  if (new Date(bulunan.son_kullanma.replace(' ', 'T')) < new Date()) {
+    req.flash('hata', 'Sıfırlama kodunun süresi dolmuş.');
+    return res.redirect('/sifremi-unuttum');
+  }
+  await q("UPDATE uye_dogrulama_kodlari SET kullanildi = 1 WHERE id = $1", [bulunan.id]);
+  req.session.sifreSifirlama.dogrulandi = true;
+  res.redirect('/sifremi-unuttum/yeni-sifre');
+}));
+
+app.get('/sifremi-unuttum/yeni-sifre', (req, res) => {
+  if (!req.session.sifreSifirlama || !req.session.sifreSifirlama.dogrulandi) return res.redirect('/sifremi-unuttum');
+  res.render('sifre-unuttum', { aktifSayfa: '', adim: 'yeni', email: req.session.sifreSifirlama.email });
+});
+
+app.post('/sifremi-unuttum/yeni-sifre', girisLimit, ah(async (req, res) => {
+  const bilgi = req.session.sifreSifirlama;
+  if (!bilgi || !bilgi.dogrulandi) return res.redirect('/sifremi-unuttum');
+  const yeni = req.body.sifre || '';
+  const yeniTekrar = req.body.sifre_tekrar || '';
+  if (yeni.length < 4 || yeni !== yeniTekrar) {
+    req.flash('hata', 'Şifre en az 4 karakter olmalı ve eşleşmeli.');
+    return res.redirect('/sifremi-unuttum/yeni-sifre');
+  }
+  const hash = bcrypt.hashSync(yeni, 10);
+  await q('UPDATE uyeler SET sifre_hash = $1 WHERE id = $2', [hash, bilgi.uyeId]);
+  delete req.session.sifreSifirlama;
+  req.flash('basari', 'Şifreniz güncellendi. Yeni şifrenizle giriş yapabilirsiniz.');
+  res.redirect('/giris');
+}));
 
 // Giriş işlemi (hem yönetici hem site sakini aynı formdan giriş yapar)
 app.post('/giris', girisLimit, ah(async (req, res) => {

@@ -1,0 +1,30 @@
+<%- include('partials/header', { sayfaBaslik: 'E-posta Doğrulama' }) %>
+
+<section class="section">
+  <div class="container">
+    <div class="auth-wrap">
+      <div class="auth-card">
+        <h1>📧 E-postanı Doğrula</h1>
+        <p class="auth-sub">
+          <strong><%= email %></strong> adresine 6 haneli doğrulama kodu gönderdik.
+          E-postanı kontrol et, kodu aşağıya yaz.
+        </p>
+        <form action="/kayit/dogrula" method="POST" class="form">
+          <div class="form-group">
+            <label for="kod">Doğrulama Kodu</label>
+            <input type="text" id="kod" name="kod" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="6 haneli kod" required autofocus style="letter-spacing: 8px; font-size: 1.4rem; text-align: center;" />
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">Doğrula</button>
+        </form>
+
+        <form action="/kayit/dogrula/yeniden" method="POST" class="form" style="margin-top: 10px;">
+          <button type="submit" class="btn btn-outline btn-block">Kodu Yeniden Gönder</button>
+        </form>
+
+        <p class="auth-alt">Kod 15 dakika geçerlidir. Spam klasörünü de kontrol etmeyi unutma.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>
