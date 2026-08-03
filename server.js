@@ -302,7 +302,7 @@ app.post('/kayit', girisLimit, ah(async (req, res) => {
   // 6 haneli doğrulama kodu gönder
   const kod = kodUret();
   await q(
-    "INSERT INTO uye_dogrulama_kodlari (uye_id, email, kod, amac, son_kullanma) VALUES ($1, $2, $3, 'email_dogrulama', to_char(now() + interval '15 minutes' AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS'))",
+    "INSERT INTO uye_dogrulama_kodlari (uye_id, email, kod, amac, son_kullanma) VALUES ($1, $2, $3, 'email_dogrulama', to_char((now() AT TIME ZONE 'Europe/Istanbul') + interval '15 minutes', 'YYYY-MM-DD HH24:MI:SS'))",
     [yeniUyeId, temizEmail, kod]
   );
 
@@ -373,7 +373,7 @@ app.post('/kayit/dogrula/yeniden', girisLimit, ah(async (req, res) => {
 
   const kod = kodUret();
   await q(
-    "INSERT INTO uye_dogrulama_kodlari (uye_id, email, kod, amac, son_kullanma) VALUES ($1, $2, $3, 'email_dogrulama', to_char(now() + interval '15 minutes' AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS'))",
+    "INSERT INTO uye_dogrulama_kodlari (uye_id, email, kod, amac, son_kullanma) VALUES ($1, $2, $3, 'email_dogrulama', to_char((now() AT TIME ZONE 'Europe/Istanbul') + interval '15 minutes', 'YYYY-MM-DD HH24:MI:SS'))",
     [uye.id, email, kod]
   );
 
@@ -419,7 +419,7 @@ app.post('/sifremi-unuttum', girisLimit, ah(async (req, res) => {
 
   const kod = kodUret();
   await q(
-    "INSERT INTO uye_dogrulama_kodlari (uye_id, email, kod, amac, son_kullanma) VALUES ($1, $2, $3, 'sifre_sifirlama', to_char(now() + interval '15 minutes' AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS'))",
+    "INSERT INTO uye_dogrulama_kodlari (uye_id, email, kod, amac, son_kullanma) VALUES ($1, $2, $3, 'sifre_sifirlama', to_char((now() AT TIME ZONE 'Europe/Istanbul') + interval '15 minutes', 'YYYY-MM-DD HH24:MI:SS'))",
     [uye.id, email, kod]
   );
 
