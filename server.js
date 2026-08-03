@@ -342,12 +342,14 @@ app.post('/kayit/dogrula', girisLimit, ah(async (req, res) => {
   const kod = (req.body.kod || '').trim();
 
   const bulunan = (await q(
-    "SELECT id, son_kullanma FROM uye_dogrulama_kodlari WHERE email = $1 AND amac = 'email_dogrulama' AND kullanildi = 0 ORDER BY id DESC LIMIT 1",
+    "SELECT id, kod, son_kullanma FROM uye_dogrulama_kodlari WHERE email = $1 AND amac = 'email_dogrulama' AND kullanildi = 0 ORDER BY id DESC LIMIT 1",
     [email]
   )).rows[0];
 
-  if (!bulunan || bulunan.kod !== kod) {
-    req.flash('hata', 'Kod hatalı veya süresi dolmuş.');
+  console.log('[DOGRULA]', { email, kodGirilen: kod, kodDb: bulunan ? bulunan.kod : null, sonKullanma: bulunan ? bulunan.son_kullanma : null });
+
+  if (!bulunan || bulunan.kod !== kod.trim()) {
+    req.flash('hata', 'Kod hatalı veya süresi dolmuş. (E-posta: ' + email + ', DB\'de kayıt: ' + (bulunan ? 'var, kod eşleşmedi' : 'yok') + ')');
     return res.redirect('/kayit/dogrula');
   }
   const sonKullanma = new Date(bulunan.son_kullanma.replace(' ', 'T'));
@@ -451,7 +453,7 @@ app.post('/sifremi-unuttum/kod', girisLimit, ah(async (req, res) => {
     [bilgi.uyeId]
   )).rows[0];
 
-  if (!bulunan || bulunan.kod !== kod) {
+  if (!bulunan || bulunan.kod !== kod.trim()) {
     req.flash('hata', 'Kod hatalı veya süresi dolmuş.');
     return res.redirect('/sifremi-unuttum/kod');
   }
