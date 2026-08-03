@@ -39,11 +39,11 @@ function escapeHtml(s) {
 }
 
 // Sitenin blokları ve her bloktaki daire sayısı (Excel verisinden)
-// "büyük" bloklar: 1-42, küçük bloklar: 1-22. Excel'deki etiket "I" ve "İ" ayrı tutulur.
+// "Büyük" bloklar (A, D, H, J): 1-40; "küçük" bloklar: 1-20.
 const BLOK_DAIRE_SAYILARI = {
-  A: 42, D: 42, H: 42, J: 42,
-  B: 22, C: 22, E: 22, F: 22, G: 22,
-  I: 22, 'İ': 22
+  A: 40, D: 40, H: 40, J: 40,
+  B: 20, C: 20, E: 20, F: 20, G: 20,
+  I: 20, 'İ': 20
 };
 const BLOK_LISTESI = ['A','B','C','D','E','F','G','H','I','İ','J'];
 
@@ -275,14 +275,20 @@ app.get('/kayit', (req, res) => {
 
 // Kayıt işlemi (e-posta + telefon doğrulama kodu)
 app.post('/kayit', girisLimit, ah(async (req, res) => {
-  const { ad_soyad, daire_no, telefon, email, sifre, sifre_tekrar } = req.body;
+  const { ad_soyad, blok, daire, telefon, email, sifre, sifre_tekrar } = req.body;
 
-  if (!ad_soyad || !daire_no || !telefon || !email || !sifre) {
+  if (!ad_soyad || !blok || !daire || !telefon || !email || !sifre) {
     req.flash('hata', 'Lütfen tüm zorunlu alanları doldurun.');
     return res.redirect('/kayit');
   }
-  // Daire formatı: "A/27", "İ/5" vb. — doğrula
-  if (!/^[A-HJİI]\/(0?[1-9]|[1-3][0-9]|40|41|42)$/.test(daire_no) && !/^[A-HJİI]\/(0?[1-9]|1[0-9]|20|21|22)$/.test(daire_no)) {
+  // Blok doğrulama (A,B,C,D,E,F,G,H,I,İ,J)
+  if (!BLOK_LISTESI.includes(blok)) {
+    req.flash('hata', 'Geçersiz blok seçimi.');
+    return res.redirect('/kayit');
+  }
+  // Daire doğrulama (1 - blok kapasitesi arası)
+  const daireNo = parseInt(daire, 10);
+  if (!Number.isInteger(daireNo) || daireNo < 1 || daireNo > BLOK_DAIRE_SAYILARI[blok]) {
     req.flash('hata', 'Geçersiz daire seçimi.');
     return res.redirect('/kayit');
   }
@@ -301,6 +307,8 @@ app.post('/kayit', girisLimit, ah(async (req, res) => {
 
   const temizTelefon = telefon.replace(/\s+/g, '');
   const temizEmail = email.trim().toLowerCase();
+  // Görüntüleme için "A/27" gibi sakla, eski kayıtlarla uyumlu kalsın
+  const daireEtiket = blok + '/' + daireNo;
 
   const mevcutTel = (await q('SELECT id FROM uyeler WHERE telefon = $1', [temizTelefon])).rows[0];
   if (mevcutTel) {
@@ -316,7 +324,7 @@ app.post('/kayit', girisLimit, ah(async (req, res) => {
   const hash = bcrypt.hashSync(sifre, 10);
   const sonuc = await q(
     'INSERT INTO uyeler (ad_soyad, daire_no, telefon, email, sifre_hash, onayli) VALUES ($1, $2, $3, $4, $5, 0) RETURNING id',
-    [ad_soyad.trim(), daire_no.trim(), temizTelefon, temizEmail, hash]
+    [ad_soyad.trim(), daireEtiket, temizTelefon, temizEmail, hash]
   );
   const yeniUyeId = sonuc.rows[0].id;
 
