@@ -8,6 +8,48 @@
   });
 %>
 <script id="daireler-data" type="application/json"><%- JSON.stringify(dairelerMap) %></script>
+<script>
+  (function () {
+    function bagla() {
+      var blokSel = document.getElementById('blok_select');
+      var daireSel = document.getElementById('daire_no');
+      var dataEl = document.getElementById('daireler-data');
+      if (!blokSel || !daireSel || !dataEl) return;
+      var harita;
+      try { harita = JSON.parse(dataEl.textContent || '{}'); } catch (e) { return; }
+      function guncelle() {
+        var blok = blokSel.value;
+        daireSel.innerHTML = '';
+        if (!blok || !harita[blok]) {
+          var o0 = document.createElement('option');
+          o0.value = ''; o0.textContent = 'Önce blok seçin';
+          daireSel.appendChild(o0);
+          daireSel.disabled = true;
+          return;
+        }
+        var oi = document.createElement('option');
+        oi.value = ''; oi.textContent = '— Daire —';
+        daireSel.appendChild(oi);
+        harita[blok].forEach(function (n) {
+          var o = document.createElement('option');
+          o.value = blok + '/' + n;
+          o.textContent = blok + '/' + n;
+          daireSel.appendChild(o);
+        });
+        daireSel.disabled = false;
+      }
+      blokSel.addEventListener('change', guncelle);
+      blokSel.addEventListener('input', guncelle);
+      blokSel.addEventListener('blur', guncelle);
+      if (blokSel.value) guncelle();
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', bagla);
+    } else {
+      bagla();
+    }
+  })();
+</script>
 
 <section class="section">
   <div class="container">
