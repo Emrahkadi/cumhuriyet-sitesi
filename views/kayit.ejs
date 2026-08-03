@@ -1,5 +1,14 @@
 <%- include('partials/header', { sayfaBaslik: 'Üye Ol' }) %>
 
+<%
+  // JS'in kullanacağı blok -> daire listesi haritası
+  var dairelerMap = {};
+  (daireler || []).forEach(function(d) {
+    dairelerMap[d.blok] = d.secenekler;
+  });
+%>
+<script id="daireler-data" type="application/json"><%- JSON.stringify(dairelerMap) %></script>
+
 <section class="section">
   <div class="container">
     <div class="auth-wrap">
@@ -11,9 +20,22 @@
             <label for="ad_soyad">Ad Soyad</label>
             <input type="text" id="ad_soyad" name="ad_soyad" required />
           </div>
-          <div class="form-group">
-            <label for="daire_no">Daire No</label>
-            <input type="text" id="daire_no" name="daire_no" placeholder="Örn: A-12" required />
+          <div class="form-row">
+            <div class="form-group">
+              <label for="blok_select">Blok</label>
+              <select id="blok_select" required>
+                <option value="">— Seçin —</option>
+                <% daireler.forEach(function(d) { %>
+                  <option value="<%= d.blok %>"><%= d.etiket %> blok</option>
+                <% }); %>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="daire_no">Daire</label>
+              <select id="daire_no" name="daire_no" required disabled>
+                <option value="">Önce blok seçin</option>
+              </select>
+            </div>
           </div>
           <div class="form-group">
             <label for="telefon">Telefon Numarası</label>

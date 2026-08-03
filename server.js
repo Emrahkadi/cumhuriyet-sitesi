@@ -38,6 +38,15 @@ function escapeHtml(s) {
   }[c]));
 }
 
+// Sitenin blokları ve her bloktaki daire sayısı (Excel verisinden)
+// "büyük" bloklar: 1-42, küçük bloklar: 1-22. Excel'deki etiket "I" ve "İ" ayrı tutulur.
+const BLOK_DAIRE_SAYILARI = {
+  A: 42, D: 42, H: 42, J: 42,
+  B: 22, C: 22, E: 22, F: 22, G: 22,
+  I: 22, 'İ': 22
+};
+const BLOK_LISTESI = ['A','B','C','D','E','F','G','H','I','İ','J'];
+
 // --- Görünüm motoru ---
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -252,9 +261,16 @@ app.post('/iletisim', girisLimit, ah(async (req, res) => {
 //  ÜYE KİMLİK DOĞRULAMA
 // =====================================================================
 
-// Kayıt formu
+// Kayıt formu (daire seçimi ile)
 app.get('/kayit', (req, res) => {
-  res.render('kayit', { aktifSayfa: 'kayit' });
+  // Her blok için daire seçeneklerini hazırla (A/1, A/2, ...)
+  const daireler = BLOK_LISTESI.map((blok) => ({
+    blok,
+    etiket: (blok === 'I' ? 'ı' : (blok === 'İ' ? 'i' : blok.toLowerCase())),
+    adet: BLOK_DAIRE_SAYILARI[blok],
+    secenekler: Array.from({ length: BLOK_DAIRE_SAYILARI[blok] }, (_, i) => i + 1)
+  }));
+  res.render('kayit', { aktifSayfa: 'kayit', daireler });
 });
 
 // Kayıt işlemi (e-posta + telefon doğrulama kodu)
@@ -263,6 +279,11 @@ app.post('/kayit', girisLimit, ah(async (req, res) => {
 
   if (!ad_soyad || !daire_no || !telefon || !email || !sifre) {
     req.flash('hata', 'Lütfen tüm zorunlu alanları doldurun.');
+    return res.redirect('/kayit');
+  }
+  // Daire formatı: "A/27", "İ/5" vb. — doğrula
+  if (!/^[A-HJİI]\/(0?[1-9]|[1-3][0-9]|40|41|42)$/.test(daire_no) && !/^[A-HJİI]\/(0?[1-9]|1[0-9]|20|21|22)$/.test(daire_no)) {
+    req.flash('hata', 'Geçersiz daire seçimi.');
     return res.redirect('/kayit');
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -449,12 +470,14 @@ app.post('/sifremi-unuttum/kod', girisLimit, ah(async (req, res) => {
   if (!bilgi) return res.redirect('/sifremi-unuttum');
   const kod = (req.body.kod || '').trim();
   const bulunan = (await q(
-    "SELECT id, son_kullanma FROM uye_dogrulama_kodlari WHERE uye_id = $1 AND amac = 'sifre_sifirlama' AND kullanildi = 0 ORDER BY id DESC LIMIT 1",
+    "SELECT id, kod, son_kullanma FROM uye_dogrulama_kodlari WHERE uye_id = $1 AND amac = 'sifre_sifirlama' AND kullanildi = 0 ORDER BY id DESC LIMIT 1",
     [bilgi.uyeId]
   )).rows[0];
 
-  if (!bulunan || bulunan.kod !== kod.trim()) {
-    req.flash('hata', 'Kod hatalı veya süresi dolmuş.');
+  console.log('[SIFRE-DOGRULA]', { email: bilgi.email, kodGirilen: kod, kodDb: bulunan ? bulunan.kod : null });
+
+  if (!bulunan || bulunan.kod !== kod) {
+    req.flash('hata', 'Kod hatalı veya süresi dolmuş. (DB: ' + (bulunan ? 'var, kod eşleşmedi' : 'kayıt yok') + ')');
     return res.redirect('/sifremi-unuttum/kod');
   }
   if (new Date(bulunan.son_kullanma.replace(' ', 'T')) < new Date()) {
