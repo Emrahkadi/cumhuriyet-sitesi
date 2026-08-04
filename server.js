@@ -275,20 +275,33 @@ app.get('/kayit', (req, res) => {
 
 // Kayıt işlemi (e-posta + telefon doğrulama kodu)
 app.post('/kayit', girisLimit, ah(async (req, res) => {
-  const { ad_soyad, blok, daire, telefon, email, sifre, sifre_tekrar } = req.body;
+  const { ad_soyad, blok, daire, daire_no, telefon, email, sifre, sifre_tekrar } = req.body;
 
-  if (!ad_soyad || !blok || !daire || !telefon || !email || !sifre) {
+  // Eski form (daire_no = "A/15") ve yeni form (blok + daire ayrı) geriye uyumlu
+  let secilenBlok = (blok || '').trim();
+  let secilenDaire = (daire || '').trim();
+
+  if (daire_no && !secilenBlok && !secilenDaire) {
+    // Eski "A/15" formatı
+    const eski = String(daire_no).split('/');
+    if (eski.length === 2) {
+      secilenBlok = eski[0];
+      secilenDaire = eski[1];
+    }
+  }
+
+  if (!ad_soyad || !secilenBlok || !secilenDaire || !telefon || !email || !sifre) {
     req.flash('hata', 'Lütfen tüm zorunlu alanları doldurun.');
     return res.redirect('/kayit');
   }
   // Blok doğrulama (A,B,C,D,E,F,G,H,I,İ,J)
-  if (!BLOK_LISTESI.includes(blok)) {
+  if (!BLOK_LISTESI.includes(secilenBlok)) {
     req.flash('hata', 'Geçersiz blok seçimi.');
     return res.redirect('/kayit');
   }
   // Daire doğrulama (1 - blok kapasitesi arası)
-  const daireNo = parseInt(daire, 10);
-  if (!Number.isInteger(daireNo) || daireNo < 1 || daireNo > BLOK_DAIRE_SAYILARI[blok]) {
+  const daireNo = parseInt(secilenDaire, 10);
+  if (!Number.isInteger(daireNo) || daireNo < 1 || daireNo > BLOK_DAIRE_SAYILARI[secilenBlok]) {
     req.flash('hata', 'Geçersiz daire seçimi.');
     return res.redirect('/kayit');
   }
@@ -308,7 +321,7 @@ app.post('/kayit', girisLimit, ah(async (req, res) => {
   const temizTelefon = telefon.replace(/\s+/g, '');
   const temizEmail = email.trim().toLowerCase();
   // Görüntüleme için "A/27" gibi sakla, eski kayıtlarla uyumlu kalsın
-  const daireEtiket = blok + '/' + daireNo;
+  const daireEtiket = secilenBlok + '/' + daireNo;
 
   const mevcutTel = (await q('SELECT id FROM uyeler WHERE telefon = $1', [temizTelefon])).rows[0];
   if (mevcutTel) {
