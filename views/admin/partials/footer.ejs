@@ -2,5 +2,52 @@
   </main>
 
   <script src="/js/main.js"></script>
+  <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+  <script>
+    // Quill editörü: data-quill attribute'lu tüm textarea'ları başlat
+    document.querySelectorAll('textarea[data-quill]').forEach(function(ta) {
+      // Gizli bir input aynı name ile oluştur, Quill içeriği oraya yazılacak
+      var hidden = document.createElement('input');
+      hidden.type = 'hidden';
+      hidden.name = ta.name;
+      hidden.id = ta.id + '_hidden';
+      ta.removeAttribute('name');
+      ta.style.display = 'none';
+      ta.parentNode.insertBefore(hidden, ta);
+
+      var editorDiv = document.createElement('div');
+      editorDiv.style.minHeight = '180px';
+      editorDiv.style.background = '#fff';
+      ta.parentNode.insertBefore(editorDiv, ta);
+
+      var quill = new Quill(editorDiv, {
+        theme: 'snow',
+        placeholder: ta.getAttribute('placeholder') || 'İçerik yazın...',
+        modules: {
+          toolbar: [
+            [{ 'header': [1, 2, 3, false] }],
+            ['bold', 'italic', 'underline', 'strike'],
+            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+            [{ 'align': [] }],
+            ['link', 'blockquote', 'code-block'],
+            ['clean']
+          ]
+        }
+      });
+
+      // Mevcut değeri (EJS ile render edilmiş) editöre yükle
+      if (ta.value && ta.value.trim()) {
+        quill.root.innerHTML = ta.value;
+      }
+
+      // Form submit olunca editör içeriğini gizli input'a yaz
+      var form = ta.closest('form');
+      if (form) {
+        form.addEventListener('submit', function() {
+          hidden.value = quill.root.innerHTML;
+        });
+      }
+    });
+  </script>
 </body>
 </html>
