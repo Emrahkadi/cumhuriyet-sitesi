@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Cumhuriyet Sitesi - Express sunucusu
  * Genel sayfalar, üye/yönetici kimlik doğrulama ve yönetim paneli rotaları.
  */
@@ -21,7 +21,6 @@ const { q, pool, init } = require('./database');
 const { gonder: mailGonder, kodUret } = require('./services/mailer');
 
 const fs = require('fs');
-const path = require('path');
 
 // Excel yüklemesi için bellekte tutan multer (max 10 MB, sadece .xlsx)
 const upload = multer({
@@ -404,7 +403,7 @@ app.post('/kayit', girisLimit, ah(async (req, res) => {
 
   const hash = bcrypt.hashSync(sifre, 10);
   const sonuc = await q(
-    'INSERT INTO uyeler (ad_soyad, daire_no, telefon, email, sifre_hash, onayli) VALUES ($1, $2, $3, $4, $5, 0) RETURNING id',
+    'INSERT INTO uyeler (ad_soyad, daire_no, telefon, email, sifre_hash, onayli, email_dogrulandi) VALUES ($1, $2, $3, $4, $5, 1, 1) RETURNING id',
     [ad_soyad.trim(), daireEtiket, temizTelefon, temizEmail, hash]
   );
   const yeniUyeId = sonuc.rows[0].id;
@@ -472,7 +471,7 @@ app.post('/kayit/dogrula', girisLimit, ah(async (req, res) => {
   await q("UPDATE uyeler SET email_dogrulandi = 1 WHERE email = $1", [email]);
   delete req.session.bekleyenEmail;
 
-  req.flash('basari', 'E-postanız doğrulandı! Hesabınız admin onayına düştü. Onaylandığında giriş yapabilirsiniz.');
+  req.flash('basari', 'E-postanız doğrulandı! Hesabınız aktifleştirildi. Hemen giriş yapabilirsiniz.');
   res.redirect('/giris');
 }));
 
@@ -619,11 +618,6 @@ app.post('/giris', girisLimit, ah(async (req, res) => {
     req.flash('hata', 'Kullanıcı adı/telefon veya şifre hatalı.');
     return res.redirect('/giris');
   }
-  if (!uye.onayli) {
-    req.flash('hata', 'Hesabınız henüz yönetici tarafından onaylanmadı.');
-    return res.redirect('/giris');
-  }
-
   req.session.uye = {
     id: uye.id,
     ad_soyad: uye.ad_soyad,
@@ -699,7 +693,7 @@ app.get('/yonetim/cikis', (req, res) => {
 app.get('/yonetim', adminGerekli, ah(async (req, res) => {
   const istatistik = {
     uyeSayisi: (await q('SELECT COUNT(*)::int AS c FROM uyeler')).rows[0].c,
-    bekleyenUye: (await q('SELECT COUNT(*)::int AS c FROM uyeler WHERE onayli = 0')).rows[0].c,
+    bekleyenUye: (await q('SELECT COUNT(*)::int AS c FROM uyeler WHERE email_dogrulandi = 0')).rows[0].c,
     duyuruSayisi: (await q('SELECT COUNT(*)::int AS c FROM duyurular')).rows[0].c,
     okunmamisMesaj: (await q('SELECT COUNT(*)::int AS c FROM mesajlar WHERE okundu = 0')).rows[0].c
   };
@@ -729,20 +723,70 @@ app.post('/yonetim/duyurular/ekle', adminGerekli, dosyaTek('duyurular'), ah(asyn
 }));
 
 app.post('/yonetim/duyurular/sil/:id', adminGerekli, ah(async (req, res) => {
+  // Ek dosyayı da disk'ten temizle
+  const duyuru = (await q('SELECT ek_dosya FROM duyurular WHERE id = $1', [req.params.id])).rows[0];
+  if (duyuru && duyuru.ek_dosya) {
+    const dosyaYolu = path.join(__dirname, 'public', duyuru.ek_dosya);
+    fs.unlink(dosyaYolu, () => {}); // yoksa hata yutulur
+  }
   await q('DELETE FROM duyurular WHERE id = $1', [req.params.id]);
   req.flash('basari', 'Duyuru silindi.');
   res.redirect('/yonetim/duyurular');
 }));
 
+// Duyuru düzenleme formu
+app.get('/yonetim/duyurular/duzenle/:id', adminGerekli, ah(async (req, res) => {
+  const duyuru = (await q('SELECT * FROM duyurular WHERE id = $1', [req.params.id])).rows[0];
+  if (!duyuru) {
+    req.flash('hata', 'Duyuru bulunamadı.');
+    return res.redirect('/yonetim/duyurular');
+  }
+  res.render('admin/duyuru-duzenle', { aktifSayfa: 'duyurular', duyuru });
+}));
+
+// Duyuru düzenleme işlemi
+app.post('/yonetim/duyurular/duzenle/:id', adminGerekli, dosyaTek('duyurular'), ah(async (req, res) => {
+  const mevcut = (await q('SELECT * FROM duyurular WHERE id = $1', [req.params.id])).rows[0];
+  if (!mevcut) {
+    req.flash('hata', 'Duyuru bulunamadı.');
+    return res.redirect('/yonetim/duyurular');
+  }
+  const { baslik, icerik, kategori, onemli, ek_dosya_sil } = req.body;
+  if (!baslik || !icerik) {
+    req.flash('hata', 'Başlık ve içerik zorunludur.');
+    return res.redirect('/yonetim/duyurular/duzenle/' + req.params.id);
+  }
+  const temizIcerik = zenginMetin(icerik);
+  let ekDosya = mevcut.ek_dosya;
+  // Yeni dosya yüklendiyse eskiyi sil + yenisini ata
+  if (req.file) {
+    if (mevcut.ek_dosya) {
+      fs.unlink(path.join(__dirname, 'public', mevcut.ek_dosya), () => {});
+    }
+    ekDosya = '/uploads/duyurular/' + req.file.filename;
+  } else if (ek_dosya_sil === '1') {
+    if (mevcut.ek_dosya) {
+      fs.unlink(path.join(__dirname, 'public', mevcut.ek_dosya), () => {});
+    }
+    ekDosya = null;
+  }
+  await q(
+    'UPDATE duyurular SET baslik = $1, icerik = $2, kategori = $3, onemli = $4, ek_dosya = $5 WHERE id = $6',
+    [baslik.trim(), temizIcerik, (kategori || 'Genel').trim(), onemli ? 1 : 0, ekDosya, req.params.id]
+  );
+  req.flash('basari', 'Duyuru güncellendi.');
+  res.redirect('/yonetim/duyurular');
+}));
+
 // --- Üye yönetimi ---
 app.get('/yonetim/uyeler', adminGerekli, ah(async (req, res) => {
-  const uyeler = (await q('SELECT * FROM uyeler ORDER BY onayli ASC, id DESC')).rows;
+  const uyeler = (await q('SELECT * FROM uyeler ORDER BY email_dogrulandi ASC, id DESC')).rows;
   res.render('admin/uyeler', { aktifSayfa: 'uyeler', uyeler });
 }));
 
-app.post('/yonetim/uyeler/onayla/:id', adminGerekli, ah(async (req, res) => {
-  await q('UPDATE uyeler SET onayli = 1 WHERE id = $1', [req.params.id]);
-  req.flash('basari', 'Üye onaylandı.');
+app.post('/yonetim/uyeler/email-dogrula/:id', adminGerekli, ah(async (req, res) => {
+  await q('UPDATE uyeler SET email_dogrulandi = 1 WHERE id = $1', [req.params.id]);
+  req.flash('basari', 'Üye e-postası doğrulandı.');
   res.redirect('/yonetim/uyeler');
 }));
 
@@ -789,8 +833,55 @@ app.post('/yonetim/kentsel-donusum/ekle', adminGerekli, dosyaTek('kentsel'), ah(
 }));
 
 app.post('/yonetim/kentsel-donusum/sil/:id', adminGerekli, ah(async (req, res) => {
+  const madde = (await q('SELECT ek_dosya FROM kentsel_donusum WHERE id = $1', [req.params.id])).rows[0];
+  if (madde && madde.ek_dosya) {
+    fs.unlink(path.join(__dirname, 'public', madde.ek_dosya), () => {});
+  }
   await q('DELETE FROM kentsel_donusum WHERE id = $1', [req.params.id]);
   req.flash('basari', 'Kayıt silindi.');
+  res.redirect('/yonetim/kentsel-donusum');
+}));
+
+// Kentsel düzenleme formu
+app.get('/yonetim/kentsel-donusum/duzenle/:id', adminGerekli, ah(async (req, res) => {
+  const madde = (await q('SELECT * FROM kentsel_donusum WHERE id = $1', [req.params.id])).rows[0];
+  if (!madde) {
+    req.flash('hata', 'Kayıt bulunamadı.');
+    return res.redirect('/yonetim/kentsel-donusum');
+  }
+  res.render('admin/kentsel-donusum-duzenle', { aktifSayfa: 'kentsel-donusum', madde });
+}));
+
+// Kentsel düzenleme işlemi
+app.post('/yonetim/kentsel-donusum/duzenle/:id', adminGerekli, dosyaTek('kentsel'), ah(async (req, res) => {
+  const mevcut = (await q('SELECT * FROM kentsel_donusum WHERE id = $1', [req.params.id])).rows[0];
+  if (!mevcut) {
+    req.flash('hata', 'Kayıt bulunamadı.');
+    return res.redirect('/yonetim/kentsel-donusum');
+  }
+  const { baslik, icerik, durum, ek_dosya_sil } = req.body;
+  if (!baslik || !icerik) {
+    req.flash('hata', 'Başlık ve içerik zorunludur.');
+    return res.redirect('/yonetim/kentsel-donusum/duzenle/' + req.params.id);
+  }
+  const temizIcerik = zenginMetin(icerik);
+  let ekDosya = mevcut.ek_dosya;
+  if (req.file) {
+    if (mevcut.ek_dosya) {
+      fs.unlink(path.join(__dirname, 'public', mevcut.ek_dosya), () => {});
+    }
+    ekDosya = '/uploads/kentsel/' + req.file.filename;
+  } else if (ek_dosya_sil === '1') {
+    if (mevcut.ek_dosya) {
+      fs.unlink(path.join(__dirname, 'public', mevcut.ek_dosya), () => {});
+    }
+    ekDosya = null;
+  }
+  await q(
+    'UPDATE kentsel_donusum SET baslik = $1, icerik = $2, durum = $3, ek_dosya = $4 WHERE id = $5',
+    [baslik.trim(), temizIcerik, (durum || 'Planlama').trim(), ekDosya, req.params.id]
+  );
+  req.flash('basari', 'Kayıt güncellendi.');
   res.redirect('/yonetim/kentsel-donusum');
 }));
 
@@ -819,7 +910,7 @@ app.post('/yonetim/aidatlar/ekle', adminGerekli, ah(async (req, res) => {
 
   if (tum_uyeler) {
     // Tüm onaylı üyelere aidat tahakkuk ettir
-    const hedef = (await q('SELECT id FROM uyeler WHERE onayli = 1')).rows;
+    const hedef = (await q('SELECT id FROM uyeler WHERE email_dogrulandi = 1')).rows;
     for (const u of hedef) {
       await q(
         'INSERT INTO aidatlar (uye_id, donem, tutar, aciklama) VALUES ($1, $2, $3, $4)',
@@ -864,7 +955,7 @@ app.post('/yonetim/aidatlar/sil/:id', adminGerekli, ah(async (req, res) => {
 
 // --- Üyeye mesaj gönderme ---
 app.get('/yonetim/mesaj-gonder', adminGerekli, ah(async (req, res) => {
-  const uyeler = (await q('SELECT id, ad_soyad, daire_no FROM uyeler WHERE onayli = 1 ORDER BY ad_soyad ASC')).rows;
+  const uyeler = (await q('SELECT id, ad_soyad, daire_no FROM uyeler WHERE email_dogrulandi = 1 ORDER BY ad_soyad ASC')).rows;
   const gonderilenler = (await q(
     `SELECT m.*, u.ad_soyad, u.daire_no
      FROM uye_mesajlari m JOIN uyeler u ON u.id = m.uye_id
@@ -883,7 +974,7 @@ app.post('/yonetim/mesaj-gonder', adminGerekli, ah(async (req, res) => {
   const temizMesaj = zenginMetin(mesaj);
 
   if (tum_uyeler) {
-    const hedef = (await q('SELECT id FROM uyeler WHERE onayli = 1')).rows;
+    const hedef = (await q('SELECT id FROM uyeler WHERE email_dogrulandi = 1')).rows;
     for (const u of hedef) {
       await q('INSERT INTO uye_mesajlari (uye_id, baslik, mesaj) VALUES ($1, $2, $3)', [u.id, temizBaslik, temizMesaj]);
     }

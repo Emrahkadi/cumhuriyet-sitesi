@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    Cumhuriyet Sitesi - Yönetim Paneli Stilleri
    ============================================================ */
 
@@ -141,19 +141,14 @@
 .td-islem { display: flex; gap: 8px; }
 .td-islem form { display: inline; }
 
-.btn-sil, .btn-onayla {
-  border: none;
-  padding: 7px 14px;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-  transition: 0.2s;
-}
+.btn-sil, .btn-onayla, .btn-duzenle, .btn-duzenle, .btn-duzenle { border: none; padding: 7px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: 0.2s; text-decoration: none; display: inline-block; }
 .btn-sil { background: #fdecee; color: var(--renk-vurgu); }
 .btn-sil:hover { background: var(--renk-vurgu); color: #fff; }
 .btn-onayla { background: #e6f7f0; color: #1b7a5e; }
+.btn-duzenle { background: #e8f0fb; color: var(--renk-ana); }
+.btn-duzenle:hover { background: var(--renk-ana); color: #fff; }
+.ek-link { font-size: 1.2rem; text-decoration: none; }
+.ek-link:hover { text-decoration: underline; }
 .btn-onayla:hover { background: #1b7a5e; color: #fff; }
 
 /* Tıklanabilir istatistik kartı */
@@ -355,3 +350,8 @@
   .admin-site-link, .admin-logout { font-size: 0; text-align: center; }
   .admin-main { margin-left: 70px; }
 }
+
+.btn-duzenle { background: #e8f0fb; color: var(--renk-ana); }
+.btn-duzenle:hover { background: var(--renk-ana); color: #fff; }
+.ek-link { font-size: 1.2rem; text-decoration: none; }
+.ek-link:hover { text-decoration: underline; }

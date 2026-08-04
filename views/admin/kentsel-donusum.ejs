@@ -37,7 +37,7 @@
     <div class="table-wrap">
       <table class="admin-table">
         <thead>
-          <tr><th>Başlık</th><th>Durum</th><th>Tarih</th><th>İşlem</th></tr>
+          <tr><th>Başlık</th><th>Durum</th><th>Tarih</th><th>Ek</th><th>İşlem</th></tr>
         </thead>
         <tbody>
           <% maddeler.forEach(function(m) { %>
@@ -46,7 +46,13 @@
               <td><span class="badge badge-durum"><%= m.durum %></span></td>
               <td><%= m.olusturma_tarihi.split(' ')[0] %></td>
               <td>
-                <form action="/yonetim/kentsel-donusum/sil/<%= m.id %>" method="POST" data-confirm="Bu kayıt silinsin mi?">
+                <% if (m.ek_dosya) { %>
+                  <a href="<%= m.ek_dosya %>" target="_blank" rel="noopener" class="ek-link">📎</a>
+                <% } else { %>—<% } %>
+              </td>
+              <td class="td-islem">
+                <a href="/yonetim/kentsel-donusum/duzenle/<%= m.id %>" class="btn-duzenle">Düzenle</a>
+                <form action="/yonetim/kentsel-donusum/sil/<%= m.id %>" method="POST" data-confirm="Bu kayıt silinsin mi?" style="display:inline">
                   <button type="submit" class="btn-sil">Sil</button>
                 </form>
               </td>

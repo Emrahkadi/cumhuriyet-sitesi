@@ -1,0 +1,49 @@
+<%- include('partials/header', { sayfaBaslik: 'Duyuru Düzenle' }) %>
+
+<div class="admin-panel-box">
+  <h2>Duyuru Düzenle (#<%= duyuru.id %>)</h2>
+  <form action="/yonetim/duyurular/duzenle/<%= duyuru.id %>" method="POST" class="form" enctype="multipart/form-data">
+    <div class="form-group">
+      <label for="baslik">Başlık</label>
+      <input type="text" id="baslik" name="baslik" value="<%= duyuru.baslik %>" required />
+    </div>
+    <div class="form-group">
+      <label for="icerik">İçerik</label>
+      <textarea id="icerik" name="icerik" rows="6" data-quill placeholder="Duyuru içeriğini yazın..."><%= duyuru.icerik %></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="kategori">Kategori</label>
+        <select id="kategori" name="kategori">
+          <% ['Genel','Aidat','Bakım','Toplantı','Etkinlik'].forEach(function(k) { %>
+            <option value="<%= k %>" <%= duyuru.kategori === k ? 'selected' : '' %>><%= k %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="form-group form-check">
+        <label><input type="checkbox" name="onemli" value="1" <%= duyuru.onemli ? 'checked' : '' %> /> Önemli olarak işaretle</label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Mevcut Ek Dosya</label>
+      <% if (duyuru.ek_dosya) { %>
+        <p>📎 <a href="<%= duyuru.ek_dosya %>" target="_blank" rel="noopener"><%= duyuru.ek_dosya.split('/').pop() %></a>
+          <label style="margin-left:12px"><input type="checkbox" name="ek_dosya_sil" value="1" /> Mevcut eki sil</label>
+        </p>
+      <% } else { %>
+        <p><em>Ek dosya yok.</em></p>
+      <% } %>
+    </div>
+    <div class="form-group">
+      <label for="ek">Yeni Ek Dosya (PDF, Excel, görsel — maks 10 MB)</label>
+      <input type="file" id="ek" name="ek" accept=".pdf,.xlsx,.xls,.csv,.png,.jpg,.jpeg,.webp,.gif" />
+      <small>Yeni dosya seçerseniz eskisi otomatik silinir.</small>
+    </div>
+    <div class="form-row">
+      <button type="submit" class="btn btn-primary">Kaydet</button>
+      <a href="/yonetim/duyurular" class="btn btn-secondary">İptal</a>
+    </div>
+  </form>
+</div>
+
+<%- include('partials/footer') %>

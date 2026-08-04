@@ -1,0 +1,44 @@
+<%- include('partials/header', { sayfaBaslik: 'Kentsel Dönüşüm Düzenle' }) %>
+
+<div class="admin-panel-box">
+  <h2>Kentsel Dönüşüm Kayıt Düzenle (#<%= madde.id %>)</h2>
+  <form action="/yonetim/kentsel-donusum/duzenle/<%= madde.id %>" method="POST" class="form" enctype="multipart/form-data">
+    <div class="form-group">
+      <label for="baslik">Başlık</label>
+      <input type="text" id="baslik" name="baslik" value="<%= madde.baslik %>" required />
+    </div>
+    <div class="form-group">
+      <label for="icerik">İçerik</label>
+      <textarea id="icerik" name="icerik" rows="6" data-quill placeholder="Kentsel dönüşüm içeriğini yazın..."><%= madde.icerik %></textarea>
+    </div>
+    <div class="form-group">
+      <label for="durum">Durum</label>
+      <select id="durum" name="durum">
+        <% ['Planlama','Değerlendirme','Onay Süreci','Uygulama','Tamamlandı'].forEach(function(d) { %>
+          <option value="<%= d %>" <%= madde.durum === d ? 'selected' : '' %>><%= d %></option>
+        <% }); %>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Mevcut Ek Dosya</label>
+      <% if (madde.ek_dosya) { %>
+        <p>📎 <a href="<%= madde.ek_dosya %>" target="_blank" rel="noopener"><%= madde.ek_dosya.split('/').pop() %></a>
+          <label style="margin-left:12px"><input type="checkbox" name="ek_dosya_sil" value="1" /> Mevcut eki sil</label>
+        </p>
+      <% } else { %>
+        <p><em>Ek dosya yok.</em></p>
+      <% } %>
+    </div>
+    <div class="form-group">
+      <label for="ek">Yeni Ek Dosya (PDF, Excel, görsel — maks 10 MB)</label>
+      <input type="file" id="ek" name="ek" accept=".pdf,.xlsx,.xls,.csv,.png,.jpg,.jpeg,.webp,.gif" />
+      <small>Yeni dosya seçerseniz eskisi otomatik silinir.</small>
+    </div>
+    <div class="form-row">
+      <button type="submit" class="btn btn-primary">Kaydet</button>
+      <a href="/yonetim/kentsel-donusum" class="btn btn-secondary">İptal</a>
+    </div>
+  </form>
+</div>
+
+<%- include('partials/footer') %>
