@@ -1,34 +1,34 @@
 <%- include('partials/header', { sayfaBaslik: 'Özet' }) %>
 
 <div class="stat-grid">
-  <div class="stat-card stat-blue">
+  <a class="stat-card stat-blue stat-card-link" href="/yonetim/uyeler">
     <span class="stat-icon">👥</span>
     <div>
       <span class="stat-value"><%= istatistik.uyeSayisi %></span>
       <span class="stat-label">Toplam Üye</span>
     </div>
-  </div>
-  <div class="stat-card stat-orange">
+  </a>
+  <a class="stat-card stat-orange stat-card-link" href="/yonetim/uyeler">
     <span class="stat-icon">⏳</span>
     <div>
       <span class="stat-value"><%= istatistik.bekleyenUye %></span>
       <span class="stat-label">Onay Bekleyen</span>
     </div>
-  </div>
-  <div class="stat-card stat-green">
+  </a>
+  <a class="stat-card stat-green stat-card-link" href="/yonetim/duyurular">
     <span class="stat-icon">📢</span>
     <div>
       <span class="stat-value"><%= istatistik.duyuruSayisi %></span>
       <span class="stat-label">Duyuru</span>
     </div>
-  </div>
-  <div class="stat-card stat-purple">
+  </a>
+  <a class="stat-card stat-purple stat-card-link" href="/yonetim/mesajlar">
     <span class="stat-icon">✉️</span>
     <div>
       <span class="stat-value"><%= istatistik.okunmamisMesaj %></span>
       <span class="stat-label">Okunmamış Mesaj</span>
     </div>
-  </div>
+  </a>
 </div>
 
 <div class="admin-quick">

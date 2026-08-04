@@ -152,6 +152,18 @@
 .btn-onayla { background: #e6f7f0; color: #1b7a5e; }
 .btn-onayla:hover { background: #1b7a5e; color: #fff; }
 
+/* Tıklanabilir istatistik kartı */
+.stat-card-link {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.stat-card-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
 /* ---------- Mesajlar ---------- */
 .mesaj-liste { display: flex; flex-direction: column; gap: 16px; }
 .mesaj-item {
