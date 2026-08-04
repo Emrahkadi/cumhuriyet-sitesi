@@ -261,47 +261,33 @@ app.post('/iletisim', girisLimit, ah(async (req, res) => {
 //  ÜYE KİMLİK DOĞRULAMA
 // =====================================================================
 
-// Kayıt formu (daire seçimi ile)
+// Kayıt formu (tek dropdown daire seçimi ile)
 app.get('/kayit', (req, res) => {
-  // Her blok için daire seçeneklerini hazırla (A/1, A/2, ...)
-  const daireler = BLOK_LISTESI.map((blok) => ({
-    blok,
-    etiket: (blok === 'I' ? 'ı' : (blok === 'İ' ? 'i' : blok.toLowerCase())),
-    adet: BLOK_DAIRE_SAYILARI[blok],
-    secenekler: Array.from({ length: BLOK_DAIRE_SAYILARI[blok] }, (_, i) => i + 1)
-  }));
+  // Tüm daireleri "A/1" formatında tek liste halinde hazırla
+  const daireler = BLOK_LISTESI.flatMap((blok) =>
+    Array.from({ length: BLOK_DAIRE_SAYILARI[blok] }, (_, i) => blok + '/' + (i + 1))
+  );
   res.render('kayit', { aktifSayfa: 'kayit', daireler });
 });
 
 // Kayıt işlemi (e-posta + telefon doğrulama kodu)
 app.post('/kayit', girisLimit, ah(async (req, res) => {
-  const { ad_soyad, blok, daire, daire_no, telefon, email, sifre, sifre_tekrar } = req.body;
+  const { ad_soyad, daire_no, telefon, email, sifre, sifre_tekrar } = req.body;
+  const daireEtiket = (daire_no || '').trim();
 
-  // Eski form (daire_no = "A/15") ve yeni form (blok + daire ayrı) geriye uyumlu
-  let secilenBlok = (blok || '').trim();
-  let secilenDaire = (daire || '').trim();
-
-  if (daire_no && !secilenBlok && !secilenDaire) {
-    // Eski "A/15" formatı
-    const eski = String(daire_no).split('/');
-    if (eski.length === 2) {
-      secilenBlok = eski[0];
-      secilenDaire = eski[1];
-    }
-  }
-
-  if (!ad_soyad || !secilenBlok || !secilenDaire || !telefon || !email || !sifre) {
+  if (!ad_soyad || !daireEtiket || !telefon || !email || !sifre) {
     req.flash('hata', 'Lütfen tüm zorunlu alanları doldurun.');
     return res.redirect('/kayit');
   }
-  // Blok doğrulama (A,B,C,D,E,F,G,H,I,İ,J)
-  if (!BLOK_LISTESI.includes(secilenBlok)) {
-    req.flash('hata', 'Geçersiz blok seçimi.');
+  // "A/27" formatında doğrula (blok + "/" + sayi)
+  const eslesen = daireEtiket.match(/^([A-HJİI])\/(\d+)$/);
+  if (!eslesen) {
+    req.flash('hata', 'Geçersiz daire seçimi.');
     return res.redirect('/kayit');
   }
-  // Daire doğrulama (1 - blok kapasitesi arası)
-  const daireNo = parseInt(secilenDaire, 10);
-  if (!Number.isInteger(daireNo) || daireNo < 1 || daireNo > BLOK_DAIRE_SAYILARI[secilenBlok]) {
+  const secilenBlok = eslesen[1];
+  const daireNo = parseInt(eslesen[2], 10);
+  if (daireNo < 1 || daireNo > BLOK_DAIRE_SAYILARI[secilenBlok]) {
     req.flash('hata', 'Geçersiz daire seçimi.');
     return res.redirect('/kayit');
   }
@@ -320,8 +306,6 @@ app.post('/kayit', girisLimit, ah(async (req, res) => {
 
   const temizTelefon = telefon.replace(/\s+/g, '');
   const temizEmail = email.trim().toLowerCase();
-  // Görüntüleme için "A/27" gibi sakla, eski kayıtlarla uyumlu kalsın
-  const daireEtiket = secilenBlok + '/' + daireNo;
 
   const mevcutTel = (await q('SELECT id FROM uyeler WHERE telefon = $1', [temizTelefon])).rows[0];
   if (mevcutTel) {
