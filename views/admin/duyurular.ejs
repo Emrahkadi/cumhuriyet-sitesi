@@ -2,7 +2,7 @@
 
 <div class="admin-panel-box">
   <h2>Yeni Duyuru Ekle</h2>
-  <form action="/yonetim/duyurular/ekle" method="POST" class="form">
+  <form action="/yonetim/duyurular/ekle" method="POST" class="form" enctype="multipart/form-data">
     <div class="form-group">
       <label for="baslik">Başlık</label>
       <input type="text" id="baslik" name="baslik" required />
@@ -25,6 +25,10 @@
       <div class="form-group form-check">
         <label><input type="checkbox" name="onemli" value="1" /> Önemli olarak işaretle</label>
       </div>
+    </div>
+    <div class="form-group">
+      <label for="ek">Ek Dosya (PDF, Excel, görsel — maks 10 MB)</label>
+      <input type="file" id="ek" name="ek" accept=".pdf,.xlsx,.xls,.csv,.png,.jpg,.jpeg,.webp,.gif" />
     </div>
     <button type="submit" class="btn btn-primary">Duyuru Ekle</button>
   </form>

@@ -20,11 +20,43 @@ const sanitizeHtml = require('sanitize-html');
 const { q, pool, init } = require('./database');
 const { gonder: mailGonder, kodUret } = require('./services/mailer');
 
+const fs = require('fs');
+const path = require('path');
+
 // Excel yüklemesi için bellekte tutan multer (max 10 MB, sadece .xlsx)
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 }
 });
+
+// Duyuru / kentsel dönüşüm ekleri için disk storage (PDF, Excel, görsel)
+// public/uploads/duyurular ve public/uploads/kentsel klasörleri kullanılır
+const UPLOAD_KOK = path.join(__dirname, 'public', 'uploads');
+const uploadKlasor = (altKlasor) => {
+  const hedef = path.join(UPLOAD_KOK, altKlasor);
+  if (!fs.existsSync(hedef)) fs.mkdirSync(hedef, { recursive: true });
+  return hedef;
+};
+const dosyaYukle = multer({
+  storage: multer.diskStorage({
+    destination: function (req, file, cb) {
+      const altKlasor = req.baseUrl.includes('kentsel') ? 'kentsel' : 'duyurular';
+      cb(null, uploadKlasor(altKlasor));
+    },
+    filename: function (req, file, cb) {
+      const guvenliAd = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80);
+      cb(null, Date.now() + '-' + Math.round(Math.random() * 1e6) + '-' + guvenliAd);
+    }
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  fileFilter: function (req, file, cb) {
+    const izinli = ['pdf', 'xlsx', 'xls', 'csv', 'png', 'jpg', 'jpeg', 'webp', 'gif'];
+    const uzanti = (file.originalname.split('.').pop() || '').toLowerCase();
+    if (izinli.includes(uzanti)) cb(null, true);
+    else cb(new Error('Bu dosya türüne izin verilmiyor. (İzinli: ' + izinli.join(', ') + ')'));
+  }
+});
+const dosyaTek = uploadKlasor => uploadKlasor === 'kentsel' ? dosyaYukle.single('ek') : dosyaYukle.single('ek');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -680,18 +712,19 @@ app.get('/yonetim/duyurular', adminGerekli, ah(async (req, res) => {
   res.render('admin/duyurular', { aktifSayfa: 'duyurular', duyurular });
 }));
 
-app.post('/yonetim/duyurular/ekle', adminGerekli, ah(async (req, res) => {
+app.post('/yonetim/duyurular/ekle', adminGerekli, dosyaTek('duyurular'), ah(async (req, res) => {
   const { baslik, icerik, kategori, onemli } = req.body;
   if (!baslik || !icerik) {
     req.flash('hata', 'Başlık ve içerik zorunludur.');
     return res.redirect('/yonetim/duyurular');
   }
   const temizIcerik = zenginMetin(icerik);
+  const ekDosya = req.file ? '/uploads/duyurular/' + req.file.filename : null;
   await q(
-    'INSERT INTO duyurular (baslik, icerik, kategori, onemli) VALUES ($1, $2, $3, $4)',
-    [baslik.trim(), temizIcerik, (kategori || 'Genel').trim(), onemli ? 1 : 0]
+    'INSERT INTO duyurular (baslik, icerik, kategori, onemli, ek_dosya) VALUES ($1, $2, $3, $4, $5)',
+    [baslik.trim(), temizIcerik, (kategori || 'Genel').trim(), onemli ? 1 : 0, ekDosya]
   );
-  req.flash('basari', 'Duyuru eklendi.');
+  req.flash('basari', 'Duyuru eklendi.' + (ekDosya ? ' Ek dosya yüklendi.' : ''));
   res.redirect('/yonetim/duyurular');
 }));
 
@@ -739,18 +772,19 @@ app.get('/yonetim/kentsel-donusum', adminGerekli, ah(async (req, res) => {
   res.render('admin/kentsel-donusum', { aktifSayfa: 'kentsel-donusum', maddeler });
 }));
 
-app.post('/yonetim/kentsel-donusum/ekle', adminGerekli, ah(async (req, res) => {
+app.post('/yonetim/kentsel-donusum/ekle', adminGerekli, dosyaTek('kentsel'), ah(async (req, res) => {
   const { baslik, icerik, durum } = req.body;
   if (!baslik || !icerik) {
     req.flash('hata', 'Başlık ve içerik zorunludur.');
     return res.redirect('/yonetim/kentsel-donusum');
   }
   const temizIcerik = zenginMetin(icerik);
+  const ekDosya = req.file ? '/uploads/kentsel/' + req.file.filename : null;
   await q(
-    'INSERT INTO kentsel_donusum (baslik, icerik, durum) VALUES ($1, $2, $3)',
-    [baslik.trim(), temizIcerik, (durum || 'Planlama').trim()]
+    'INSERT INTO kentsel_donusum (baslik, icerik, durum, ek_dosya) VALUES ($1, $2, $3, $4)',
+    [baslik.trim(), temizIcerik, (durum || 'Planlama').trim(), ekDosya]
   );
-  req.flash('basari', 'Kayıt eklendi.');
+  req.flash('basari', 'Kayıt eklendi.' + (ekDosya ? ' Ek dosya yüklendi.' : ''));
   res.redirect('/yonetim/kentsel-donusum');
 }));
 

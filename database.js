@@ -76,6 +76,7 @@ async function createTables() {
       icerik TEXT NOT NULL,
       kategori TEXT NOT NULL DEFAULT 'Genel',
       onemli INTEGER NOT NULL DEFAULT 0,
+      ek_dosya TEXT,
       olusturma_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
     );
 
@@ -95,6 +96,7 @@ async function createTables() {
       baslik TEXT NOT NULL,
       icerik TEXT NOT NULL,
       durum TEXT NOT NULL DEFAULT 'Planlama',
+      ek_dosya TEXT,
       olusturma_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
     );
 
@@ -147,6 +149,8 @@ async function createTables() {
     ALTER TABLE uyeler ADD COLUMN IF NOT EXISTS email TEXT;
     ALTER TABLE uyeler ADD COLUMN IF NOT EXISTS email_dogrulandi INTEGER NOT NULL DEFAULT 0;
     CREATE UNIQUE INDEX IF NOT EXISTS idx_uyeler_email ON uyeler (email) WHERE email IS NOT NULL;
+    ALTER TABLE duyurular ADD COLUMN IF NOT EXISTS ek_dosya TEXT;
+    ALTER TABLE kentsel_donusum ADD COLUMN IF NOT EXISTS ek_dosya TEXT;
   `);
 }
 

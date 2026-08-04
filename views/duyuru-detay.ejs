@@ -9,11 +9,12 @@
         <time><%= duyuru.olusturma_tarihi %></time>
       </div>
       <h1><%= duyuru.baslik %></h1>
-      <div class="duyuru-icerik">
-        <% duyuru.icerik.split('\n').forEach(function(p) { %>
-          <% if (p.trim()) { %><p><%= p %></p><% } %>
-        <% }); %>
-      </div>
+      <div class="duyuru-icerik"><%- duyuru.icerik %></div>
+      <% if (duyuru.ek_dosya) { %>
+        <p class="ek-dosya">
+          📎 <a href="<%= duyuru.ek_dosya %>" target="_blank" rel="noopener">Ek dosyayı indir / görüntüle</a>
+        </p>
+      <% } %>
     </article>
   </div>
 </section>
