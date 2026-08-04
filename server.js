@@ -239,6 +239,7 @@ app.use((req, res, next) => {
 // Giriş yapan üye için okunmamış mesaj sayısı (bildirim rozeti)
 app.use(async (req, res, next) => {
   res.locals.okunmamisMesajSayisi = 0;
+  res.locals.okunmamisMesajlar = [];
   if (req.session.uye) {
     try {
       const r = await q(
@@ -246,8 +247,14 @@ app.use(async (req, res, next) => {
         [req.session.uye.id]
       );
       res.locals.okunmamisMesajSayisi = r.rows[0].c;
+      const son = await q(
+        'SELECT id, baslik, mesaj, olusturma_tarihi FROM uye_mesajlari WHERE uye_id = $1 AND okundu = 0 ORDER BY id DESC LIMIT 5',
+        [req.session.uye.id]
+      );
+      res.locals.okunmamisMesajlar = son.rows.map(m => ({ ...m, okundu: 0 }));
     } catch (e) {
       res.locals.okunmamisMesajSayisi = 0;
+      res.locals.okunmamisMesajlar = [];
     }
   }
   next();

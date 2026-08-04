@@ -16,7 +16,7 @@
     <% } else { %>
       <div class="mesaj-liste">
         <% mesajlar.forEach(function(m) { %>
-          <div class="mesaj-item <%= m.okundu ? '' : 'mesaj-yeni' %>">
+          <div id="m<%= m.id %>" class="mesaj-item <%= m.okundu ? '' : 'mesaj-yeni' %>">
             <div class="mesaj-head">
               <div>
                 <strong><%= m.baslik %></strong>

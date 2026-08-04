@@ -29,9 +29,32 @@
         <a href="/iletisim" class="<%= aktifSayfa === 'iletisim' ? 'active' : '' %>">İletişim</a>
 
         <% if (uye) { %>
-          <a href="/mesajlarim" class="nav-bell" title="Mesajlarım">
-            🔔<% if (okunmamisMesajSayisi > 0) { %><span class="nav-badge"><%= okunmamisMesajSayisi %></span><% } %>
-          </a>
+          <div class="nav-bell-wrapper">
+            <button type="button" id="navBellBtn" class="nav-bell" title="Mesajlarım" aria-haspopup="true" aria-expanded="false">
+              🔔<% if (okunmamisMesajSayisi > 0) { %><span class="nav-badge"><%= okunmamisMesajSayisi %></span><% } %>
+            </button>
+            <div class="nav-bell-dropdown" id="navBellDropdown" hidden>
+              <div class="nav-bell-header">
+                <strong>Mesajlarım</strong>
+                <a href="/mesajlarim">Tümü →</a>
+              </div>
+              <% if (okunmamisMesajSayisi === 0) { %>
+                <div class="nav-bell-empty">Okunmamış mesaj yok</div>
+              <% } else { %>
+                <ul class="nav-bell-list">
+                  <% okunmamisMesajlar.forEach(function(m) { %>
+                    <li>
+                      <a href="/mesajlarim#m<%= m.id %>">
+                        <strong><%= m.baslik %></strong>
+                        <span><%= (m.mesaj || '').replace(/<[^>]+>/g, '').slice(0, 80) %><%= (m.mesaj || '').length > 80 ? '…' : '' %></span>
+                        <small><%= m.olusturma_tarihi %></small>
+                      </a>
+                    </li>
+                  <% }); %>
+                </ul>
+              <% } %>
+            </div>
+          </div>
           <a href="/panel" class="nav-cta <%= aktifSayfa === 'panel' ? 'active' : '' %>">Panelim</a>
           <a href="/cikis" class="nav-logout">Çıkış</a>
         <% } else { %>
@@ -49,3 +72,23 @@
   <% } %>
 
   <main>
+  <script>
+    // Bildirim dropdown açma/kapama
+    (function() {
+      var btn = document.getElementById('navBellBtn');
+      var dd = document.getElementById('navBellDropdown');
+      if (!btn || !dd) return;
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var goster = dd.hasAttribute('hidden');
+        if (goster) { dd.removeAttribute('hidden'); btn.setAttribute('aria-expanded', 'true'); }
+        else { dd.setAttribute('hidden', ''); btn.setAttribute('aria-expanded', 'false'); }
+      });
+      document.addEventListener('click', function(e) {
+        if (!dd.contains(e.target) && e.target !== btn) {
+          dd.setAttribute('hidden', '');
+          btn.setAttribute('aria-expanded', 'false');
+        }
+      });
+    })();
+  </script>
