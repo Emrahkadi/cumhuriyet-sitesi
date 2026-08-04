@@ -15,6 +15,7 @@ const ExcelJS = require('exceljs');
 const helmet = require('helmet');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
+const sanitizeHtml = require('sanitize-html');
 
 const { q, pool, init } = require('./database');
 const { gonder: mailGonder, kodUret } = require('./services/mailer');
@@ -36,6 +37,42 @@ function escapeHtml(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[c]));
+}
+
+// Quill'den gelen HTML içeriği güvenli şekilde temizler.
+// Zararlı <script>, onclick, javascript: vb. etiketleri/özelliklerini çıkarır.
+const TEMIZLEME_SECENEKLERI = {
+  allowedTags: [
+    'p', 'br', 'b', 'strong', 'i', 'em', 'u', 's', 'strike',
+    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+    'ul', 'ol', 'li',
+    'a', 'blockquote', 'pre', 'code',
+    'span', 'div'
+  ],
+  allowedAttributes: {
+    a: ['href', 'name', 'target', 'rel'],
+    span: ['style'],
+    div: ['style'],
+    p: ['style'],
+    '*': ['class', 'style']
+  },
+  allowedStyles: {
+    '*': {
+      'color': [/^#(0x)?[0-9a-f]+$/i, /^rgb\(/, /^rgba\(/, /^[a-z]+$/],
+      'background-color': [/^#(0x)?[0-9a-f]+$/i, /^rgb\(/, /^rgba\(/, /^[a-z]+$/],
+      'font-size': [/^\d+(px|em|rem|%|pt)$/],
+      'font-weight': [/^(bold|normal|\d{1,3})$/],
+      'text-align': [/^(left|right|center|justify)$/],
+      'text-decoration': [/^(underline|line-through|none)$/]
+    }
+  },
+  allowedSchemes: ['http', 'https', 'mailto', 'tel'],
+  allowedSchemesByTag: { a: ['http', 'https', 'mailto', 'tel'] },
+  transformTags: { a: sanitizeHtml.simpleTransform('a', { rel: 'noopener noreferrer', target: '_blank' }, true) }
+};
+function zenginMetin(html) {
+  if (!html) return '';
+  return sanitizeHtml(String(html), TEMIZLEME_SECENEKLERI);
 }
 
 // Sitenin blokları ve her bloktaki daire sayısı (Excel verisinden)
@@ -242,7 +279,7 @@ app.get('/iletisim', (req, res) => {
   res.render('iletisim', { aktifSayfa: 'iletisim' });
 });
 
-// İletişim formu gönderimi
+// İletişim formu gönderimi (zengin metin destekli)
 app.post('/iletisim', girisLimit, ah(async (req, res) => {
   const { ad_soyad, email, telefon, konu, mesaj } = req.body;
   if (!ad_soyad || !mesaj) {
@@ -251,7 +288,7 @@ app.post('/iletisim', girisLimit, ah(async (req, res) => {
   }
   await q(
     'INSERT INTO mesajlar (ad_soyad, email, telefon, konu, mesaj) VALUES ($1, $2, $3, $4, $5)',
-    [ad_soyad.trim(), (email || '').trim(), (telefon || '').trim(), (konu || '').trim(), mesaj.trim()]
+    [ad_soyad.trim().slice(0, 100), (email || '').trim().slice(0, 150), (telefon || '').trim().slice(0, 30), (konu || '').trim().slice(0, 200), zenginMetin(mesaj)]
   );
   req.flash('basari', 'Mesajınız alındı. En kısa sürede size dönüş yapılacaktır.');
   res.redirect('/iletisim');
@@ -649,9 +686,10 @@ app.post('/yonetim/duyurular/ekle', adminGerekli, ah(async (req, res) => {
     req.flash('hata', 'Başlık ve içerik zorunludur.');
     return res.redirect('/yonetim/duyurular');
   }
+  const temizIcerik = zenginMetin(icerik);
   await q(
     'INSERT INTO duyurular (baslik, icerik, kategori, onemli) VALUES ($1, $2, $3, $4)',
-    [baslik.trim(), icerik.trim(), (kategori || 'Genel').trim(), onemli ? 1 : 0]
+    [baslik.trim(), temizIcerik, (kategori || 'Genel').trim(), onemli ? 1 : 0]
   );
   req.flash('basari', 'Duyuru eklendi.');
   res.redirect('/yonetim/duyurular');
@@ -707,9 +745,10 @@ app.post('/yonetim/kentsel-donusum/ekle', adminGerekli, ah(async (req, res) => {
     req.flash('hata', 'Başlık ve içerik zorunludur.');
     return res.redirect('/yonetim/kentsel-donusum');
   }
+  const temizIcerik = zenginMetin(icerik);
   await q(
     'INSERT INTO kentsel_donusum (baslik, icerik, durum) VALUES ($1, $2, $3)',
-    [baslik.trim(), icerik.trim(), (durum || 'Planlama').trim()]
+    [baslik.trim(), temizIcerik, (durum || 'Planlama').trim()]
   );
   req.flash('basari', 'Kayıt eklendi.');
   res.redirect('/yonetim/kentsel-donusum');
@@ -806,11 +845,13 @@ app.post('/yonetim/mesaj-gonder', adminGerekli, ah(async (req, res) => {
     req.flash('hata', 'Başlık ve mesaj zorunludur.');
     return res.redirect('/yonetim/mesaj-gonder');
   }
+  const temizBaslik = baslik.trim().slice(0, 200);
+  const temizMesaj = zenginMetin(mesaj);
 
   if (tum_uyeler) {
     const hedef = (await q('SELECT id FROM uyeler WHERE onayli = 1')).rows;
     for (const u of hedef) {
-      await q('INSERT INTO uye_mesajlari (uye_id, baslik, mesaj) VALUES ($1, $2, $3)', [u.id, baslik.trim(), mesaj.trim()]);
+      await q('INSERT INTO uye_mesajlari (uye_id, baslik, mesaj) VALUES ($1, $2, $3)', [u.id, temizBaslik, temizMesaj]);
     }
     req.flash('basari', `${hedef.length} üyeye mesaj gönderildi.`);
   } else {
@@ -818,7 +859,7 @@ app.post('/yonetim/mesaj-gonder', adminGerekli, ah(async (req, res) => {
       req.flash('hata', 'Üye seçin veya "Tüm üyeler" işaretleyin.');
       return res.redirect('/yonetim/mesaj-gonder');
     }
-    await q('INSERT INTO uye_mesajlari (uye_id, baslik, mesaj) VALUES ($1, $2, $3)', [uye_id, baslik.trim(), mesaj.trim()]);
+    await q('INSERT INTO uye_mesajlari (uye_id, baslik, mesaj) VALUES ($1, $2, $3)', [uye_id, temizBaslik, temizMesaj]);
     req.flash('basari', 'Mesaj gönderildi.');
   }
   res.redirect('/yonetim/mesaj-gonder');
