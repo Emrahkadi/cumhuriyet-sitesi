@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Veritabanı kurulumu ve şema tanımları (PostgreSQL / pg)
  * Bağlantı için DATABASE_URL ortam değişkeni gereklidir (Neon/Supabase vb.).
  * Doğrudan çalıştırıldığında (npm run init-db) tabloları oluşturur.
@@ -135,6 +135,28 @@ async function createTables() {
       bilgi_iletisim TEXT DEFAULT '',
       olusturma_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
     );
+CREATE TABLE IF NOT EXISTS duyuru_ekleri (
+      id SERIAL PRIMARY KEY,
+      duyuru_id INTEGER NOT NULL REFERENCES duyurular(id) ON DELETE CASCADE,
+      dosya_yolu TEXT NOT NULL,
+      orijinal_ad TEXT,
+      boyut INTEGER,
+      olusturma_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
+    );
+    CREATE INDEX IF NOT EXISTS idx_duyuru_ekleri ON duyuru_ekleri (duyuru_id);
+
+    CREATE TABLE IF NOT EXISTS kentsel_ekleri (
+      id SERIAL PRIMARY KEY,
+      kentsel_id INTEGER NOT NULL REFERENCES kentsel_donusum(id) ON DELETE CASCADE,
+      dosya_yolu TEXT NOT NULL,
+      orijinal_ad TEXT,
+      boyut INTEGER,
+      olusturma_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
+    );
+    CREATE INDEX IF NOT EXISTS idx_kentsel_ekleri ON kentsel_ekleri (kentsel_id);
+
+
+
 
     -- Performans indeksleri
     CREATE INDEX IF NOT EXISTS idx_uye_mesajlari_uye ON uye_mesajlari (uye_id, okundu);
@@ -225,4 +247,6 @@ if (require.main === module) {
       console.error('Veritabanı hazırlanamadı:', err.message);
       process.exit(1);
     });
+
 }
+    
