@@ -89,7 +89,13 @@
 
       if (ta.value && ta.value.trim()) {
         quill.root.innerHTML = ta.value;
+        hidden.value = ta.value;
       }
+
+      // Her içerik değişikliğinde gizli input'u güncelle
+      quill.on('text-change', function() {
+        hidden.value = quill.root.innerHTML;
+      });
 
       var form = ta.closest('form');
       if (form) {

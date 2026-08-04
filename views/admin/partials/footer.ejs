@@ -38,7 +38,13 @@
       // Mevcut değeri (EJS ile render edilmiş) editöre yükle
       if (ta.value && ta.value.trim()) {
         quill.root.innerHTML = ta.value;
+        hidden.value = ta.value;
       }
+
+      // Her içerik değişikliğinde gizli input'u güncelle (submit'ten önce hazır olsun)
+      quill.on('text-change', function() {
+        hidden.value = quill.root.innerHTML;
+      });
 
       // Form submit olunca editör içeriğini gizli input'a yaz
       var form = ta.closest('form');
