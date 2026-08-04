@@ -12,6 +12,7 @@
       hidden.name = ta.name;
       hidden.id = ta.id + '_hidden';
       ta.removeAttribute('name');
+      ta.removeAttribute('required'); // HTML5 required'i kaldır, server-side kontrolü var
       ta.style.display = 'none';
       ta.parentNode.insertBefore(hidden, ta);
 
