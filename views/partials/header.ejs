@@ -17,7 +17,7 @@
         <span class="logo-text">Cumhuriyet <strong>Sitesi</strong></span>
       </a>
 
-      <button type="button" class="nav-toggle" id="navToggle" aria-label="Menü" aria-expanded="false" aria-controls="mainNav">
+      <button type="button" class="nav-toggle" id="navToggle" aria-label="Menü" aria-expanded="false" aria-controls="mainNav" onclick="var n=document.getElementById('mainNav'),o=n.classList.contains('open');n.classList[o?'remove':'add']('open');this.setAttribute('aria-expanded',o?'false':'true');">
         <span></span><span></span><span></span>
       </button>
 
@@ -86,19 +86,9 @@
       var nav = document.getElementById('mainNav');
       if (!tog || !nav) return;
 
-      tog.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        // setTimeout(0): toggle'ı bir sonraki tick'e erteler.
-        // Aynı tick'te başka script'ler (örn. 3rd-party MutationObserver,
-        // capture-phase click listener) class'ı geri kaldırabiliyor.
-        // Asenkron yaparak bu yarış durumunu çözüyoruz.
-        setTimeout(function() {
-          nav.classList.toggle('open');
-          var isOpen = nav.classList.contains('open');
-          tog.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-        }, 0);
-      });
+      // Not: Toggle davranışı navToggle butonunun inline onclick
+      // attribute'unda tanımlı. Burada sadece X kapatma, ESC ve resize
+      // gibi ek davranışları bağlıyoruz.
       // Drawer içindeki X kapatma butonu
       var closeBtn = document.getElementById('navClose');
       if (closeBtn) {
