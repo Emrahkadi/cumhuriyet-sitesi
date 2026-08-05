@@ -23,24 +23,24 @@
       <p class="empty-state">Kayıtlı aidat bulunmuyor.</p>
     <% } else { %>
       <div class="table-wrap">
-        <table class="admin-table">
+        <table class="admin-table responsive-table">
           <thead>
             <tr><th>Dönem</th><th>Tutar</th><th>Açıklama</th><th>Durum</th><th>Ödeme Tarihi</th></tr>
           </thead>
           <tbody>
             <% aidatlar.forEach(function(a) { %>
               <tr>
-                <td><%= a.donem %></td>
-                <td><%= Number(a.tutar).toLocaleString('tr-TR', { minimumFractionDigits: 2 }) %> ₺</td>
-                <td><%= a.aciklama || '-' %></td>
-                <td>
+                <td data-label="Dönem"><%= a.donem %></td>
+                <td data-label="Tutar"><%= Number(a.tutar).toLocaleString('tr-TR', { minimumFractionDigits: 2 }) %> ₺</td>
+                <td data-label="Açıklama"><%= a.aciklama || '-' %></td>
+                <td data-label="Durum">
                   <% if (a.odendi) { %>
                     <span class="badge badge-onayli">Ödendi</span>
                   <% } else { %>
                     <span class="badge badge-onemli">Ödenmedi</span>
                   <% } %>
                 </td>
-                <td><%= a.odeme_tarihi || '-' %></td>
+                <td data-label="Ödeme Tarihi"><%= a.odeme_tarihi || '-' %></td>
               </tr>
             <% }); %>
           </tbody>

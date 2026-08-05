@@ -40,23 +40,23 @@
     <p class="empty-state">Henüz duyuru yok.</p>
   <% } else { %>
     <div class="table-wrap">
-      <table class="admin-table">
+      <table class="admin-table responsive-table">
         <thead>
           <tr><th>Başlık</th><th>Kategori</th><th>Tarih</th><th>Önemli</th><th>Ek</th><th>İşlem</th></tr>
         </thead>
         <tbody>
           <% duyurular.forEach(function(d) { %>
             <tr>
-              <td><%= d.baslik %></td>
-              <td><span class="badge badge-genel"><%= d.kategori %></span></td>
-              <td><%= d.olusturma_tarihi.split(' ')[0] %></td>
-              <td><%= d.onemli ? '⭐' : '-' %></td>
-              <td>
+              <td data-label="Başlık"><%= d.baslik %></td>
+              <td data-label="Kategori"><span class="badge badge-genel"><%= d.kategori %></span></td>
+              <td data-label="Tarih"><%= d.olusturma_tarihi.split(' ')[0] %></td>
+              <td data-label="Önemli"><%= d.onemli ? '⭐' : '-' %></td>
+              <td data-label="Ek">
                 <% if (d.ek_dosya) { %>
                   <a href="<%= d.ek_dosya %>" target="_blank" rel="noopener" class="ek-link">📎</a>
                 <% } else { %>—<% } %>
               </td>
-              <td class="td-islem">
+              <td data-label="İşlem" class="td-islem">
                 <a href="/yonetim/duyurular/duzenle/<%= d.id %>" class="btn-duzenle">Düzenle</a>
                 <form action="/yonetim/duyurular/sil/<%= d.id %>" method="POST" data-confirm="Bu duyuru silinsin mi?" style="display:inline">
                   <button type="submit" class="btn-sil">Sil</button>

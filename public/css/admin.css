@@ -17,10 +17,12 @@
   flex-direction: column;
   position: fixed;
   top: 0; bottom: 0; left: 0;
+  z-index: 200;
+  transition: transform 0.3s ease;
 }
 .admin-logo {
-  padding: 24px 22px;
-  font-size: 1.3rem;
+  padding: 22px 20px;
+  font-size: 1.2rem;
   font-weight: 600;
   color: #fff;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
@@ -57,21 +59,58 @@
 .admin-logout:hover { background: rgba(255, 138, 138, 0.12); }
 
 /* ---------- Main ---------- */
-.admin-main { flex: 1; margin-left: 250px; }
+.admin-main { flex: 1; margin-left: 250px; min-width: 0; }
 .admin-topbar {
   background: #fff;
-  padding: 18px 30px;
+  padding: 14px 24px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 14px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
   position: sticky;
   top: 0;
   z-index: 10;
 }
-.admin-topbar h1 { font-size: 1.4rem; }
-.admin-user { color: var(--metin-acik); font-weight: 500; }
-.admin-content { padding: 30px; }
+.admin-topbar h1 { font-size: 1.25rem; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-user { color: var(--metin-acik); font-weight: 500; font-size: 0.85rem; }
+.admin-content { padding: 24px; max-width: 100%; overflow-x: hidden; }
+
+/* Hamburger toggle (sadece mobil görünür) */
+.admin-sidebar-toggle {
+  display: none;
+  background: none;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  width: 40px; height: 40px;
+}
+.admin-sidebar-toggle span {
+  width: 22px; height: 2.5px;
+  background: var(--metin);
+  border-radius: 3px;
+  transition: 0.3s;
+}
+.admin-sidebar-toggle:hover { background: var(--arkaplan); }
+.admin-sidebar-toggle[aria-expanded="true"] span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.admin-sidebar-toggle[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
+.admin-sidebar-toggle[aria-expanded="true"] span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* Mobil overlay (sidebar açıkken) */
+.admin-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 199;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.admin-overlay.open { opacity: 1; pointer-events: auto; }
 
 /* ---------- İstatistik kartları ---------- */
 .stat-grid {
@@ -231,7 +270,7 @@
 .sakin-table td { padding: 4px 5px; border-bottom: 1px solid var(--kenarlik); }
 .sakin-table input {
   width: 110px;
-  padding: 6px 8px;
+  padding: 8px 10px;
   border: 1px solid var(--kenarlik);
   border-radius: 6px;
   font-family: inherit;
@@ -239,6 +278,30 @@
 }
 .sakin-table input.genis { width: 200px; }
 .sakin-table input:focus { outline: none; border-color: var(--renk-ana); background: #f5f9ff; }
+/* ---- Sakin tablosu: çok sütunlu, yatay kaydırma göstergesi ---- */
+@media (max-width: 720px) {
+  .sakin-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    position: relative;
+    border-radius: 10px;
+    border: 1px solid var(--kenarlik);
+  }
+  .sakin-table-wrap::after {
+    content: '← kaydır →';
+    display: block;
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--metin-acik);
+    padding: 6px 0;
+    background: linear-gradient(to right, transparent, #f5f7fa 30%, #f5f7fa 70%, transparent);
+    border-top: 1px solid var(--kenarlik);
+  }
+  .sakin-table input { width: 100px; font-size: 0.8rem; padding: 6px 8px; }
+  .sakin-table input.genis { width: 160px; }
+  .sakin-table th, .sakin-table td { padding: 4px; font-size: 0.78rem; }
+  .sakin-table th { font-size: 0.68rem; }
+}
 .sakin-islem { display: flex; gap: 6px; white-space: nowrap; }
 
 /* ---------- Site yerleşim planı (harita) ---------- */
@@ -338,17 +401,137 @@
 .import-kutu summary { cursor: pointer; font-size: 1rem; }
 .import-kutu[open] summary { margin-bottom: 14px; }
 
-/* ---------- Responsive ---------- */
-@media (max-width: 768px) {
+/* ============================================================
+   RESPONSIVE - Admin Panel
+   ============================================================ */
+
+/* ---- Tablet: 1024px ve altı ---- */
+@media (max-width: 1024px) {
+  .admin-content { padding: 20px; }
+  .stat-grid { gap: 14px; }
+  .stat-card { padding: 20px; }
+  .stat-value { font-size: 1.5rem; }
+}
+
+/* ---- Orta tablet / büyük telefon: 900px ve altı ---- */
+@media (max-width: 900px) {
+  .admin-main { margin-left: 0; }
   .admin-sidebar {
-    width: 70px;
+    transform: translateX(-100%);
+    width: 280px;
+    max-width: 85vw;
   }
-  .admin-logo { font-size: 0; padding: 20px 0; text-align: center; }
-  .admin-logo span { font-size: 1.5rem; }
-  .admin-nav a { font-size: 0; padding: 14px 0; text-align: center; }
-  .admin-nav a::first-letter { font-size: 1.3rem; }
-  .admin-site-link, .admin-logout { font-size: 0; text-align: center; }
-  .admin-main { margin-left: 70px; }
+  .admin-sidebar.open { transform: translateX(0); }
+  .admin-sidebar-toggle { display: flex; }
+  .admin-topbar { padding: 12px 16px; }
+  .admin-topbar h1 { font-size: 1.1rem; }
+  .admin-content { padding: 16px; }
+
+  .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .stat-card { padding: 16px; gap: 12px; }
+  .stat-icon { width: 44px; height: 44px; font-size: 1.3rem; border-radius: 10px; }
+  .stat-value { font-size: 1.3rem; }
+  .stat-label { font-size: 0.78rem; }
+
+  .admin-panel-box, .admin-quick { padding: 20px; }
+  .admin-panel-box h2, .admin-quick h2 { font-size: 1.1rem; }
+
+  .quick-link { padding: 12px 16px; font-size: 0.9rem; }
+
+  .mesaj-item { padding: 16px; }
+  .mesaj-iletisim { flex-direction: column; gap: 4px; }
+}
+
+/* ---- Telefon: 600px ve altı ---- */
+@media (max-width: 600px) {
+  .admin-topbar { padding: 10px 12px; gap: 10px; }
+  .admin-topbar h1 { font-size: 1rem; }
+  .admin-user { font-size: 0.78rem; }
+  .admin-sidebar-toggle { width: 36px; height: 36px; }
+  .admin-sidebar-toggle span { width: 20px; }
+
+  .admin-content { padding: 12px; }
+
+  .stat-grid { grid-template-columns: 1fr; gap: 10px; }
+  .stat-card { padding: 14px; }
+
+  .admin-panel-box, .admin-quick { padding: 16px; border-radius: 12px; }
+
+  .admin-table th, .admin-table td { padding: 10px 8px; font-size: 0.85rem; }
+
+  /* Quill editör mobilde daha kompakt toolbar */
+  .ql-toolbar.ql-snow { padding: 6px; }
+  .ql-container.ql-snow { font-size: 15px; }
+
+  .sakin-form-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .sakin-form-grid label { font-size: 0.75rem; }
+
+  .blok-detay-ust { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .blok-detay-ust h2 { font-size: 1.2rem; }
+  .blok-arama { flex-direction: column; }
+  .blok-arama input[type="text"] { width: 100%; min-width: 0; }
+
+  /* Bina kartları (harita) daha kompakt */
+  .harita { max-height: 70vh; }
+  .bina-kart { width: 68px; padding: 4px 2px; }
+  .bina-svg { width: 38px; }
+  .bina-harf { width: 20px; height: 20px; font-size: 0.78rem; }
+}
+
+/* ---- Çok küçük telefon: 380px ve altı ---- */
+@media (max-width: 380px) {
+  .stat-grid { gap: 8px; }
+  .stat-card { padding: 12px; gap: 10px; }
+  .stat-icon { width: 40px; height: 40px; font-size: 1.1rem; }
+  .stat-value { font-size: 1.1rem; }
+
+  .bina-kart { width: 56px; }
+  .bina-svg { width: 32px; }
+}
+
+/* ============================================================
+   RESPONSIVE TABLOLAR - Admin tabloları mobilde kart görünümü
+   ============================================================ */
+@media (max-width: 720px) {
+  .admin-table.responsive-table thead { display: none; }
+  .admin-table.responsive-table,
+  .admin-table.responsive-table tbody,
+  .admin-table.responsive-table tr,
+  .admin-table.responsive-table td { display: block; width: 100%; }
+  .admin-table.responsive-table tr {
+    background: #fff;
+    border: 1px solid var(--kenarlik);
+    border-radius: var(--radius);
+    margin-bottom: 12px;
+    padding: 12px 14px;
+    box-shadow: var(--golge);
+  }
+  .admin-table.responsive-table td {
+    padding: 6px 0;
+    border: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    text-align: right;
+    font-size: 0.88rem;
+  }
+  .admin-table.responsive-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--metin-acik);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    text-align: left;
+    flex-shrink: 0;
+  }
+  .admin-table.responsive-table td.td-islem,
+  .admin-table.responsive-table td[data-label="İşlem"] {
+    justify-content: flex-end;
+    border-top: 1px solid var(--kenarlik);
+    padding-top: 10px;
+    margin-top: 6px;
+  }
 }
 
 .btn-duzenle { background: #e8f0fb; color: var(--renk-ana); }

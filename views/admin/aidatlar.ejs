@@ -41,25 +41,25 @@
     <p class="empty-state">Henüz aidat kaydı yok.</p>
   <% } else { %>
     <div class="table-wrap">
-      <table class="admin-table">
+      <table class="admin-table responsive-table">
         <thead>
           <tr><th>Üye</th><th>Daire</th><th>Dönem</th><th>Tutar</th><th>Durum</th><th>İşlem</th></tr>
         </thead>
         <tbody>
           <% aidatlar.forEach(function(a) { %>
             <tr>
-              <td><%= a.ad_soyad %></td>
-              <td><%= a.daire_no %></td>
-              <td><%= a.donem %></td>
-              <td><%= Number(a.tutar).toLocaleString('tr-TR', { minimumFractionDigits: 2 }) %> ₺</td>
-              <td>
+              <td data-label="Üye"><%= a.ad_soyad %></td>
+              <td data-label="Daire"><%= a.daire_no %></td>
+              <td data-label="Dönem"><%= a.donem %></td>
+              <td data-label="Tutar"><%= Number(a.tutar).toLocaleString('tr-TR', { minimumFractionDigits: 2 }) %> ₺</td>
+              <td data-label="Durum">
                 <% if (a.odendi) { %>
                   <span class="badge badge-onayli">Ödendi</span>
                 <% } else { %>
                   <span class="badge badge-bekliyor">Ödenmedi</span>
                 <% } %>
               </td>
-              <td class="td-islem">
+              <td data-label="İşlem" class="td-islem">
                 <% if (a.odendi) { %>
                   <form action="/yonetim/aidatlar/geri-al/<%= a.id %>" method="POST">
                     <button type="submit" class="btn-sil">Geri Al</button>

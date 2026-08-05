@@ -7,7 +7,7 @@
   <meta name="description" content="Cumhuriyet Sitesi resmi web sitesi - duyurular, iletişim, kentsel dönüşüm ve site sakinleri üyelik portalı." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css?v=3" />
+  <link rel="stylesheet" href="/css/style.css?v=4" />
 </head>
 <body>
   <header class="site-header">
@@ -17,7 +17,7 @@
         <span class="logo-text">Cumhuriyet <strong>Sitesi</strong></span>
       </a>
 
-      <button class="nav-toggle" id="navToggle" aria-label="Menü">
+      <button class="nav-toggle" id="navToggle" aria-label="Menü" aria-expanded="false" aria-controls="mainNav">
         <span></span><span></span><span></span>
       </button>
 
@@ -71,8 +71,47 @@
     <div class="container"><div class="alert alert-error"><%= hata %></div></div>
   <% } %>
 
+  <div class="nav-overlay" id="navOverlay"></div>
   <main>
   <script>
+    // Mobil menü açma/kapama (drawer)
+    (function() {
+      var tog = document.getElementById('navToggle');
+      var nav = document.getElementById('mainNav');
+      var ovl = document.getElementById('navOverlay');
+      if (!tog || !nav) return;
+      function kapat() {
+        nav.classList.remove('open');
+        if (ovl) ovl.classList.remove('open');
+        document.body.classList.remove('menu-open');
+        tog.setAttribute('aria-expanded', 'false');
+      }
+      function ac() {
+        nav.classList.add('open');
+        if (ovl) ovl.classList.add('open');
+        document.body.classList.add('menu-open');
+        tog.setAttribute('aria-expanded', 'true');
+      }
+      tog.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (nav.classList.contains('open')) kapat();
+        else ac();
+      });
+      if (ovl) ovl.addEventListener('click', kapat);
+      // Link tıklanınca menüyü kapat
+      nav.querySelectorAll('a').forEach(function(a) {
+        a.addEventListener('click', kapat);
+      });
+      // ESC tuşu ile kapat
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && nav.classList.contains('open')) kapat();
+      });
+      // Ekran büyürse drawer'ı sıfırla
+      window.addEventListener('resize', function() {
+        if (window.innerWidth > 860) kapat();
+      });
+    })();
+
     // Bildirim dropdown açma/kapama
     (function() {
       var btn = document.getElementById('navBellBtn');

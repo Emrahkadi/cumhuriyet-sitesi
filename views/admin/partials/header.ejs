@@ -6,12 +6,13 @@
   <title>Yönetim Paneli - Cumhuriyet Sitesi</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css?v=3" />
-  <link rel="stylesheet" href="/css/admin.css" />
+  <link rel="stylesheet" href="/css/style.css?v=4" />
+  <link rel="stylesheet" href="/css/admin.css?v=2" />
   <link rel="stylesheet" href="https://cdn.quilljs.com/1.3.7/quill.snow.css" />
 </head>
 <body class="admin-body">
-  <aside class="admin-sidebar">
+  <div class="admin-overlay" id="adminOverlay"></div>
+  <aside class="admin-sidebar" id="adminSidebar">
     <div class="admin-logo">
       <img src="/images/logo.png?v=2" alt="Cumhuriyet Sitesi" class="admin-logo-img" />
       <span>Yönetim</span>
@@ -34,6 +35,9 @@
 
   <main class="admin-main">
     <header class="admin-topbar">
+      <button type="button" class="admin-sidebar-toggle" id="adminSidebarToggle" aria-label="Menü" aria-expanded="false" aria-controls="adminSidebar">
+        <span></span><span></span><span></span>
+      </button>
       <h1><%= sayfaBaslik %></h1>
       <span class="admin-user">👤 <%= yonetici.kullanici_adi %></span>
     </header>

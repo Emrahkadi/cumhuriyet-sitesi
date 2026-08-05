@@ -7,26 +7,26 @@
     <p class="empty-state">Henüz kayıtlı üye yok.</p>
   <% } else { %>
     <div class="table-wrap">
-      <table class="admin-table">
+      <table class="admin-table responsive-table">
         <thead>
           <tr><th>Ad Soyad</th><th>Daire No</th><th>Telefon</th><th>E-posta</th><th>Durum</th><th>Kayıt</th><th>İşlem</th></tr>
         </thead>
         <tbody>
           <% uyeler.forEach(function(u) { %>
             <tr>
-              <td><%= u.ad_soyad %></td>
-              <td><%= u.daire_no %></td>
-              <td><%= u.telefon %></td>
-              <td><small><%= u.email || '-' %></small></td>
-              <td>
+              <td data-label="Ad Soyad"><%= u.ad_soyad %></td>
+              <td data-label="Daire"><%= u.daire_no %></td>
+              <td data-label="Telefon"><%= u.telefon %></td>
+              <td data-label="E-posta"><small><%= u.email || '-' %></small></td>
+              <td data-label="Durum">
                 <% if (u.email_dogrulandi) { %>
                   <span class="badge badge-onayli">Doğrulanmış</span>
                 <% } else { %>
                   <span class="badge badge-bekliyor">E-posta bekliyor</span>
                 <% } %>
               </td>
-              <td><%= u.olusturma_tarihi.split(' ')[0] %></td>
-              <td class="td-islem">
+              <td data-label="Kayıt"><%= u.olusturma_tarihi.split(' ')[0] %></td>
+              <td data-label="İşlem" class="td-islem">
                 <% if (!u.email_dogrulandi) { %>
                   <form action="/yonetim/uyeler/email-dogrula/<%= u.id %>" method="POST">
                     <button type="submit" class="btn-onayla">E-postayı doğrula</button>

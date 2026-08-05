@@ -36,24 +36,24 @@
     <p class="empty-state">Henüz mesaj gönderilmemiş.</p>
   <% } else { %>
     <div class="table-wrap">
-      <table class="admin-table">
+      <table class="admin-table responsive-table">
         <thead>
           <tr><th>Üye</th><th>Daire</th><th>Başlık</th><th>Durum</th><th>Tarih</th></tr>
         </thead>
         <tbody>
           <% gonderilenler.forEach(function(m) { %>
             <tr>
-              <td><%= m.ad_soyad %></td>
-              <td><%= m.daire_no %></td>
-              <td><%= m.baslik %></td>
-              <td>
+              <td data-label="Üye"><%= m.ad_soyad %></td>
+              <td data-label="Daire"><%= m.daire_no %></td>
+              <td data-label="Başlık"><%= m.baslik %></td>
+              <td data-label="Durum">
                 <% if (m.okundu) { %>
                   <span class="badge badge-onayli">Okundu</span>
                 <% } else { %>
                   <span class="badge badge-bekliyor">Okunmadı</span>
                 <% } %>
               </td>
-              <td><%= m.olusturma_tarihi.split(' ')[0] %></td>
+              <td data-label="Tarih"><%= m.olusturma_tarihi.split(' ')[0] %></td>
             </tr>
           <% }); %>
         </tbody>

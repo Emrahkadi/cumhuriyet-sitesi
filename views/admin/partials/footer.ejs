@@ -55,6 +55,44 @@
         });
       }
     });
+
+    // Sidebar drawer açma/kapama (mobil)
+    (function() {
+      var tog = document.getElementById('adminSidebarToggle');
+      var sb  = document.getElementById('adminSidebar');
+      var ovl = document.getElementById('adminOverlay');
+      if (!tog || !sb) return;
+      function kapat() {
+        sb.classList.remove('open');
+        if (ovl) ovl.classList.remove('open');
+        document.body.classList.remove('menu-open');
+        tog.setAttribute('aria-expanded', 'false');
+      }
+      function ac() {
+        sb.classList.add('open');
+        if (ovl) ovl.classList.add('open');
+        document.body.classList.add('menu-open');
+        tog.setAttribute('aria-expanded', 'true');
+      }
+      tog.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (sb.classList.contains('open')) kapat();
+        else ac();
+      });
+      if (ovl) ovl.addEventListener('click', kapat);
+      // Sidebar linki tıklanınca kapat
+      sb.querySelectorAll('a').forEach(function(a) {
+        a.addEventListener('click', kapat);
+      });
+      // ESC
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && sb.classList.contains('open')) kapat();
+      });
+      // Pencere büyüyünce drawer'ı sıfırla
+      window.addEventListener('resize', function() {
+        if (window.innerWidth > 900) kapat();
+      });
+    })();
   </script>
 </body>
 </html>
