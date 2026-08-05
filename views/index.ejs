@@ -40,7 +40,7 @@
               <time><%= d.olusturma_tarihi.split(' ')[0] %></time>
             </div>
             <h3><a href="/duyuru/<%= d.id %>"><%= d.baslik %></a></h3>
-            <p><%= d.icerik.length > 120 ? d.icerik.substring(0, 120) + '...' : d.icerik %></p>
+            <p><%= kisalt(d.icerik, 120) %></p>
             <a href="/duyuru/<%= d.id %>" class="card-link">Devamını oku →</a>
           </article>
         <% }); %>

@@ -332,7 +332,7 @@ time { color: var(--metin-acik); font-size: 0.82rem; }
   padding: 22px;
 }
 .timeline-content h3 { margin: 8px 0; font-size: 1.15rem; }
-.timeline-content p { color: var(--metin-acik); font-size: 0.95rem; }
+
 
 .cta-box {
   background: linear-gradient(135deg, var(--renk-ana) 0%, var(--renk-ana-koyu) 100%);
@@ -645,3 +645,7 @@ time { color: var(--metin-acik); font-size: 0.82rem; }
 @media (max-width: 520px) {
   .footer-grid { grid-template-columns: 1fr; }
 }
+
+.kentsel-icerik p:first-child { margin-top: 0; }
+.kentsel-icerik p:last-child { margin-bottom: 0; }
+.kentsel-icerik { color: var(--metin-acik); font-size: 0.95rem; }

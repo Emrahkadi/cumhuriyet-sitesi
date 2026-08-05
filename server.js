@@ -107,6 +107,16 @@ function zenginMetin(html) {
   return sanitizeHtml(String(html), TEMIZLEME_SECENEKLERI);
 }
 
+// Quill HTML'inden kısa, salt metin özet çıkarır (kart listelemeleri için)
+function kisalt(html, uzunluk) {
+  if (!html) return '';
+  uzunluk = uzunluk || 140;
+  const temiz = sanitizeHtml(String(html), { allowedTags: [], allowedAttributes: {} })
+    .replace(/\s+/g, ' ').trim();
+  if (temiz.length <= uzunluk) return temiz;
+  return temiz.substring(0, uzunluk).replace(/\s\S*$/, '') + '…';
+}
+
 // Sitenin blokları ve her bloktaki daire sayısı (Excel verisinden)
 // "Büyük" bloklar (A, D, H, J): 1-40; "küçük" bloklar: 1-20.
 const BLOK_DAIRE_SAYILARI = {
@@ -233,6 +243,9 @@ app.use((req, res, next) => {
   res.locals.basari = req.flash('basari');
   res.locals.hata = req.flash('hata');
   res.locals.aktifSayfa = '';
+  // EJS şablonlarında kullanılabilecek yardımcılar
+  res.locals.kisalt = kisalt;
+  res.locals.zenginMetin = zenginMetin;
   next();
 });
 
