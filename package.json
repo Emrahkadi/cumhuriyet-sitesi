@@ -28,9 +28,13 @@
     "express-rate-limit": "^7.4.0",
     "express-session": "^1.18.0",
     "helmet": "^7.1.0",
-    "multer": "^1.4.5-lts.1",
-    "nodemailer": "^6.9.13",
+    "multer": "^2.2.0",
+    "nodemailer": "^9.0.4",
     "pg": "^8.12.0",
     "sanitize-html": "^2.13.1"
+  },
+  "overrides": {
+    "brace-expansion": "^5.0.9",
+    "uuid": "^14.0.1"
   }
 }
