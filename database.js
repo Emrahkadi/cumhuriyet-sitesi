@@ -229,14 +229,9 @@ CREATE TABLE IF NOT EXISTS duyuru_ekleri (
     CREATE INDEX IF NOT EXISTS idx_anket_oylar_daire ON anket_oylar (anket_id, daire_no);
     CREATE INDEX IF NOT EXISTS idx_anket_katilimlar_daire ON anket_katilimlar (anket_id, daire_no);
   `);
-  // Eski unique index'i (uye_id bazında) kaldırıp daire_no bazlı yap.
-  // (idempotent: eğer eski index varsa drop, yoksa no-op)
-  await pool.query(`DROP INDEX IF EXISTS idx_anket_katilimlar_unique;`);
-  await pool.query(`
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_anket_katilimlar_daire_unique
-    ON anket_katilimlar (anket_id, daire_no);
-  `);
-  // Mevcut eski kayıtların daire_no'sunu üyeler tablosundan geriye doldur
+  // ÖNCE mevcut eski kayıtların daire_no'sunu üyeler tablosundan geriye
+  // doldur. Unique index oluşturmadan ÖNCE bu yapılmalı, yoksa NULL
+  // değerleri unique constraint'i ihlal eder.
   await pool.query(`
     UPDATE anket_katilimlar k
        SET daire_no = u.daire_no
@@ -248,6 +243,16 @@ CREATE TABLE IF NOT EXISTS duyuru_ekleri (
        SET daire_no = u.daire_no
       FROM uyeler u
      WHERE o.uye_id = u.id AND (o.daire_no IS NULL OR o.daire_no = '');
+  `);
+  // Eski unique index'i (uye_id bazında) kaldırıp daire_no bazlı yap.
+  // (idempotent: eğer eski index varsa drop, yoksa no-op)
+  await pool.query(`DROP INDEX IF EXISTS idx_anket_katilimlar_unique;`);
+  // NULL olan daire_no'ları unique constraint'ten hariç tut
+  // (PostgreSQL'de NULL != NULL, ama birden fazla NULL unique ihlal eder)
+  await pool.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_anket_katilimlar_daire_unique
+    ON anket_katilimlar (anket_id, daire_no)
+    WHERE daire_no IS NOT NULL;
   `);
 }
 
