@@ -419,11 +419,12 @@
 @media (max-width: 900px) {
   .admin-main { margin-left: 0; }
   .admin-sidebar {
-    transform: translateX(-100vw);
+    transform: translateX(calc(-100% - 20px));
     width: 280px;
     max-width: 85vw;
+    visibility: hidden;
   }
-  .admin-sidebar.open { transform: translateX(0); }
+  .admin-sidebar.open { transform: translateX(0); visibility: visible; }
   .admin-sidebar-toggle { display: flex; }
   .admin-topbar { padding: 12px 16px; }
   .admin-topbar h1 { font-size: 1.1rem; }
