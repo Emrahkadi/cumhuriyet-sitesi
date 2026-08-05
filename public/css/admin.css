@@ -422,9 +422,14 @@
     transform: translateX(calc(-100% - 20px));
     width: 280px;
     max-width: 85vw;
-    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
   }
-  .admin-sidebar.open { transform: translateX(0); visibility: visible; }
+  .admin-sidebar.open {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
   .admin-sidebar-toggle { display: flex; }
   .admin-topbar { padding: 12px 16px; }
   .admin-topbar h1 { font-size: 1.1rem; }

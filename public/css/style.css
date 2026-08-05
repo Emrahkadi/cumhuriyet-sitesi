@@ -694,13 +694,18 @@ button, .btn, a {
     box-shadow: -8px 0 24px rgba(0, 0, 0, 0.15);
     gap: 2px;
     display: flex;
-    transform: translateX(calc(100% + 20px)); /* kendi genişliği + 20px fazla */
+    transform: translateX(calc(100% + 20px));
     transition: transform 0.3s ease;
     overflow-y: auto;
     z-index: 999;
-    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
   }
-  .main-nav.open { transform: translateX(0); visibility: visible; }
+  .main-nav.open {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
   .main-nav a {
     padding: 14px 16px;
     font-size: 1rem;
