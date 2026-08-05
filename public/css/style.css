@@ -45,7 +45,7 @@ img { max-width: 100%; display: block; }
   box-shadow: var(--golge);
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 1000; /* Drawer'ın (999) üstünde kalsın ki toggle her zaman tıklanabilsin */
 }
 .header-inner {
   display: flex;
@@ -53,6 +53,8 @@ img { max-width: 100%; display: block; }
   justify-content: space-between;
   height: 72px;
   gap: 12px;
+  position: relative;
+  z-index: 1001;
 }
 .logo { display: flex; align-items: center; gap: 10px; font-size: 1.05rem; min-width: 0; }
 .logo-img { height: 44px; width: 44px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
@@ -86,6 +88,8 @@ img { max-width: 100%; display: block; }
   border: none;
   cursor: pointer;
   padding: 6px;
+  position: relative;
+  z-index: 1002;
 }
 .nav-toggle span {
   width: 26px; height: 3px;
