@@ -187,12 +187,11 @@ CREATE TABLE IF NOT EXISTS duyuru_ekleri (
       anket_id INTEGER NOT NULL REFERENCES anketler(id) ON DELETE CASCADE,
       soru_id INTEGER NOT NULL REFERENCES anket_sorulari(id) ON DELETE CASCADE,
       uye_id INTEGER NOT NULL REFERENCES uyeler(id) ON DELETE CASCADE,
-      daire_no TEXT NOT NULL, -- hane bazında unique kontrol için
+      daire_no TEXT, -- hane bazında unique kontrol için (NULL olabilir: eski kayıtlar)
       secim INTEGER NOT NULL, -- seçilen seçeneğin indexi
       oy_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
     );
     CREATE INDEX IF NOT EXISTS idx_anket_oylar ON anket_oylar (anket_id, soru_id, uye_id);
-    CREATE INDEX IF NOT EXISTS idx_anket_oylar_daire ON anket_oylar (anket_id, daire_no);
 
     -- Daire başına anket bazında tek katılım
     -- (aynı daireden sadece bir kişi oy kullanabilir)
@@ -200,11 +199,10 @@ CREATE TABLE IF NOT EXISTS duyuru_ekleri (
       id SERIAL PRIMARY KEY,
       anket_id INTEGER NOT NULL REFERENCES anketler(id) ON DELETE CASCADE,
       uye_id INTEGER NOT NULL REFERENCES uyeler(id) ON DELETE CASCADE,
-      daire_no TEXT NOT NULL, -- hane bazında unique kontrol için
+      daire_no TEXT, -- hane bazında unique kontrol için (NULL olabilir: eski kayıtlar)
       tamamlandi INTEGER NOT NULL DEFAULT 0, -- 1: tüm sorular cevaplandı
       katilim_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
     );
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_anket_katilimlar_unique ON anket_katilimlar (anket_id, daire_no);
 
 
 
@@ -227,7 +225,9 @@ CREATE TABLE IF NOT EXISTS duyuru_ekleri (
     -- Anket tablolarına hane (daire) bazında kontrol için daire_no eklendi
     ALTER TABLE anket_oylar ADD COLUMN IF NOT EXISTS daire_no TEXT;
     ALTER TABLE anket_katilimlar ADD COLUMN IF NOT EXISTS daire_no TEXT;
+    -- Bu index'ler ALTER'den SONRA oluşturulmalı (kolon mevcut olmalı)
     CREATE INDEX IF NOT EXISTS idx_anket_oylar_daire ON anket_oylar (anket_id, daire_no);
+    CREATE INDEX IF NOT EXISTS idx_anket_katilimlar_daire ON anket_katilimlar (anket_id, daire_no);
   `);
   // Eski unique index'i (uye_id bazında) kaldırıp daire_no bazlı yap.
   // (idempotent: eğer eski index varsa drop, yoksa no-op)
