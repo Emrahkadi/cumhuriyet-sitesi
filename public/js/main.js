@@ -1,13 +1,9 @@
 // Mobil menü açma/kapama
-document.addEventListener('DOMContentLoaded', function () {
-  var toggle = document.getElementById('navToggle');
-  var nav = document.getElementById('mainNav');
-  if (toggle && nav) {
-    toggle.addEventListener('click', function () {
-      nav.classList.toggle('open');
-    });
-  }
-});
+// Not: Toggle mantığı artık views/partials/header.ejs içindeki IIFE'de yönetiliyor
+// (overlay kapatma, ESC, link tıklama, resize dahil). Burada tekrar listener
+// eklemek "open" class'ının açılıp hemen kapanmasına neden oluyordu.
+// Bu yüzden buradaki eski toggle kodu kaldırıldı.
+void 0;
 
 // Onay gerektiren form gönderimleri (CSP uyumlu; inline onsubmit yerine)
 document.addEventListener(

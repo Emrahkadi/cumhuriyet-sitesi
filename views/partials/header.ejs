@@ -80,6 +80,8 @@
   <script>
     // Mobil menü açma/kapama (drawer)
     (function() {
+      if (window.__navToggleBound) return;
+      window.__navToggleBound = true;
       var tog = document.getElementById('navToggle');
       var nav = document.getElementById('mainNav');
       var ovl = document.getElementById('navOverlay');
