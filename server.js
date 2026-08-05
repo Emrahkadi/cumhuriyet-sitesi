@@ -537,9 +537,6 @@ app.get('/giris', (req, res) => {
 //  Kullanım: GET /__debug/login?tel=05456401902
 // =====================================================================
 app.get('/__debug/login', ah(async (req, res) => {
-  if (process.env.NODE_ENV === 'production' && process.env.ENABLE_DEBUG !== '1') {
-    return res.status(404).send('Not found');
-  }
   const tel = (req.query.tel || '').replace(/\s+/g, '');
   if (!tel) return res.status(400).send('tel parametresi gerekli');
   const uye = (await q(
