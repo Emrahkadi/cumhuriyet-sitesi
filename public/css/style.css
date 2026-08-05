@@ -65,12 +65,12 @@ img { max-width: 100%; display: block; }
 
 .main-nav { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
 .main-nav a {
-  padding: 8px 10px;
+  padding: 7px 9px;
   border-radius: 8px;
   font-weight: 500;
   color: var(--metin);
   transition: all 0.2s;
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   white-space: nowrap;
 }
 .main-nav a:hover { background: var(--arkaplan); color: var(--renk-ana); }
