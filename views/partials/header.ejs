@@ -86,21 +86,18 @@
       var nav = document.getElementById('mainNav');
       if (!tog || !nav) return;
 
-      // Basit toggle: open class'ını ekle/kaldır
-      function toggleMenu() {
-        var isOpen = nav.classList.contains('open');
-        if (isOpen) {
-          nav.classList.remove('open');
-          tog.setAttribute('aria-expanded', 'false');
-        } else {
-          nav.classList.add('open');
-          tog.setAttribute('aria-expanded', 'true');
-        }
-      }
       tog.addEventListener('click', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        toggleMenu();
+        // setTimeout(0): toggle'ı bir sonraki tick'e erteler.
+        // Aynı tick'te başka script'ler (örn. 3rd-party MutationObserver,
+        // capture-phase click listener) class'ı geri kaldırabiliyor.
+        // Asenkron yaparak bu yarış durumunu çözüyoruz.
+        setTimeout(function() {
+          nav.classList.toggle('open');
+          var isOpen = nav.classList.contains('open');
+          tog.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        }, 0);
       });
       // Drawer içindeki X kapatma butonu
       var closeBtn = document.getElementById('navClose');
