@@ -84,43 +84,46 @@
       window.__navToggleBound = true;
       var tog = document.getElementById('navToggle');
       var nav = document.getElementById('mainNav');
-      var ovl = document.getElementById('navOverlay');
       if (!tog || !nav) return;
-      function kapat() {
-        if (window.__navDebug) console.warn('KAPAT çağrıldı. Stack:', new Error().stack);
-        nav.classList.remove('open');
-        if (ovl) ovl.classList.remove('open');
-        document.body.classList.remove('menu-open');
-        tog.setAttribute('aria-expanded', 'false');
-      }
-      function ac() {
-        if (window.__navDebug) console.warn('AÇ çağrıldı');
-        nav.classList.add('open');
-        if (ovl) ovl.classList.add('open');
-        document.body.classList.add('menu-open');
-        tog.setAttribute('aria-expanded', 'true');
+
+      // Basit toggle: open class'ını ekle/kaldır
+      function toggleMenu() {
+        var isOpen = nav.classList.contains('open');
+        if (isOpen) {
+          nav.classList.remove('open');
+          tog.setAttribute('aria-expanded', 'false');
+        } else {
+          nav.classList.add('open');
+          tog.setAttribute('aria-expanded', 'true');
+        }
       }
       tog.addEventListener('click', function(e) {
+        e.preventDefault();
         e.stopPropagation();
-        if (window.__navDebug) console.warn('Toggle click yakalandı. Mevcut open:', nav.classList.contains('open'));
-        if (nav.classList.contains('open')) kapat();
-        else ac();
+        toggleMenu();
       });
-      if (ovl) ovl.addEventListener('click', kapat);
       // Drawer içindeki X kapatma butonu
       var closeBtn = document.getElementById('navClose');
-      if (closeBtn) closeBtn.addEventListener('click', kapat);
-      // Link tıklanınca menüyü kapat
-      nav.querySelectorAll('a').forEach(function(a) {
-        a.addEventListener('click', kapat);
-      });
+      if (closeBtn) {
+        closeBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          nav.classList.remove('open');
+          tog.setAttribute('aria-expanded', 'false');
+        });
+      }
       // ESC tuşu ile kapat
       document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && nav.classList.contains('open')) kapat();
+        if (e.key === 'Escape' && nav.classList.contains('open')) {
+          nav.classList.remove('open');
+          tog.setAttribute('aria-expanded', 'false');
+        }
       });
       // Ekran büyürse drawer'ı sıfırla
       window.addEventListener('resize', function() {
-        if (window.innerWidth > 860) kapat();
+        if (window.innerWidth > 860 && nav.classList.contains('open')) {
+          nav.classList.remove('open');
+          tog.setAttribute('aria-expanded', 'false');
+        }
       });
     })();
 
