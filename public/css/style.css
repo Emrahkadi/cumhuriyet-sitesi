@@ -847,15 +847,18 @@ button, .btn, a {
     display: flex;
     transform: translateX(calc(100% + 20px));
     transition: transform 0.3s ease, box-shadow 0.3s ease;
-    overflow-y: auto;
+    overflow: hidden; /* kapalıyken scroll bar gösterme */
     z-index: 999;
     opacity: 0;
     pointer-events: none;
+    visibility: hidden;
   }
   .main-nav.open {
     transform: translateX(0);
     opacity: 1;
     pointer-events: auto;
+    visibility: visible;
+    overflow-y: auto;
     box-shadow: -8px 0 24px rgba(0, 0, 0, 0.15);
   }
   .main-nav a {
