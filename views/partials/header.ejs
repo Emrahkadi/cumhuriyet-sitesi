@@ -87,12 +87,14 @@
       var ovl = document.getElementById('navOverlay');
       if (!tog || !nav) return;
       function kapat() {
+        if (window.__navDebug) console.warn('KAPAT çağrıldı. Stack:', new Error().stack);
         nav.classList.remove('open');
         if (ovl) ovl.classList.remove('open');
         document.body.classList.remove('menu-open');
         tog.setAttribute('aria-expanded', 'false');
       }
       function ac() {
+        if (window.__navDebug) console.warn('AÇ çağrıldı');
         nav.classList.add('open');
         if (ovl) ovl.classList.add('open');
         document.body.classList.add('menu-open');
@@ -100,6 +102,7 @@
       }
       tog.addEventListener('click', function(e) {
         e.stopPropagation();
+        if (window.__navDebug) console.warn('Toggle click yakalandı. Mevcut open:', nav.classList.contains('open'));
         if (nav.classList.contains('open')) kapat();
         else ac();
       });
