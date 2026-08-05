@@ -56,8 +56,8 @@ img { max-width: 100%; display: block; }
   position: relative;
   z-index: 1001;
 }
-.logo { display: flex; align-items: center; gap: 10px; font-size: 1.05rem; min-width: 0; }
-.logo-img { height: 44px; width: 44px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.logo { display: flex; align-items: center; gap: 12px; font-size: 1.15rem; min-width: 0; }
+.logo-img { height: 72px; width: 72px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
 .logo-text strong { color: var(--renk-ana); }
 .logo-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
@@ -816,8 +816,8 @@ button, .btn, a {
 @media (max-width: 860px) {
   /* Header: mobil menüye geçiş */
   .site-header { position: sticky; top: 0; }
-  .header-inner { height: 64px; }
-  .logo-img { height: 40px; width: 40px; }
+  .header-inner { height: 72px; }
+  .logo-img { height: 64px; width: 64px; }
   .logo-text { font-size: 0.95rem; }
   .nav-toggle {
     display: flex;
@@ -870,26 +870,8 @@ button, .btn, a {
   .main-nav a:last-child { border-bottom: none; }
   .main-nav .nav-cta { text-align: center; margin-top: 10px; border-radius: 10px; }
 
-  /* Drawer kapatma butonu (X) */
-  .nav-close {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    background: none;
-    border: none;
-    font-size: 32px;
-    line-height: 1;
-    color: var(--metin);
-    cursor: pointer;
-    padding: 4px 10px;
-    border-radius: 8px;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .nav-close:hover { background: var(--arkaplan); color: var(--renk-vurgu); }
+  /* Drawer kapatma butonu (X) kaldırıldı - artık sadece toggle ve overlay kullanılıyor */
+  .nav-close { display: none !important; }
 
   /* Bildirim dropdown mobilde tam ekran görünüm */
   .nav-bell-wrapper { position: static; }
@@ -961,8 +943,8 @@ button, .btn, a {
 /* ---- Telefon: 600px ve altı ---- */
 @media (max-width: 600px) {
   .container { padding: 0 14px; }
-  .header-inner { height: 60px; }
-  .logo-img { height: 36px; width: 36px; }
+  .header-inner { height: 68px; }
+  .logo-img { height: 56px; width: 56px; }
   .logo-text { font-size: 0.9rem; }
 
   .hero { padding: 32px 0 40px; }
@@ -1017,9 +999,9 @@ button, .btn, a {
 
 /* ---- Çok küçük telefon: 380px ve altı ---- */
 @media (max-width: 380px) {
-  .header-inner { height: 56px; gap: 6px; }
+  .header-inner { height: 60px; gap: 6px; }
   .logo { gap: 8px; }
-  .logo-img { height: 32px; width: 32px; }
+  .logo-img { height: 48px; width: 48px; }
   .logo-text { font-size: 0.82rem; }
   .nav-toggle { width: 40px; height: 40px; }
   .nav-toggle span { width: 22px; }

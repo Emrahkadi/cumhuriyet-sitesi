@@ -49,29 +49,35 @@
 
 <% if (katilimcilar.length > 0) { %>
   <div class="admin-panel-box">
-    <h2 style="margin-bottom:14px;">👥 Katılımcılar (<%= katilimcilar.length %> kişi)</h2>
-    <div class="table-wrap">
-      <table class="admin-table responsive-table">
-        <thead>
-          <tr>
-            <th>Ad Soyad</th>
-            <th>Daire</th>
-            <th>Katılım Tarihi</th>
-            <th>Cevaplanan Soru</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% katilimcilar.forEach(function(k) { %>
-            <tr>
-              <td data-label="Ad Soyad"><%= k.ad_soyad %></td>
-              <td data-label="Daire"><%= k.daire_no %></td>
-              <td data-label="Katılım"><%= k.katilim_tarihi %></td>
-              <td data-label="Cevap"><%= k.cevaplanan_soru %> / <%= soruSayisi %></td>
-            </tr>
+    <h2 style="margin-bottom:14px;">👥 Katılımcılar ve Verdikleri Oylar (<%= katilimcilar.length %> kişi)</h2>
+    <p style="color:var(--metin-acik);font-size:0.85rem;margin-bottom:14px;">
+      🔒 Bu bilgiler sadece yönetim tarafından görülebilir. Üyeler kimlerin ne oy verdiğini göremez.
+    </p>
+    <% katilimcilar.forEach(function(k) { %>
+      <details style="margin-bottom:10px;border:1px solid var(--kenarlik);border-radius:10px;padding:10px 14px;background:#fafbfc;">
+        <summary style="cursor:pointer;font-weight:600;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;list-style:none;">
+          <span>👤 <%= k.ad_soyad %> <span style="color:var(--metin-acik);font-weight:400;font-size:0.85rem;">— Daire <%= k.daire_no %></span></span>
+          <span style="color:var(--metin-acik);font-weight:400;font-size:0.82rem;">
+            <%= k.cevaplanan_soru %>/<%= soruSayisi %> cevap · <%= k.katilim_tarihi %>
+          </span>
+        </summary>
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--kenarlik);">
+          <% sorular.forEach(function(s, idx) { %>
+            <% const secilenIdx = k.oyler[s.id]; %>
+            <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;font-size:0.9rem;">
+              <strong style="color:var(--metin-acik);min-width:60px;">S<%= idx + 1 %>:</strong>
+              <span>
+                <% if (secilenIdx !== undefined && secilenIdx !== null) { %>
+                  <%= s.secenekler[secilenIdx] %>
+                <% } else { %>
+                  <em style="color:var(--metin-acik);">— cevaplanmamış —</em>
+                <% } %>
+              </span>
+            </div>
           <% }); %>
-        </tbody>
-      </table>
-    </div>
+        </div>
+      </details>
+    <% }); %>
   </div>
 <% } else { %>
   <div class="admin-panel-box" style="text-align:center;color:var(--metin-acik);">

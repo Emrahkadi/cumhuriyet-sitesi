@@ -224,12 +224,15 @@ app.use(
     secret: process.env.SESSION_SECRET || 'gizli-anahtar',
     resave: false,
     saveUninitialized: false,
-    rolling: true,
+    rolling: true, // Her istekle birlikte oturum süresi uzatılır (yenilemede logout olmaz)
     cookie: {
       httpOnly: true,
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
-      maxAge: 1000 * 60 * 60 * 8 // 8 saat
+      // 30 dakika hareketsizlik sonrası oturum sona erer.
+      // "rolling: true" sayesinde kullanıcı sayfayı yenilediğinde veya
+      // gezindiğinde süre baştan başlar (2-3 dk sonra logout olmaz).
+      maxAge: 1000 * 60 * 30 // 30 dakika
     }
   })
 );
@@ -1214,6 +1217,9 @@ app.get('/anketler', uyeGerekli, ah(async (req, res) => {
 // --- Üye: Tek anketi görüntüle ve oy ver ---
 app.get('/anket/:id', uyeGerekli, ah(async (req, res) => {
   const uyeId = req.session.uye.id;
+  // Üyenin daire bilgisini al (hane bazlı kontrol için)
+  const uyeRow = (await q('SELECT daire_no FROM uyeler WHERE id = $1', [uyeId])).rows[0];
+  const daireNo = uyeRow ? uyeRow.daire_no : '';
   const anket = (await q('SELECT * FROM anketler WHERE id = $1', [req.params.id])).rows[0];
   if (!anket || anket.durum !== 1) {
     req.flash('hata', 'Anket bulunamadı veya kapatılmış.');
@@ -1228,19 +1234,28 @@ app.get('/anket/:id', uyeGerekli, ah(async (req, res) => {
     'SELECT * FROM anket_sorulari WHERE anket_id = $1 ORDER BY sira, id',
     [req.params.id]
   )).rows.map(s => ({ ...s, secenekler: JSON.parse(s.secenekler) }));
-  // Üyenin daha önce verdiği oylar
-  const oylar = (await q(
-    'SELECT soru_id, secim FROM anket_oylar WHERE anket_id = $1 AND uye_id = $2',
-    [req.params.id, uyeId]
+  // Bu haneden (daire) daha önce oy verilmiş mi?
+  const haneOy = (await q(
+    'SELECT soru_id, secim FROM anket_oylar WHERE anket_id = $1 AND daire_no = $2',
+    [req.params.id, daireNo]
   )).rows;
   const oyMap = {};
-  oylar.forEach(o => { oyMap[o.soru_id] = o.secim; });
-  res.render('anket/detay', { aktifSayfa: 'anketler', anket, sorular, oyMap });
+  haneOy.forEach(o => { oyMap[o.soru_id] = o.secim; });
+  // Hane bilgisi (UI'da göstermek için)
+  const haneKatilim = haneOy.length > 0;
+  res.render('anket/detay', { aktifSayfa: 'anketler', anket, sorular, oyMap, daireNo, haneKatilim });
 }));
 
 // --- Üye: Oy gönder ---
 app.post('/anket/:id/oy', uyeGerekli, ah(async (req, res) => {
   const uyeId = req.session.uye.id;
+  // Üyenin daire bilgisini al
+  const uyeRow = (await q('SELECT daire_no FROM uyeler WHERE id = $1', [uyeId])).rows[0];
+  const daireNo = uyeRow ? uyeRow.daire_no : '';
+  if (!daireNo) {
+    req.flash('hata', 'Daire bilginiz bulunamadı. Yönetimle iletişime geçin.');
+    return res.redirect('/anketler');
+  }
   const anket = (await q('SELECT * FROM anketler WHERE id = $1', [req.params.id])).rows[0];
   if (!anket || anket.durum !== 1) {
     req.flash('hata', 'Anket bulunamadı veya kapatılmış.');
@@ -1252,14 +1267,13 @@ app.post('/anket/:id/oy', uyeGerekli, ah(async (req, res) => {
   }
   const sorular = (await q('SELECT id, secenekler FROM anket_sorulari WHERE anket_id = $1', [req.params.id])).rows;
 
-  // Çoklu seçim mi?
-  const coklu = anket.coklu_secim === 1;
-
-  // Önce eski oyları sil (üye değiştirip tekrar oy verebilir mi? Admin kararı: sadece 1 kez)
-  // Burada: üye zaten oy verdiyse tekrar veremesin
-  const mevcutOy = (await q('SELECT 1 FROM anket_oylar WHERE anket_id = $1 AND uye_id = $2 LIMIT 1', [req.params.id, uyeId])).rows[0];
-  if (mevcutOy) {
-    req.flash('hata', 'Bu ankete zaten oy vermişsiniz. Tekrar oy verilemez.');
+  // Daire (hane) bazında daha önce oy kullanılmış mı?
+  const mevcutHaneOy = (await q(
+    'SELECT 1 FROM anket_katilimlar WHERE anket_id = $1 AND daire_no = $2 LIMIT 1',
+    [req.params.id, daireNo]
+  )).rows[0];
+  if (mevcutHaneOy) {
+    req.flash('hata', 'Bu hane (' + daireNo + ' dairesi) için başka bir kullanıcı tarafından geçerli bir oy kullanılmıştır. Her daireden yalnızca bir oy verilebilir.');
     return res.redirect('/anket/' + req.params.id);
   }
 
@@ -1278,16 +1292,18 @@ app.post('/anket/:id/oy', uyeGerekli, ah(async (req, res) => {
       return res.redirect('/anket/' + req.params.id);
     }
     await q(
-      'INSERT INTO anket_oylar (anket_id, soru_id, uye_id, secim) VALUES ($1, $2, $3, $4)',
-      [req.params.id, soru.id, uyeId, secimInt]
+      'INSERT INTO anket_oylar (anket_id, soru_id, uye_id, daire_no, secim) VALUES ($1, $2, $3, $4, $5)',
+      [req.params.id, soru.id, uyeId, daireNo, secimInt]
     );
   }
-  // Katılım kaydı
+  // Katılım kaydı (hane bazında unique)
   await q(
-    `INSERT INTO anket_katilimlar (anket_id, uye_id, tamamlandi)
-     VALUES ($1, $2, 1)
-     ON CONFLICT (anket_id, uye_id) DO UPDATE SET tamamlandi = 1, katilim_tarihi = to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')`,
-    [req.params.id, uyeId]
+    `INSERT INTO anket_katilimlar (anket_id, uye_id, daire_no, tamamlandi)
+     VALUES ($1, $2, $3, 1)
+     ON CONFLICT (anket_id, daire_no) DO UPDATE
+       SET uye_id = EXCLUDED.uye_id, tamamlandi = 1,
+           katilim_tarihi = to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')`,
+    [req.params.id, uyeId, daireNo]
   );
   req.flash('basari', 'Oylarınız başarıyla kaydedildi. Katılımınız için teşekkürler!');
   res.redirect('/anketler');
@@ -1377,7 +1393,7 @@ app.get('/yonetim/anketler/rapor/:id', adminGerekli, ah(async (req, res) => {
     });
     soruRaporlari.push({ ...s, secenekler, dagilim, toplamOy });
   }
-  // Katılımcı listesi (kim oy verdi)
+  // Katılımcı listesi (kim oy verdi) + her katılımcının verdiği oylar
   const katilimcilar = (await q(
     `SELECT u.id, u.ad_soyad, u.daire_no, k.katilim_tarihi,
       (SELECT COUNT(*)::int FROM anket_oylar WHERE anket_id = $1 AND uye_id = u.id) AS cevaplanan_soru
@@ -1387,6 +1403,16 @@ app.get('/yonetim/anketler/rapor/:id', adminGerekli, ah(async (req, res) => {
      ORDER BY k.katilim_tarihi DESC`,
     [req.params.id]
   )).rows;
+  // Her katılımcının tüm oylarını çek (soru_id -> secim)
+  for (const k of katilimcilar) {
+    const oylar = (await q(
+      'SELECT soru_id, secim FROM anket_oylar WHERE anket_id = $1 AND uye_id = $2',
+      [req.params.id, k.id]
+    )).rows;
+    const oyMap = {};
+    oylar.forEach(o => { oyMap[o.soru_id] = o.secim; });
+    k.oyler = oyMap;
+  }
 
   res.render('admin/anket-rapor', {
     aktifSayfa: 'anketler',

@@ -180,26 +180,31 @@ CREATE TABLE IF NOT EXISTS duyuru_ekleri (
     );
     CREATE INDEX IF NOT EXISTS idx_anket_sorulari ON anket_sorulari (anket_id, sira);
 
-    -- Her soru için oy (üye başına, soru başına tek oy)
+    -- Her soru için oy (daire başına, soru başına tek oy — aynı daireden
+    -- birden fazla kişi (örn. eş, çocuk) aynı soruya oy veremesin)
     CREATE TABLE IF NOT EXISTS anket_oylar (
       id SERIAL PRIMARY KEY,
       anket_id INTEGER NOT NULL REFERENCES anketler(id) ON DELETE CASCADE,
       soru_id INTEGER NOT NULL REFERENCES anket_sorulari(id) ON DELETE CASCADE,
       uye_id INTEGER NOT NULL REFERENCES uyeler(id) ON DELETE CASCADE,
+      daire_no TEXT NOT NULL, -- hane bazında unique kontrol için
       secim INTEGER NOT NULL, -- seçilen seçeneğin indexi
       oy_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
     );
     CREATE INDEX IF NOT EXISTS idx_anket_oylar ON anket_oylar (anket_id, soru_id, uye_id);
+    CREATE INDEX IF NOT EXISTS idx_anket_oylar_daire ON anket_oylar (anket_id, daire_no);
 
-    -- Üye başına anket bazında tek katılım (tüm soruları cevaplamış mı kontrolü)
+    -- Daire başına anket bazında tek katılım
+    -- (aynı daireden sadece bir kişi oy kullanabilir)
     CREATE TABLE IF NOT EXISTS anket_katilimlar (
       id SERIAL PRIMARY KEY,
       anket_id INTEGER NOT NULL REFERENCES anketler(id) ON DELETE CASCADE,
       uye_id INTEGER NOT NULL REFERENCES uyeler(id) ON DELETE CASCADE,
+      daire_no TEXT NOT NULL, -- hane bazında unique kontrol için
       tamamlandi INTEGER NOT NULL DEFAULT 0, -- 1: tüm sorular cevaplandı
       katilim_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
     );
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_anket_katilimlar_unique ON anket_katilimlar (anket_id, uye_id);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_anket_katilimlar_unique ON anket_katilimlar (anket_id, daire_no);
 
 
 
@@ -219,6 +224,30 @@ CREATE TABLE IF NOT EXISTS duyuru_ekleri (
     CREATE UNIQUE INDEX IF NOT EXISTS idx_uyeler_email ON uyeler (email) WHERE email IS NOT NULL;
     ALTER TABLE duyurular ADD COLUMN IF NOT EXISTS ek_dosya TEXT;
     ALTER TABLE kentsel_donusum ADD COLUMN IF NOT EXISTS ek_dosya TEXT;
+    -- Anket tablolarına hane (daire) bazında kontrol için daire_no eklendi
+    ALTER TABLE anket_oylar ADD COLUMN IF NOT EXISTS daire_no TEXT;
+    ALTER TABLE anket_katilimlar ADD COLUMN IF NOT EXISTS daire_no TEXT;
+    CREATE INDEX IF NOT EXISTS idx_anket_oylar_daire ON anket_oylar (anket_id, daire_no);
+  `);
+  // Eski unique index'i (uye_id bazında) kaldırıp daire_no bazlı yap.
+  // (idempotent: eğer eski index varsa drop, yoksa no-op)
+  await pool.query(`DROP INDEX IF EXISTS idx_anket_katilimlar_unique;`);
+  await pool.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_anket_katilimlar_daire_unique
+    ON anket_katilimlar (anket_id, daire_no);
+  `);
+  // Mevcut eski kayıtların daire_no'sunu üyeler tablosundan geriye doldur
+  await pool.query(`
+    UPDATE anket_katilimlar k
+       SET daire_no = u.daire_no
+      FROM uyeler u
+     WHERE k.uye_id = u.id AND (k.daire_no IS NULL OR k.daire_no = '');
+  `);
+  await pool.query(`
+    UPDATE anket_oylar o
+       SET daire_no = u.daire_no
+      FROM uyeler u
+     WHERE o.uye_id = u.id AND (o.daire_no IS NULL OR o.daire_no = '');
   `);
 }
 

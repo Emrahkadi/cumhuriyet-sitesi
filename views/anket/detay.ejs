@@ -17,9 +17,15 @@
     <% const oyVerdim = Object.keys(oyMap).length > 0; %>
 
     <% if (oyVerdim) { %>
-      <div class="alert" style="background:#e6f7f0;color:#1b7a5e;border:1px solid #b8e6d3;padding:18px;border-radius:10px;margin-bottom:20px;">
-        <strong>✓ Bu ankete daha önce oy verdiniz.</strong>
-        <p style="margin:6px 0 0 0;color:#1b7a5e;">Seçimleriniz kaydedildi. Tekrar oy verilemez. Sonuçlar gizli ise sadece yönetim tarafından görülebilir.</p>
+      <div class="alert" style="background:#fff8e6;color:#6b4d00;border:1px solid #f5d98a;padding:18px;border-radius:10px;margin-bottom:20px;">
+        <strong>🏠 <%= daireNo %> dairesi için oy kullanılmıştır.</strong>
+        <p style="margin:6px 0 0 0;color:#6b4d00;">
+          Bu haneden (<%= daireNo %>) daha önce geçerli bir oy verilmiş. Her daireden yalnızca bir oy kullanılabilir.
+        </p>
+      </div>
+    <% } else { %>
+      <div class="alert" style="background:#e8f0fb;color:var(--renk-ana);border:1px solid #c8dbf2;padding:14px 18px;border-radius:10px;margin-bottom:20px;">
+        🏠 <strong><%= daireNo %></strong> dairesi olarak oy vereceksiniz. Her haneden yalnızca bir oy kullanılabilir.
       </div>
     <% } %>
 

@@ -7,7 +7,7 @@
   <meta name="description" content="Cumhuriyet Sitesi resmi web sitesi - duyurular, iletişim, kentsel dönüşüm ve site sakinleri üyelik portalı." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css?v=12" />
+  <link rel="stylesheet" href="/css/style.css?v=13" />
 </head>
 <body>
   <header class="site-header">
@@ -22,7 +22,6 @@
       </button>
 
       <nav class="main-nav" id="mainNav">
-        <button type="button" class="nav-close" id="navClose" aria-label="Menüyü kapat">×</button>
         <a href="/" class="<%= aktifSayfa === 'anasayfa' ? 'active' : '' %>">Ana Sayfa</a>
         <a href="/duyurular" class="<%= aktifSayfa === 'duyurular' ? 'active' : '' %>">Duyurular</a>
         <a href="/hakkinda" class="<%= aktifSayfa === 'hakkinda' ? 'active' : '' %>">Hakkımızda</a>
@@ -115,11 +114,10 @@
       }
       // Toggle tıklandığında watcher'ı başlat
       tog.addEventListener('click', startWatching);
-      // navClose tıklandığında da izle
-      var closeBtn = document.getElementById('navClose');
-      if (closeBtn) {
-        closeBtn.addEventListener('click', function(e) {
-          e.preventDefault();
+      // Overlay'e (drawer dışına) tıklayınca kapat
+      var overlay = document.getElementById('navOverlay');
+      if (overlay) {
+        overlay.addEventListener('click', function() {
           tog.setAttribute('aria-expanded', 'false');
           enforceState();
         });

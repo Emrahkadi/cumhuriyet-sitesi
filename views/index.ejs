@@ -8,7 +8,12 @@
       <h1>Cumhuriyet Sitesi<br />Resmi Yönetim Portalı</h1>
       <p>Güncel duyurular, site yönetimi hizmetleri ve site sakinlerine özel üyelik alanı tek bir çatı altında. Modern, güvenli ve huzurlu yaşamın adresi.</p>
       <div class="hero-actions">
-        <a href="/kayit" class="btn btn-primary">Üye Ol</a>
+        <% if (typeof uye === 'undefined' || !uye) { %>
+          <a href="/kayit" class="btn btn-primary">Üye Ol</a>
+          <a href="/giris" class="btn btn-outline">Giriş Yap</a>
+        <% } else { %>
+          <a href="/panel" class="btn btn-primary">Panelim</a>
+        <% } %>
         <a href="/duyurular" class="btn btn-outline">Duyuruları Gör</a>
       </div>
     </div>
