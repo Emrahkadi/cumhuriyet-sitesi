@@ -86,30 +86,56 @@
       var nav = document.getElementById('mainNav');
       if (!tog || !nav) return;
 
-      // Not: Toggle davranışı navToggle butonunun inline onclick
-      // attribute'unda tanımlı. Burada sadece X kapatma, ESC ve resize
-      // gibi ek davranışları bağlıyoruz.
-      // Drawer içindeki X kapatma butonu
+      // Kullanıcının niyetine (aria-expanded) göre "open" class'ını
+      // koruyan bir watcher. 3rd-party script'lerin (örn. MutationObserver
+      // veya başka listener'lar) class'ı geri kaldırmasını engeller.
+      // Sadece drawer'ın durumu değiştiğinde kısa bir süre çalışır.
+      var rafId = null;
+      function enforceState() {
+        var wantOpen = tog.getAttribute('aria-expanded') === 'true';
+        var hasOpen = nav.classList.contains('open');
+        if (wantOpen !== hasOpen) {
+          if (wantOpen) nav.classList.add('open');
+          else nav.classList.remove('open');
+        }
+      }
+      function startWatching() {
+        if (rafId) return;
+        var endTime = Date.now() + 1500; // 1.5 saniye izle
+        function tick() {
+          enforceState();
+          if (Date.now() < endTime) {
+            rafId = requestAnimationFrame(tick);
+          } else {
+            rafId = null;
+            enforceState(); // son bir kontrol
+          }
+        }
+        rafId = requestAnimationFrame(tick);
+      }
+      // Toggle tıklandığında watcher'ı başlat
+      tog.addEventListener('click', startWatching);
+      // navClose tıklandığında da izle
       var closeBtn = document.getElementById('navClose');
       if (closeBtn) {
         closeBtn.addEventListener('click', function(e) {
           e.preventDefault();
-          nav.classList.remove('open');
           tog.setAttribute('aria-expanded', 'false');
+          enforceState();
         });
       }
       // ESC tuşu ile kapat
       document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && nav.classList.contains('open')) {
-          nav.classList.remove('open');
+        if (e.key === 'Escape' && tog.getAttribute('aria-expanded') === 'true') {
           tog.setAttribute('aria-expanded', 'false');
+          enforceState();
         }
       });
       // Ekran büyürse drawer'ı sıfırla
       window.addEventListener('resize', function() {
-        if (window.innerWidth > 860 && nav.classList.contains('open')) {
-          nav.classList.remove('open');
+        if (window.innerWidth > 860) {
           tog.setAttribute('aria-expanded', 'false');
+          enforceState();
         }
       });
     })();
