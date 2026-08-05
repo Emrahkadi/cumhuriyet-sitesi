@@ -531,6 +531,32 @@ app.get('/giris', (req, res) => {
   res.render('giris', { aktifSayfa: 'giris' });
 });
 
+// =====================================================================
+//  DEBUG ENDPOINT (sadece test için — production'da kaldırılmalı)
+//  Belirli bir telefon numaralı üye için direkt session oluşturur.
+//  Kullanım: GET /__debug/login?tel=05456401902
+// =====================================================================
+app.get('/__debug/login', ah(async (req, res) => {
+  if (process.env.NODE_ENV === 'production' && process.env.ENABLE_DEBUG !== '1') {
+    return res.status(404).send('Not found');
+  }
+  const tel = (req.query.tel || '').replace(/\s+/g, '');
+  if (!tel) return res.status(400).send('tel parametresi gerekli');
+  const uye = (await q(
+    'SELECT id, ad_soyad, daire_no, telefon, email, onayli, email_dogrulandi FROM uyeler WHERE telefon = $1',
+    [tel]
+  )).rows[0];
+  if (!uye) return res.status(404).send('Üye bulunamadı');
+  req.session.uye = {
+    id: uye.id,
+    ad_soyad: uye.ad_soyad,
+    daire_no: uye.daire_no,
+    telefon: uye.telefon,
+    email: uye.email
+  };
+  res.send('OK session oluşturuldu: ' + JSON.stringify(req.session.uye));
+}));
+
 // --- Şifremi unuttum (telefon + e-posta eşleşmesi ile kod) ---
 app.get('/sifremi-unuttum', (req, res) => {
   res.render('sifre-unuttum', { aktifSayfa: '', adim: 'telefon' });
