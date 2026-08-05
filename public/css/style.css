@@ -51,33 +51,37 @@ img { max-width: 100%; display: block; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 72px;
+  height: 108px;
   gap: 12px;
   position: relative;
   z-index: 1001;
   min-width: 0;
 }
-.logo { display: flex; align-items: center; gap: 10px; font-size: 1.05rem; min-width: 0; flex-shrink: 0; }
-.logo-img { height: 72px; width: 72px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.logo { display: flex; align-items: center; gap: 12px; font-size: 1.15rem; min-width: 0; flex-shrink: 0; }
+.logo-img { height: 96px; width: 96px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
 .logo-text strong { color: var(--renk-ana); }
 /* Logo yazısı: hiçbir koşulda kesilmesin */
 .logo-text { white-space: nowrap; overflow: visible; flex-shrink: 0; }
 
-.main-nav { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.main-nav { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 .main-nav a {
-  padding: 7px 9px;
+  padding: 9px 12px;
   border-radius: 8px;
   font-weight: 500;
   color: var(--metin);
   transition: all 0.2s;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   white-space: nowrap;
 }
 .main-nav a:hover { background: var(--arkaplan); color: var(--renk-ana); }
-.main-nav a.active { color: var(--renk-ana); }
+/* Active link rengi .nav-cta'yı ezmemesi için özel selector */
+.main-nav a.active:not(.nav-cta) { color: var(--renk-ana); }
 .main-nav .nav-cta {
   background: var(--renk-ana);
-  color: #fff;
+  color: #fff !important;
+  font-weight: 600;
+  padding: 9px 16px !important;
+  font-size: 0.95rem !important;
 }
 .main-nav .nav-cta:hover { background: var(--renk-ana-koyu); color: #fff; }
 .main-nav .nav-logout { color: var(--renk-vurgu); }
@@ -818,9 +822,9 @@ button, .btn, a {
 @media (max-width: 860px) {
   /* Header: mobil menüye geçiş */
   .site-header { position: sticky; top: 0; }
-  .header-inner { height: 72px; }
-  .logo-img { height: 64px; width: 64px; }
-  .logo-text { font-size: 0.95rem; }
+  .header-inner { height: 96px; }
+  .logo-img { height: 80px; width: 80px; }
+  .logo-text { font-size: 1rem; }
   .nav-toggle {
     display: flex;
     width: 44px; height: 44px;
@@ -945,8 +949,8 @@ button, .btn, a {
 /* ---- Telefon: 600px ve altı ---- */
 @media (max-width: 600px) {
   .container { padding: 0 14px; }
-  .header-inner { height: 68px; }
-  .logo-img { height: 56px; width: 56px; }
+  .header-inner { height: 84px; }
+  .logo-img { height: 72px; width: 72px; }
   .logo-text { font-size: 0.9rem; }
 
   .hero { padding: 32px 0 40px; }
