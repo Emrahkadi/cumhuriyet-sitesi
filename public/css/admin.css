@@ -417,7 +417,7 @@
 @media (max-width: 900px) {
   .admin-main { margin-left: 0; }
   .admin-sidebar {
-    transform: translateX(-100%);
+    transform: translateX(-100vw);
     width: 280px;
     max-width: 85vw;
   }

@@ -671,7 +671,7 @@ button, .btn, a {
     transition: 0.3s;
   }
 
-  /* Mobil menü: sağdan açılan drawer */
+  /* Mobil menü: sağdan açılan drawer (her zaman ekran dışında) */
   .main-nav {
     position: fixed;
     top: 0; right: 0;
@@ -685,7 +685,7 @@ button, .btn, a {
     box-shadow: -8px 0 24px rgba(0, 0, 0, 0.15);
     gap: 2px;
     display: flex;
-    transform: translateX(100%);
+    transform: translateX(100vw);
     transition: transform 0.3s ease;
     overflow-y: auto;
     z-index: 999;
