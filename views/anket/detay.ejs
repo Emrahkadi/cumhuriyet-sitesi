@@ -29,6 +29,10 @@
       </div>
     <% } %>
 
+    <div class="anket-bilgi" style="margin-bottom:20px;">
+      <strong>🔒 Gizlilik:</strong> Hangi üyenin hangi oyu verdiği sadece yönetim tarafından görülebilir.
+    </div>
+
     <form action="/anket/<%= anket.id %>/oy" method="POST" class="anket-form">
       <% sorular.forEach(function(soru, idx) { %>
         <div class="soru-kart">

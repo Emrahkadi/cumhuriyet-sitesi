@@ -55,20 +55,22 @@ img { max-width: 100%; display: block; }
   gap: 12px;
   position: relative;
   z-index: 1001;
+  min-width: 0;
 }
-.logo { display: flex; align-items: center; gap: 12px; font-size: 1.15rem; min-width: 0; }
+.logo { display: flex; align-items: center; gap: 10px; font-size: 1.05rem; min-width: 0; flex-shrink: 0; }
 .logo-img { height: 72px; width: 72px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
 .logo-text strong { color: var(--renk-ana); }
-.logo-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Logo yazısı: hiçbir koşulda kesilmesin */
+.logo-text { white-space: nowrap; overflow: visible; flex-shrink: 0; }
 
-.main-nav { display: flex; align-items: center; gap: 4px; }
+.main-nav { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
 .main-nav a {
-  padding: 8px 12px;
+  padding: 8px 10px;
   border-radius: 8px;
   font-weight: 500;
   color: var(--metin);
   transition: all 0.2s;
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   white-space: nowrap;
 }
 .main-nav a:hover { background: var(--arkaplan); color: var(--renk-ana); }
