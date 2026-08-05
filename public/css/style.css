@@ -845,7 +845,7 @@ button, .btn, a {
     box-shadow: none;
     gap: 2px;
     display: flex;
-    transform: translateX(calc(100% + 20px));
+    transform: translateX(100vw);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     overflow: hidden; /* kapalıyken scroll bar gösterme */
     z-index: 999;
