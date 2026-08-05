@@ -80,6 +80,9 @@
         else ac();
       });
       if (ovl) ovl.addEventListener('click', kapat);
+      // Sidebar içindeki X kapatma butonu
+      var closeBtn = document.getElementById('adminSidebarClose');
+      if (closeBtn) closeBtn.addEventListener('click', kapat);
       // Sidebar linki tıklanınca kapat
       sb.querySelectorAll('a').forEach(function(a) {
         a.addEventListener('click', kapat);

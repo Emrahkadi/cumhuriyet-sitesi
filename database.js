@@ -155,6 +155,52 @@ CREATE TABLE IF NOT EXISTS duyuru_ekleri (
     );
     CREATE INDEX IF NOT EXISTS idx_kentsel_ekleri ON kentsel_ekleri (kentsel_id);
 
+    -- ============================================================
+    -- ANKET / YOKLAMA SİSTEMİ
+    -- Admin anket oluşturur, üyeler oy verir, sonuçlar gizli (sadece admin görür)
+    -- ============================================================
+    CREATE TABLE IF NOT EXISTS anketler (
+      id SERIAL PRIMARY KEY,
+      baslik TEXT NOT NULL,
+      aciklama TEXT,
+      coklu_secim INTEGER NOT NULL DEFAULT 0, -- 0: tek seçim, 1: çoklu seçim
+      durum INTEGER NOT NULL DEFAULT 1, -- 1: açık, 0: kapalı
+      gizli INTEGER NOT NULL DEFAULT 1, -- 1: sonuçlar gizli, 0: sonuçlar görünür
+      bitis_tarihi TEXT,
+      olusturma_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
+    );
+
+    CREATE TABLE IF NOT EXISTS anket_sorulari (
+      id SERIAL PRIMARY KEY,
+      anket_id INTEGER NOT NULL REFERENCES anketler(id) ON DELETE CASCADE,
+      soru TEXT NOT NULL,
+      secenekler TEXT NOT NULL, -- JSON dizisi: ["Seçenek 1", "Seçenek 2", ...]
+      sira INTEGER NOT NULL DEFAULT 0,
+      olusturma_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
+    );
+    CREATE INDEX IF NOT EXISTS idx_anket_sorulari ON anket_sorulari (anket_id, sira);
+
+    -- Her soru için oy (üye başına, soru başına tek oy)
+    CREATE TABLE IF NOT EXISTS anket_oylar (
+      id SERIAL PRIMARY KEY,
+      anket_id INTEGER NOT NULL REFERENCES anketler(id) ON DELETE CASCADE,
+      soru_id INTEGER NOT NULL REFERENCES anket_sorulari(id) ON DELETE CASCADE,
+      uye_id INTEGER NOT NULL REFERENCES uyeler(id) ON DELETE CASCADE,
+      secim INTEGER NOT NULL, -- seçilen seçeneğin indexi
+      oy_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
+    );
+    CREATE INDEX IF NOT EXISTS idx_anket_oylar ON anket_oylar (anket_id, soru_id, uye_id);
+
+    -- Üye başına anket bazında tek katılım (tüm soruları cevaplamış mı kontrolü)
+    CREATE TABLE IF NOT EXISTS anket_katilimlar (
+      id SERIAL PRIMARY KEY,
+      anket_id INTEGER NOT NULL REFERENCES anketler(id) ON DELETE CASCADE,
+      uye_id INTEGER NOT NULL REFERENCES uyeler(id) ON DELETE CASCADE,
+      tamamlandi INTEGER NOT NULL DEFAULT 0, -- 1: tüm sorular cevaplandı
+      katilim_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_anket_katilimlar_unique ON anket_katilimlar (anket_id, uye_id);
+
 
 
 
@@ -249,4 +295,5 @@ if (require.main === module) {
     });
 
 }
-    
+
+    

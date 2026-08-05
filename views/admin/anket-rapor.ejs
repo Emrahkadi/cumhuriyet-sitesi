@@ -1,0 +1,82 @@
+<%- include('partials/header', { sayfaBaslik: 'Anket Raporu' }) %>
+
+<div class="admin-panel-box">
+  <a href="/yonetim/anketler" class="back-link" style="display:inline-block;margin-bottom:14px;">← Anketlere dön</a>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+    <div>
+      <h2 style="margin:0;">📊 <%= anket.baslik %></h2>
+      <% if (anket.aciklama) { %><p style="color:var(--metin-acik);margin:6px 0 0 0;"><%= anket.aciklama %></p><% } %>
+    </div>
+    <div>
+      <% if (anket.durum === 1) { %><span class="badge badge-onayli">Açık</span><% } else { %><span class="badge badge-bekliyor">Kapalı</span><% } %>
+      <% if (anket.gizli) { %><span class="badge badge-durum">🔒 Gizli</span><% } %>
+    </div>
+  </div>
+  <p style="color:var(--metin-acik);font-size:0.88rem;margin-top:10px;">
+    Oluşturma: <%= anket.olusturma_tarihi %>
+    <% if (anket.bitis_tarihi) { %> · Bitiş: <%= anket.bitis_tarihi %><% } %>
+  </p>
+</div>
+
+<% if (basari && basari.length) { %><div class="alert alert-success"><%= basari %></div><% } %>
+<% if (hata && hata.length) { %><div class="alert alert-error"><%= hata %></div><% } %>
+
+<% if (soruSayisi === 0) { %>
+  <div class="admin-panel-box" style="text-align:center;">
+    <p style="color:var(--metin-acik);">Bu ankette henüz soru yok.</p>
+  </div>
+<% } else { %>
+  <% sorular.forEach(function(s, idx) { %>
+    <div class="admin-panel-box">
+      <h3 style="margin-bottom:14px;">Soru <%= idx + 1 %>: <%= s.soru %></h3>
+      <div class="rapor-satirlar">
+        <% s.dagilim.forEach(function(d) { %>
+          <div class="rapor-satir">
+            <div class="rapor-satir-baslik">
+              <span class="rapor-secenek"><%= d.secenek %></span>
+              <span class="rapor-sayi"><%= d.adet %> oy (<%= d.yuzde %>%)</span>
+            </div>
+            <div class="rapor-bar-disi">
+              <div class="rapor-bar-ic" style="width:<%= d.yuzde %>%"></div>
+            </div>
+          </div>
+        <% }); %>
+        <div class="rapor-toplam">Toplam: <strong><%= s.toplamOy %></strong> oy</div>
+      </div>
+    </div>
+  <% }); %>
+<% } %>
+
+<% if (katilimcilar.length > 0) { %>
+  <div class="admin-panel-box">
+    <h2 style="margin-bottom:14px;">👥 Katılımcılar (<%= katilimcilar.length %> kişi)</h2>
+    <div class="table-wrap">
+      <table class="admin-table responsive-table">
+        <thead>
+          <tr>
+            <th>Ad Soyad</th>
+            <th>Daire</th>
+            <th>Katılım Tarihi</th>
+            <th>Cevaplanan Soru</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% katilimcilar.forEach(function(k) { %>
+            <tr>
+              <td data-label="Ad Soyad"><%= k.ad_soyad %></td>
+              <td data-label="Daire"><%= k.daire_no %></td>
+              <td data-label="Katılım"><%= k.katilim_tarihi %></td>
+              <td data-label="Cevap"><%= k.cevaplanan_soru %> / <%= soruSayisi %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+<% } else { %>
+  <div class="admin-panel-box" style="text-align:center;color:var(--metin-acik);">
+    Henüz kimse bu ankete oy vermemiş.
+  </div>
+<% } %>
+
+<%- include('partials/footer') %>

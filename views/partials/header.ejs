@@ -7,7 +7,7 @@
   <meta name="description" content="Cumhuriyet Sitesi resmi web sitesi - duyurular, iletişim, kentsel dönüşüm ve site sakinleri üyelik portalı." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css?v=9" />
+  <link rel="stylesheet" href="/css/style.css?v=10" />
 </head>
 <body>
   <header class="site-header">
@@ -22,11 +22,15 @@
       </button>
 
       <nav class="main-nav" id="mainNav">
+        <button type="button" class="nav-close" id="navClose" aria-label="Menüyü kapat">×</button>
         <a href="/" class="<%= aktifSayfa === 'anasayfa' ? 'active' : '' %>">Ana Sayfa</a>
         <a href="/duyurular" class="<%= aktifSayfa === 'duyurular' ? 'active' : '' %>">Duyurular</a>
         <a href="/hakkinda" class="<%= aktifSayfa === 'hakkinda' ? 'active' : '' %>">Hakkımızda</a>
         <a href="/kentsel-donusum" class="<%= aktifSayfa === 'kentsel-donusum' ? 'active' : '' %>">Kentsel Dönüşüm</a>
         <a href="/iletisim" class="<%= aktifSayfa === 'iletisim' ? 'active' : '' %>">İletişim</a>
+        <% if (uye) { %>
+          <a href="/anketler" class="<%= aktifSayfa === 'anketler' ? 'active' : '' %>">📊 Anketler</a>
+        <% } %>
 
         <% if (uye) { %>
           <div class="nav-bell-wrapper">
@@ -98,6 +102,9 @@
         else ac();
       });
       if (ovl) ovl.addEventListener('click', kapat);
+      // Drawer içindeki X kapatma butonu
+      var closeBtn = document.getElementById('navClose');
+      if (closeBtn) closeBtn.addEventListener('click', kapat);
       // Link tıklanınca menüyü kapat
       nav.querySelectorAll('a').forEach(function(a) {
         a.addEventListener('click', kapat);

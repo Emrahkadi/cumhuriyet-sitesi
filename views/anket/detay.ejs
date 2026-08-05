@@ -1,0 +1,62 @@
+<%- include('../partials/header', { sayfaBaslik: anket.baslik }) %>
+
+<section class="page-hero">
+  <div class="container">
+    <h1><%= anket.baslik %></h1>
+    <% if (anket.aciklama) { %><p><%= anket.aciklama %></p><% } %>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container container-narrow">
+    <a href="/anketler" class="back-link">← Anketlere dön</a>
+
+    <% if (basari && basari.length) { %><div class="alert alert-success"><%= basari %></div><% } %>
+    <% if (hata && hata.length) { %><div class="alert alert-error"><%= hata %></div><% } %>
+
+    <% const oyVerdim = Object.keys(oyMap).length > 0; %>
+
+    <% if (oyVerdim) { %>
+      <div class="alert" style="background:#e6f7f0;color:#1b7a5e;border:1px solid #b8e6d3;padding:18px;border-radius:10px;margin-bottom:20px;">
+        <strong>✓ Bu ankete daha önce oy verdiniz.</strong>
+        <p style="margin:6px 0 0 0;color:#1b7a5e;">Seçimleriniz kaydedildi. Tekrar oy verilemez. Sonuçlar gizli ise sadece yönetim tarafından görülebilir.</p>
+      </div>
+    <% } %>
+
+    <form action="/anket/<%= anket.id %>/oy" method="POST" class="anket-form">
+      <% sorular.forEach(function(soru, idx) { %>
+        <div class="soru-kart">
+          <div class="soru-numarasi">Soru <%= idx + 1 %> / <%= sorular.length %></div>
+          <h3 class="soru-metni"><%= soru.soru %></h3>
+          <div class="secenekler">
+            <% soru.secenekler.forEach(function(sec, i) { %>
+              <label class="secenek <%= oyMap[soru.id] === i ? 'secili' : '' %>">
+                <input
+                  type="radio"
+                  name="soru_<%= soru.id %>"
+                  value="<%= i %>"
+                  <%= oyMap[soru.id] !== undefined ? 'checked disabled' : '' %>
+                  required
+                />
+                <span class="secenek-isaret"></span>
+                <span class="secenek-metin"><%= sec %></span>
+              </label>
+            <% }); %>
+          </div>
+        </div>
+      <% }); %>
+
+      <% if (!oyVerdim) { %>
+        <div class="form-group" style="margin-top:24px;">
+          <button type="submit" class="btn btn-primary btn-block">🗳️ Oylarımı Gönder</button>
+        </div>
+      <% } else { %>
+        <div class="form-group" style="margin-top:24px;">
+          <a href="/anketler" class="btn btn-outline btn-block">← Anket Listesine Dön</a>
+        </div>
+      <% } %>
+    </form>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>

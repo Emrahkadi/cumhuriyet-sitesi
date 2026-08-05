@@ -1,0 +1,105 @@
+<%- include('partials/header', { sayfaBaslik: 'Yeni Anket' }) %>
+
+<div class="admin-panel-box">
+  <a href="/yonetim/anketler" class="back-link" style="display:inline-block;margin-bottom:14px;">← Anketlere dön</a>
+  <h2>📝 Yeni Anket Oluştur</h2>
+  <p class="admin-hint">Anket başlığı, sorular ve seçenekleri girin. Üyeler giriş yaptıktan sonra oy verebilir.</p>
+</div>
+
+<% if (hata && hata.length) { %><div class="alert alert-error"><%= hata %></div><% } %>
+
+<form action="/yonetim/anketler/yeni" method="POST" class="admin-panel-box" id="anketForm">
+  <div class="form-group">
+    <label for="baslik">Anket Başlığı *</label>
+    <input type="text" id="baslik" name="baslik" required maxlength="200" placeholder="Örn: Site aidat miktarı belirlenmesi" />
+  </div>
+
+  <div class="form-group">
+    <label for="aciklama">Açıklama (opsiyonel)</label>
+    <textarea id="aciklama" name="aciklama" rows="2" maxlength="500" placeholder="Anket hakkında kısa bilgi"></textarea>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label for="bitis_tarihi">Bitiş Tarihi (opsiyonel)</label>
+      <input type="date" id="bitis_tarihi" name="bitis_tarihi" />
+    </div>
+    <div class="form-group">
+      <label for="bitis_saat">Bitiş Saati</label>
+      <input type="time" id="bitis_saat" name="bitis_saat" value="23:59" />
+    </div>
+  </div>
+
+  <div class="form-group form-check">
+    <label>
+      <input type="checkbox" name="coklu_secim" value="1" />
+      Çoklu seçim (her soru için birden fazla seçenek işaretlenebilir — şu anki yapı tek seçim)
+    </label>
+  </div>
+
+  <div class="form-group form-check">
+    <label>
+      <input type="checkbox" name="gizli" value="1" checked />
+      🔒 Sonuçlar gizli (üyeler göremez, sadece admin)
+    </label>
+  </div>
+
+  <h3 style="margin-top:24px;border-top:1px solid var(--kenarlik);padding-top:20px;">❓ Sorular</h3>
+  <p class="admin-hint">Her soru için seçenekleri satır satır girin (her satır bir seçenek). Minimum 2 seçenek olmalı.</p>
+
+  <div id="soruListesi">
+    <div class="soru-blok" data-sira="0">
+      <div class="soru-blok-baslik">
+        <strong>Soru 1</strong>
+        <button type="button" class="btn-soru-sil" onclick="soruSil(this)" title="Soruyu sil">×</button>
+      </div>
+      <div class="form-group">
+        <label>Soru metni *</label>
+        <input type="text" name="soru_metni" required maxlength="500" placeholder="Soruyu buraya yazın" />
+      </div>
+      <div class="form-group">
+        <label>Seçenekler (her satıra bir seçenek, min 2) *</label>
+        <textarea name="soru_secenekleri" rows="4" required placeholder="Evet&#10;Hayır&#10;Kararsızım"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <button type="button" onclick="soruEkle()" class="btn btn-outline" style="margin-top:12px;">+ Yeni Soru Ekle</button>
+
+  <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--kenarlik);">
+    <button type="submit" class="btn btn-primary">✅ Anketi Oluştur</button>
+    <a href="/yonetim/anketler" class="btn btn-outline" style="margin-left:8px;">İptal</a>
+  </div>
+</form>
+
+<script>
+  var soruSayisi = 1;
+  function soruEkle() {
+    soruSayisi++;
+    var html = ''
+      + '<div class="soru-blok" data-sira="' + soruSayisi + '">'
+      + '  <div class="soru-blok-baslik"><strong>Soru ' + soruSayisi + '</strong>'
+      + '    <button type="button" class="btn-soru-sil" onclick="soruSil(this)" title="Soruyu sil">×</button>'
+      + '  </div>'
+      + '  <div class="form-group"><label>Soru metni *</label>'
+      + '    <input type="text" name="soru_metni" required maxlength="500" placeholder="Soruyu buraya yazın" />'
+      + '  </div>'
+      + '  <div class="form-group"><label>Seçenekler (her satıra bir seçenek, min 2) *</label>'
+      + '    <textarea name="soru_secenekleri" rows="4" required></textarea>'
+      + '  </div>'
+      + '</div>';
+    document.getElementById('soruListesi').insertAdjacentHTML('beforeend', html);
+  }
+  function soruSil(btn) {
+    var bloklar = document.querySelectorAll('.soru-blok');
+    if (bloklar.length <= 1) { alert('En az 1 soru olmalıdır.'); return; }
+    if (!confirm('Bu soru silinsin mi?')) return;
+    btn.closest('.soru-blok').remove();
+    // Numaraları yeniden düzenle
+    document.querySelectorAll('.soru-blok').forEach(function(b, i) {
+      b.querySelector('strong').textContent = 'Soru ' + (i + 1);
+    });
+  }
+</script>
+
+<%- include('partials/footer') %>

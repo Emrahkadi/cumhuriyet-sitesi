@@ -1189,6 +1189,229 @@ app.post('/yonetim/sakinler/import', adminGerekli, upload.single('dosya'), ah(as
 }));
 
 // =====================================================================
+//  ANKET / YOKLAMA SİSTEMİ
+//  - Üyeler: Giriş yaparak açık anketlere oy verir
+//  - Admin: Anket/soru oluşturur, raporları görür
+//  - Sonuçlar "gizli" ise üyeler göremez, sadece admin
+// =====================================================================
+
+// --- Üye: Açık anketleri listele ---
+app.get('/anketler', uyeGerekli, ah(async (req, res) => {
+  const uyeId = req.session.uye.id;
+  // Aktif anketler: durum=1, bitis_tarihi NULL veya gelecekte
+  const anketler = (await q(
+    `SELECT a.*,
+      (SELECT COUNT(*)::int FROM anket_sorulari WHERE anket_id = a.id) AS soru_sayisi,
+      EXISTS(SELECT 1 FROM anket_katilimlar WHERE anket_id = a.id AND uye_id = $1) AS katildim
+     FROM anketler a
+     WHERE a.durum = 1
+     ORDER BY a.id DESC`,
+    [uyeId]
+  )).rows;
+  res.render('anket/liste', { aktifSayfa: 'anketler', anketler });
+}));
+
+// --- Üye: Tek anketi görüntüle ve oy ver ---
+app.get('/anket/:id', uyeGerekli, ah(async (req, res) => {
+  const uyeId = req.session.uye.id;
+  const anket = (await q('SELECT * FROM anketler WHERE id = $1', [req.params.id])).rows[0];
+  if (!anket || anket.durum !== 1) {
+    req.flash('hata', 'Anket bulunamadı veya kapatılmış.');
+    return res.redirect('/anketler');
+  }
+  // Bitiş tarihi kontrolü
+  if (anket.bitis_tarihi && new Date(anket.bitis_tarihi.replace(' ', 'T')) < new Date()) {
+    req.flash('hata', 'Bu anketin süresi dolmuş.');
+    return res.redirect('/anketler');
+  }
+  const sorular = (await q(
+    'SELECT * FROM anket_sorulari WHERE anket_id = $1 ORDER BY sira, id',
+    [req.params.id]
+  )).rows.map(s => ({ ...s, secenekler: JSON.parse(s.secenekler) }));
+  // Üyenin daha önce verdiği oylar
+  const oylar = (await q(
+    'SELECT soru_id, secim FROM anket_oylar WHERE anket_id = $1 AND uye_id = $2',
+    [req.params.id, uyeId]
+  )).rows;
+  const oyMap = {};
+  oylar.forEach(o => { oyMap[o.soru_id] = o.secim; });
+  res.render('anket/detay', { aktifSayfa: 'anketler', anket, sorular, oyMap });
+}));
+
+// --- Üye: Oy gönder ---
+app.post('/anket/:id/oy', uyeGerekli, ah(async (req, res) => {
+  const uyeId = req.session.uye.id;
+  const anket = (await q('SELECT * FROM anketler WHERE id = $1', [req.params.id])).rows[0];
+  if (!anket || anket.durum !== 1) {
+    req.flash('hata', 'Anket bulunamadı veya kapatılmış.');
+    return res.redirect('/anketler');
+  }
+  if (anket.bitis_tarihi && new Date(anket.bitis_tarihi.replace(' ', 'T')) < new Date()) {
+    req.flash('hata', 'Bu anketin süresi dolmuş.');
+    return res.redirect('/anketler');
+  }
+  const sorular = (await q('SELECT id, secenekler FROM anket_sorulari WHERE anket_id = $1', [req.params.id])).rows;
+
+  // Çoklu seçim mi?
+  const coklu = anket.coklu_secim === 1;
+
+  // Önce eski oyları sil (üye değiştirip tekrar oy verebilir mi? Admin kararı: sadece 1 kez)
+  // Burada: üye zaten oy verdiyse tekrar veremesin
+  const mevcutOy = (await q('SELECT 1 FROM anket_oylar WHERE anket_id = $1 AND uye_id = $2 LIMIT 1', [req.params.id, uyeId])).rows[0];
+  if (mevcutOy) {
+    req.flash('hata', 'Bu ankete zaten oy vermişsiniz. Tekrar oy verilemez.');
+    return res.redirect('/anket/' + req.params.id);
+  }
+
+  // Her soru için seçimi doğrula ve kaydet
+  for (const soru of sorular) {
+    const secenekler = JSON.parse(soru.secenekler);
+    const alan = 'soru_' + soru.id;
+    const secim = req.body[alan];
+    if (secim === undefined || secim === null || secim === '') {
+      req.flash('hata', 'Lütfen tüm soruları cevaplayın.');
+      return res.redirect('/anket/' + req.params.id);
+    }
+    const secimInt = parseInt(secim, 10);
+    if (isNaN(secimInt) || secimInt < 0 || secimInt >= secenekler.length) {
+      req.flash('hata', 'Geçersiz seçim.');
+      return res.redirect('/anket/' + req.params.id);
+    }
+    await q(
+      'INSERT INTO anket_oylar (anket_id, soru_id, uye_id, secim) VALUES ($1, $2, $3, $4)',
+      [req.params.id, soru.id, uyeId, secimInt]
+    );
+  }
+  // Katılım kaydı
+  await q(
+    `INSERT INTO anket_katilimlar (anket_id, uye_id, tamamlandi)
+     VALUES ($1, $2, 1)
+     ON CONFLICT (anket_id, uye_id) DO UPDATE SET tamamlandi = 1, katilim_tarihi = to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')`,
+    [req.params.id, uyeId]
+  );
+  req.flash('basari', 'Oylarınız başarıyla kaydedildi. Katılımınız için teşekkürler!');
+  res.redirect('/anketler');
+}));
+
+// --- Admin: Anket listesi ---
+app.get('/yonetim/anketler', adminGerekli, ah(async (req, res) => {
+  const anketler = (await q(
+    `SELECT a.*,
+      (SELECT COUNT(*)::int FROM anket_sorulari WHERE anket_id = a.id) AS soru_sayisi,
+      (SELECT COUNT(DISTINCT uye_id)::int FROM anket_oylar WHERE anket_id = a.id) AS oy_veren_sayisi,
+      (SELECT COUNT(*)::int FROM uyeler WHERE email_dogrulandi = 1) AS toplam_uye
+     FROM anketler a
+     ORDER BY a.id DESC`
+  )).rows;
+  res.render('admin/anketler', { aktifSayfa: 'anketler', anketler });
+}));
+
+// --- Admin: Yeni anket formu ---
+app.get('/yonetim/anketler/yeni', adminGerekli, (req, res) => {
+  res.render('admin/anket-yeni', { aktifSayfa: 'anketler', anket: null, sorular: [] });
+});
+
+// --- Admin: Anket oluştur ---
+app.post('/yonetim/anketler/yeni', adminGerekli, ah(async (req, res) => {
+  const { baslik, aciklama, coklu_secim, gizli, bitis_tarihi, bitis_saat } = req.body;
+  if (!baslik || !baslik.trim()) {
+    req.flash('hata', 'Anket başlığı zorunludur.');
+    return res.redirect('/yonetim/anketler/yeni');
+  }
+  // bitis_tarihi + bitis_saat birleştir
+  let bitis = null;
+  if (bitis_tarihi) {
+    bitis = (bitis_tarihi + ' ' + (bitis_saat || '23:59')).trim();
+  }
+  const sonuc = await q(
+    'INSERT INTO anketler (baslik, aciklama, coklu_secim, gizli, bitis_tarihi) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+    [baslik.trim(), (aciklama || '').trim(), coklu_secim ? 1 : 0, gizli === '0' ? 0 : 1, bitis]
+  );
+  const anketId = sonuc.rows[0].id;
+  // Soruları kaydet
+  const soruMetinleri = [].concat(req.body.soru_metni || []);
+  const soruSecenekleri = [].concat(req.body.soru_secenekleri || []);
+  for (let i = 0; i < soruMetinleri.length; i++) {
+    const sm = (soruMetinleri[i] || '').trim();
+    if (!sm) continue;
+    const seceneklerRaw = (soruSecenekleri[i] || '').split('\n').map(s => s.trim()).filter(Boolean);
+    if (seceneklerRaw.length < 2) continue;
+    await q(
+      'INSERT INTO anket_sorulari (anket_id, soru, secenekler, sira) VALUES ($1, $2, $3, $4)',
+      [anketId, sm, JSON.stringify(seceneklerRaw), i]
+    );
+  }
+  req.flash('basari', 'Anket oluşturuldu. Üyeler artık oy verebilir.');
+  res.redirect('/yonetim/anketler');
+}));
+
+// --- Admin: Anket raporu (sonuçlar) ---
+app.get('/yonetim/anketler/rapor/:id', adminGerekli, ah(async (req, res) => {
+  const anket = (await q('SELECT * FROM anketler WHERE id = $1', [req.params.id])).rows[0];
+  if (!anket) {
+    req.flash('hata', 'Anket bulunamadı.');
+    return res.redirect('/yonetim/anketler');
+  }
+  const sorular = (await q(
+    'SELECT * FROM anket_sorulari WHERE anket_id = $1 ORDER BY sira, id',
+    [req.params.id]
+  )).rows;
+
+  // Her soru için oy dağılımı + üye bazında liste
+  const soruRaporlari = [];
+  for (const s of sorular) {
+    const secenekler = JSON.parse(s.secenekler);
+    const oyDagilim = (await q(
+      'SELECT secim, COUNT(*)::int AS adet FROM anket_oylar WHERE soru_id = $1 GROUP BY secim ORDER BY secim',
+      [s.id]
+    )).rows;
+    const toplamOy = oyDagilim.reduce((t, r) => t + r.adet, 0);
+    const dagilim = secenekler.map((sec, i) => {
+      const bulunan = oyDagilim.find(r => r.secim === i);
+      const adet = bulunan ? bulunan.adet : 0;
+      return {
+        secenek: sec,
+        adet,
+        yuzde: toplamOy > 0 ? Math.round((adet / toplamOy) * 100) : 0
+      };
+    });
+    soruRaporlari.push({ ...s, secenekler, dagilim, toplamOy });
+  }
+  // Katılımcı listesi (kim oy verdi)
+  const katilimcilar = (await q(
+    `SELECT u.id, u.ad_soyad, u.daire_no, k.katilim_tarihi,
+      (SELECT COUNT(*)::int FROM anket_oylar WHERE anket_id = $1 AND uye_id = u.id) AS cevaplanan_soru
+     FROM anket_katilimlar k
+     JOIN uyeler u ON u.id = k.uye_id
+     WHERE k.anket_id = $1
+     ORDER BY k.katilim_tarihi DESC`,
+    [req.params.id]
+  )).rows;
+
+  res.render('admin/anket-rapor', {
+    aktifSayfa: 'anketler',
+    anket,
+    sorular: soruRaporlari,
+    soruSayisi: sorular.length,
+    katilimcilar
+  });
+}));
+
+// --- Admin: Anket durum değiştir (aç/kapat) ---
+app.post('/yonetim/anketler/durum/:id', adminGerekli, ah(async (req, res) => {
+  await q('UPDATE anketler SET durum = CASE WHEN durum = 1 THEN 0 ELSE 1 END WHERE id = $1', [req.params.id]);
+  req.flash('basari', 'Anket durumu güncellendi.');
+  res.redirect('/yonetim/anketler');
+}));
+
+// --- Admin: Anket sil ---
+app.post('/yonetim/anketler/sil/:id', adminGerekli, ah(async (req, res) => {
+  await q('DELETE FROM anketler WHERE id = $1', [req.params.id]);
+  req.flash('basari', 'Anket ve tüm oylar silindi.');
+  res.redirect('/yonetim/anketler');
+}));
+
+// =====================================================================
 //  404 ve HATA YÖNETİMİ
 // =====================================================================
 app.use((req, res) => {

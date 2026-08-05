@@ -1,0 +1,56 @@
+<%- include('../partials/header', { sayfaBaslik: 'Anketler' }) %>
+
+<section class="page-hero">
+  <div class="container">
+    <h1>📊 Anketler & Yoklamalar</h1>
+    <p>Yönetim kurulunun açtığı anketlere katılım sağlayın. Oylarınız gizlidir, sonuçlar sadece yönetim tarafından görülür.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container container-narrow">
+    <% if (basari && basari.length) { %><div class="alert alert-success"><%= basari %></div><% } %>
+    <% if (hata && hata.length) { %><div class="alert alert-error"><%= hata %></div><% } %>
+
+    <% if (anketler.length === 0) { %>
+      <div class="empty-state">
+        <h2>📭 Henüz aktif anket yok</h2>
+        <p>Şu anda katılabileceğiniz aktif bir anket bulunmuyor. Yeni anketler açıldığında burada görünecektir.</p>
+      </div>
+    <% } else { %>
+      <div class="anket-liste">
+        <% anketler.forEach(function(a) { %>
+          <article class="anket-kart <%= a.katildim ? 'katildi' : '' %>">
+            <div class="anket-kart-top">
+              <h2><%= a.baslik %></h2>
+              <% if (a.katildim) { %>
+                <span class="badge badge-onayli">✓ Oyladınız</span>
+              <% } else { %>
+                <span class="badge badge-bekliyor">Bekliyor</span>
+              <% } %>
+            </div>
+            <% if (a.aciklama) { %><p class="anket-aciklama"><%= a.aciklama %></p><% } %>
+            <div class="anket-meta">
+              <span>📋 <%= a.soru_sayisi %> soru</span>
+              <% if (a.bitis_tarihi) { %>
+                <span>⏰ Son: <%= a.bitis_tarihi %></span>
+              <% } else { %>
+                <span>⏰ Süresiz</span>
+              <% } %>
+            </div>
+            <a href="/anket/<%= a.id %>" class="btn <%= a.katildim ? 'btn-outline' : 'btn-primary' %>">
+              <%= a.katildim ? 'Oylarımı Gör' : 'Oy Ver →' %>
+            </a>
+          </article>
+        <% }); %>
+      </div>
+    <% } %>
+
+    <div class="anket-bilgi">
+      <strong>🔒 Gizlilik:</strong> Oylarınız tamamen gizlidir. Yönetim sadece istatistikleri (yüzde, sayı) görebilir,
+      hangi üyenin hangi oyu verdiğini göremez.
+    </div>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>

@@ -6,13 +6,14 @@
   <title>Yönetim Paneli - Cumhuriyet Sitesi</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css?v=9" />
-  <link rel="stylesheet" href="/css/admin.css?v=6" />
+  <link rel="stylesheet" href="/css/style.css?v=10" />
+  <link rel="stylesheet" href="/css/admin.css?v=5" />
   <link rel="stylesheet" href="https://cdn.quilljs.com/1.3.7/quill.snow.css" />
 </head>
 <body class="admin-body">
   <div class="admin-overlay" id="adminOverlay"></div>
   <aside class="admin-sidebar" id="adminSidebar">
+    <button type="button" class="admin-sidebar-close" id="adminSidebarClose" aria-label="Menüyü kapat">×</button>
     <div class="admin-logo">
       <img src="/images/logo.png?v=2" alt="Cumhuriyet Sitesi" class="admin-logo-img" />
       <span>Yönetim</span>
@@ -24,6 +25,7 @@
       <a href="/yonetim/sakinler" class="<%= aktifSayfa === 'sakinler' ? 'active' : '' %>">📋 Sakinler</a>
       <a href="/yonetim/aidatlar" class="<%= aktifSayfa === 'aidatlar' ? 'active' : '' %>">💳 Aidatlar</a>
       <a href="/yonetim/mesaj-gonder" class="<%= aktifSayfa === 'mesaj-gonder' ? 'active' : '' %>">📨 Mesaj Gönder</a>
+      <a href="/yonetim/anketler" class="<%= aktifSayfa === 'anketler' ? 'active' : '' %>">🗳️ Anketler</a>
       <a href="/yonetim/kentsel-donusum" class="<%= aktifSayfa === 'kentsel-donusum' ? 'active' : '' %>">🏗️ Kentsel Dönüşüm</a>
       <a href="/yonetim/mesajlar" class="<%= aktifSayfa === 'mesajlar' ? 'active' : '' %>">✉️ İletişim Mesajları</a>
     </nav>

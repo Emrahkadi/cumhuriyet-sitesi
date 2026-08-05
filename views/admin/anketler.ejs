@@ -1,0 +1,81 @@
+<%- include('partials/header', { sayfaBaslik: 'Anket Yönetimi' }) %>
+
+<div class="admin-panel-box">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div>
+      <h2 style="margin:0;">📊 Anketler & Yoklamalar</h2>
+      <p class="admin-hint">Üyelerin oy verebileceği anketler oluşturun. Sonuçlar gizli ise sadece siz görebilirsiniz.</p>
+    </div>
+    <a href="/yonetim/anketler/yeni" class="btn btn-primary">+ Yeni Anket</a>
+  </div>
+</div>
+
+<% if (basari && basari.length) { %><div class="alert alert-success" style="margin:16px 0;"><%= basari %></div><% } %>
+<% if (hata && hata.length) { %><div class="alert alert-error" style="margin:16px 0;"><%= hata %></div><% } %>
+
+<% if (anketler.length === 0) { %>
+  <div class="admin-panel-box" style="text-align:center;padding:40px 20px;">
+    <h3 style="font-size:1.1rem;margin-bottom:8px;">📭 Henüz anket yok</h3>
+    <p style="color:var(--metin-acik);margin-bottom:18px;">İlk anketinizi oluşturmak için yukarıdaki "Yeni Anket" butonuna tıklayın.</p>
+    <a href="/yonetim/anketler/yeni" class="btn btn-primary">+ İlk Anketimi Oluştur</a>
+  </div>
+<% } else { %>
+  <div class="admin-panel-box" style="padding:0;overflow:hidden;">
+    <div class="table-wrap">
+      <table class="admin-table responsive-table">
+        <thead>
+          <tr>
+            <th>Başlık</th>
+            <th>Durum</th>
+            <th>Soru</th>
+            <th>Katılım</th>
+            <th>Bitiş</th>
+            <th>İşlem</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% anketler.forEach(function(a) { %>
+            <tr>
+              <td data-label="Başlık">
+                <strong><%= a.baslik %></strong>
+                <% if (a.gizli) { %><br><small style="color:var(--metin-acik);">🔒 Sonuçlar gizli</small><% } else { %><br><small style="color:var(--metin-acik);">👁 Sonuçlar açık</small><% } %>
+              </td>
+              <td data-label="Durum">
+                <% if (a.durum === 1) { %>
+                  <span class="badge badge-onayli">Açık</span>
+                <% } else { %>
+                  <span class="badge badge-bekliyor">Kapalı</span>
+                <% } %>
+              </td>
+              <td data-label="Soru"><%= a.soru_sayisi %></td>
+              <td data-label="Katılım">
+                <strong><%= a.oy_veren_sayisi %></strong> / <%= a.toplam_uye %>
+                <br><small style="color:var(--metin-acik);">
+                  <%= a.toplam_uye > 0 ? Math.round((a.oy_veren_sayisi / a.toplam_uye) * 100) : 0 %>% katılım
+                </small>
+              </td>
+              <td data-label="Bitiş">
+                <% if (a.bitis_tarihi) { %>
+                  <small><%= a.bitis_tarihi %></small>
+                <% } else { %>
+                  <small style="color:var(--metin-acik);">Süresiz</small>
+                <% } %>
+              </td>
+              <td data-label="İşlem" class="td-islem">
+                <a href="/yonetim/anketler/rapor/<%= a.id %>" class="btn-duzenle">📊 Rapor</a>
+                <form action="/yonetim/anketler/durum/<%= a.id %>" method="POST" style="display:inline">
+                  <button type="submit" class="btn-onayla"><%= a.durum === 1 ? 'Kapat' : 'Aç' %></button>
+                </form>
+                <form action="/yonetim/anketler/sil/<%= a.id %>" method="POST" data-confirm="Bu anket ve tüm oylar silinsin mi?" style="display:inline">
+                  <button type="submit" class="btn-sil">Sil</button>
+                </form>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+<% } %>
+
+<%- include('partials/footer') %>
