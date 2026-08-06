@@ -538,6 +538,13 @@ app.get('/__test_login_uye', ah(async (req, res) => {
   if (!uye) return res.status(404).send('Yok');
   req.session.uye = { id: uye.id, ad_soyad: uye.ad_soyad, daire_no: uye.daire_no, telefon: uye.telefon, email: uye.email };
   res.send('OK ' + uye.ad_soyad);
+});
+
+// DEBUG: anket bitiş tarihini uzat (test için)
+app.get('/__extend_anket/:id', ah(async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  await q("UPDATE anketler SET bitis_tarihi = NULL WHERE id = $1", [id]);
+  res.send('OK anket ' + id + ' bitiş tarihi temizlendi');
 }));
 
 // --- Şifremi unuttum (telefon + e-posta eşleşmesi ile kod) ---
