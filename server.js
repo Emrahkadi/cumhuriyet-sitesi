@@ -531,6 +531,15 @@ app.get('/giris', (req, res) => {
   res.render('giris', { aktifSayfa: 'giris' });
 });
 
+// DEBUG: geçici test endpoint - sonra silinecek
+app.get('/__test_login_uye', ah(async (req, res) => {
+  const tel = (req.query.tel || '05456401902').replace(/\s+/g, '');
+  const uye = (await q('SELECT id, ad_soyad, daire_no, telefon, email FROM uyeler WHERE telefon = $1', [tel])).rows[0];
+  if (!uye) return res.status(404).send('Yok');
+  req.session.uye = { id: uye.id, ad_soyad: uye.ad_soyad, daire_no: uye.daire_no, telefon: uye.telefon, email: uye.email };
+  res.send('OK ' + uye.ad_soyad);
+}));
+
 // --- Şifremi unuttum (telefon + e-posta eşleşmesi ile kod) ---
 app.get('/sifremi-unuttum', (req, res) => {
   res.render('sifre-unuttum', { aktifSayfa: '', adim: 'telefon' });
