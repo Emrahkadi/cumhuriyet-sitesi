@@ -39,16 +39,23 @@
           <div class="soru-numarasi">Soru <%= idx + 1 %> / <%= sorular.length %></div>
           <h3 class="soru-metni"><%= soru.soru %></h3>
           <div class="secenekler">
-            <% soru.secenekler.forEach(function(sec, i) { %>
+            <% soru.secenekler.forEach(function(sec, i) {
+                 // Kullanıcı oy verdiyse sadece seçtiği seçeneği göster
+                 const oyKullanildi = Object.keys(oyMap).length > 0;
+                 if (oyKullanildi && oyMap[soru.id] !== i) return;
+            %>
               <label class="secenek <%= oyMap[soru.id] === i ? 'secili' : '' %>">
-                <input
-                  type="radio"
-                  name="soru_<%= soru.id %>"
-                  value="<%= i %>"
-                  <%= oyMap[soru.id] !== undefined ? 'checked disabled' : '' %>
-                  required
-                />
-                <span class="secenek-isaret"></span>
+                <% if (oyKullanildi) { %>
+                  <span class="cevap-isareti" aria-label="Seçtiğiniz cevap">✓</span>
+                <% } else { %>
+                  <input
+                    type="radio"
+                    name="soru_<%= soru.id %>"
+                    value="<%= i %>"
+                    required
+                  />
+                  <span class="secenek-isaret"></span>
+                <% } %>
                 <span class="secenek-metin"><%= sec %></span>
               </label>
             <% }); %>

@@ -525,6 +525,7 @@ time { color: var(--metin-acik); font-size: 0.82rem; }
   border-color: var(--renk-ana);
   background: #f5f9ff;
 }
+/* Sadece kullanıcının oy verdiği seçenek vurgulansın */
 .secenek.secili {
   border-color: var(--renk-ana);
   background: #e8f0fb;
@@ -535,6 +536,32 @@ time { color: var(--metin-acik); font-size: 0.82rem; }
   accent-color: var(--renk-ana);
   flex-shrink: 0;
   margin: 0;
+}
+/* Oy kullanılmışsa: tüm radio'lar normal görünsün,
+   seçili olmayanlar tam gri boş daire olsun (Chrome default :disabled
+   yarı şeffaf işaretinin aksine). */
+.secenek input[type="radio"]:disabled {
+  opacity: 1;
+}
+.secenek input[type="radio"]:disabled:not(:checked) {
+  accent-color: #ccc;
+}
+.secenek.secili input[type="radio"]:disabled {
+  accent-color: var(--renk-ana);
+}
+/* Oy verilmiş: seçili cevabın yanındaki ✓ işareti */
+.cevap-isareti {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: var(--renk-ana);
+  color: #fff;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 0.95rem;
+  flex-shrink: 0;
 }
 .secenek-metin { font-size: 0.95rem; }
 
