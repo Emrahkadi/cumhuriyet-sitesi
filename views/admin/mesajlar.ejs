@@ -19,7 +19,7 @@
             <% if (m.telefon) { %><span>📞 <%= m.telefon %></span><% } %>
             <% if (m.email) { %><span>✉️ <%= m.email %></span><% } %>
           </div>
-          <p class="mesaj-metin"><%= m.mesaj %></p>
+          <p class="mesaj-metin"><%- m.mesaj %></p>
           <form action="/yonetim/mesajlar/sil/<%= m.id %>" method="POST" data-confirm="Bu mesaj silinsin mi?">
             <button type="submit" class="btn-sil">Sil</button>
           </form>
