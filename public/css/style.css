@@ -770,6 +770,11 @@ time { color: var(--metin-acik); font-size: 0.82rem; }
 }
 .mesaj-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px; }
 .mesaj-metin { color: #3d4152; white-space: pre-line; }
+.mesaj-metin p { margin: 0 0 8px; }
+.mesaj-metin p:last-child { margin-bottom: 0; }
+.mesaj-metin p:empty { display: none; }
+.mesaj-metin b, .mesaj-metin strong { font-weight: 600; color: var(--metin); }
+.mesaj-metin i, .mesaj-metin em { font-style: italic; }
 
 /* ---------- Footer ---------- */
 .site-footer { background: #1a1f2e; color: #c8cdd8; margin-top: 40px; }
