@@ -2,12 +2,36 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title><%= typeof sayfaBaslik !== 'undefined' ? sayfaBaslik + ' - ' : '' %>Cumhuriyet Sitesi</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#1e5aa8" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Cumhuriyet" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="application-name" content="Cumhuriyet Sitesi" />
+  <meta name="msapplication-TileColor" content="#1e5aa8" />
   <meta name="description" content="Cumhuriyet Sitesi resmi web sitesi - duyurular, iletişim, kentsel dönüşüm ve site sakinleri üyelik portalı." />
+  <title><%= typeof sayfaBaslik !== 'undefined' ? sayfaBaslik + ' - ' : '' %>Cumhuriyet Sitesi</title>
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
+  <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/css/style.css?v=17" />
+  <script>
+    // PWA Service Worker kaydı
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/sw.js').then(function(reg) {
+          console.log('[PWA] Service Worker kayıtlı:', reg.scope);
+        }, function(err) {
+          console.warn('[PWA] Service Worker kaydı başarısız:', err);
+        });
+      });
+    }
+  </script>
 </head>
 <body>
   <header class="site-header">
