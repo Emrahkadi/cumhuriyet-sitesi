@@ -271,6 +271,7 @@ app.get('/sitemap.xml', (req, res) => {
     { loc: '/hakkinda', oncelik: '0.6' },
     { loc: '/kentsel-donusum', oncelik: '0.7' },
     { loc: '/iletisim', oncelik: '0.6' },
+    { loc: '/gizlilik', oncelik: '0.5' },
     { loc: '/kayit', oncelik: '0.4' }
   ];
   const xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
@@ -382,6 +383,11 @@ app.get('/duyuru/:id', ah(async (req, res) => {
 // Hakkımızda
 app.get('/hakkinda', (req, res) => {
   res.render('hakkinda', { aktifSayfa: 'hakkinda' });
+});
+
+// Gizlilik Politikası
+app.get('/gizlilik', (req, res) => {
+  res.render('gizlilik', { aktifSayfa: 'gizlilik' });
 });
 
 // Kentsel dönüşüm
