@@ -20,3 +20,13 @@ Thumbs.db
 # Capacitor (native build çıktıları)
 android/
 capacitor.config.json
+
+# Geçici deploy scriptleri
+deploy-remote.sh
+recover-remote.sh
+restart-remote.sh
+diagnose.sh
+diagnose2.sh
+bubblewrap-answers.txt
+yes-licenses.txt
+yes-input.txt
