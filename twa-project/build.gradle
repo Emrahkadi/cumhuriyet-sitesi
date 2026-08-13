@@ -1,0 +1,12 @@
+// Root build file
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.5.2'
+    }
+}
+// Repositories are defined in settings.gradle (FAIL_ON_PROJECT_REPOS)
+// to keep build reproducible.

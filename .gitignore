@@ -30,3 +30,14 @@ diagnose2.sh
 bubblewrap-answers.txt
 yes-licenses.txt
 yes-input.txt
+
+# Android build çıktıları
+twa-project/build/
+twa-project/app/build/
+twa-project/.gradle/
+twa-project/local.properties
+twa-project/captures/
+twa-project/.idea/
+*.aab
+*.apk
+twa-release-key.jks
