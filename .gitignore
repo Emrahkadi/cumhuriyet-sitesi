@@ -16,3 +16,7 @@ npm-debug.log*
 # OS dosyaları
 .DS_Store
 Thumbs.db
+
+# Capacitor (native build çıktıları)
+android/
+capacitor.config.json

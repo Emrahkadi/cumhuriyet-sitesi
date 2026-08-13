@@ -254,6 +254,24 @@ CREATE TABLE IF NOT EXISTS duyuru_ekleri (
     ON anket_katilimlar (anket_id, daire_no)
     WHERE daire_no IS NOT NULL;
   `);
+
+  // Web Push bildirim abonelikleri
+  // (her kullanıcı birden fazla cihaz/ziyaretçi kaydedebilir)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS push_subscriptions (
+      id SERIAL PRIMARY KEY,
+      uye_id INTEGER REFERENCES uyeler(id) ON DELETE CASCADE,
+      endpoint TEXT NOT NULL UNIQUE,
+      p256dh TEXT NOT NULL,
+      auth TEXT NOT NULL,
+      user_agent TEXT,
+      olusturma_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
+    );
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_push_subscriptions_uye
+      ON push_subscriptions (uye_id);
+  `);
 }
 
 // --- Varsayılan yönetici ---

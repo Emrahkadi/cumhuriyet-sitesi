@@ -1110,3 +1110,94 @@ body.menu-open .nav-toggle { opacity: 0; pointer-events: none; }
 .kentsel-icerik p:first-child { margin-top: 0; }
 .kentsel-icerik p:last-child { margin-bottom: 0; }
 .kentsel-icerik { color: var(--metin-acik); font-size: 0.95rem; }
+
+/* --- Web Push bildirim butonu (header) --- */
+.nav-push-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--beyaz, #fff);
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s, transform 0.06s;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.nav-push-btn:hover { background: rgba(255, 255, 255, 0.18); border-color: rgba(255, 255, 255, 0.7); }
+.nav-push-btn:active { transform: scale(0.97); }
+.nav-push-btn .push-off { display: none; }
+.nav-push-btn.abone .push-on { display: none; }
+.nav-push-btn.abone .push-off {
+  display: inline;
+  background: linear-gradient(90deg, #16a34a, #22c55e);
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+}
+.nav-push-btn.abone {
+  background: rgba(22, 163, 74, 0.12);
+  border-color: #16a34a;
+}
+.nav-push-btn.izin-yok { background: rgba(220, 38, 38, 0.12); border-color: #dc2626; cursor: help; }
+
+/* Mobil drawer içinde push butonu */
+@media (max-width: 900px) {
+  .nav-push-btn { width: 100%; justify-content: center; padding: 12px 14px; }
+}
+
+/* iOS tarzı install banner */
+.pwa-install-banner {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+  max-width: 480px;
+  margin: 0 auto;
+  background: linear-gradient(135deg, #1e5aa8, #2a6fbf);
+  color: #fff;
+  padding: 14px 18px;
+  border-radius: 14px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.92rem;
+  animation: slideUp 0.4s ease-out;
+}
+.pwa-install-banner .pwa-banner-icon { font-size: 1.6rem; flex-shrink: 0; }
+.pwa-install-banner .pwa-banner-text { flex: 1; line-height: 1.35; }
+.pwa-install-banner .pwa-banner-text strong { display: block; }
+.pwa-install-banner .pwa-banner-close {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: #fff;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.pwa-install-banner .pwa-banner-close:hover { background: rgba(255, 255, 255, 0.35); }
+.pwa-install-banner a.pwa-banner-link {
+  color: #fff;
+  text-decoration: underline;
+  font-weight: 600;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+}
+@keyframes slideUp {
+  from { transform: translateY(120%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}

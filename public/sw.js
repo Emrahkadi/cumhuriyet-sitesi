@@ -119,22 +119,47 @@ async function networkFirst(request) {
   }
 }
 
-// Push bildirim (ileride eklenecek)
+// Push bildirim (VAPID / web-push)
 self.addEventListener('push', (event) => {
   if (!event.data) return;
-  const data = event.data.json();
-  event.waitUntil(
-    self.registration.showNotification(data.title || 'Cumhuriyet Sitesi', {
-      body: data.body || '',
-      icon: '/icons/icon-192.png',
-      badge: '/icons/icon-96.png',
-      data: data.url || '/'
-    })
-  );
+  let payload = {};
+  try {
+    payload = event.data.json();
+  } catch (e) {
+    payload = { baslik: 'Cumhuriyet Sitesi', icerik: event.data.text() };
+  }
+  const baslik = payload.baslik || payload.title || 'Cumhuriyet Sitesi';
+  const icerik = payload.icerik || payload.body || '';
+  const url = payload.url || '/';
+  const onemli = payload.onemli ? 1 : 0;
+  const tag = (payload.kategori || 'genel') + '-' + url;
+  const secenekler = {
+    body: icerik,
+    icon: payload.ikon || '/icons/icon-192.png',
+    badge: '/icons/icon-96.png',
+    data: url,
+    tag: tag,
+    renotify: true,
+    requireInteraction: onemli === 1,
+    vibrate: onemli === 1 ? [300, 150, 300, 150, 300] : [200, 100, 200]
+  };
+  event.waitUntil(self.registration.showNotification(baslik, secenekler));
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url = event.notification.data || '/';
-  event.waitUntil(clients.openWindow(url));
+  // Aynı tag'li eski bildirimleri kapat
+  event.waitUntil(
+    clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((winList) => {
+        for (const w of winList) {
+          if (w.url && new URL(w.url).pathname === url) {
+            return w.focus();
+          }
+        }
+        return clients.openWindow(url);
+      })
+  );
 });

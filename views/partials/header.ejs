@@ -19,18 +19,94 @@
   <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css?v=17" />
+  <link rel="stylesheet" href="/css/style.css?v=18" />
   <script>
     // PWA Service Worker kaydı
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
         navigator.serviceWorker.register('/sw.js').then(function(reg) {
           console.log('[PWA] Service Worker kayıtlı:', reg.scope);
+          window.__swReg = reg;
         }, function(err) {
           console.warn('[PWA] Service Worker kaydı başarısız:', err);
         });
       });
     }
+
+    // Web Push bildirim yönetimi
+    window.PushBildirim = (function() {
+      const DESTEK = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+      let izinDurumu = DESTEK ? Notification.permission : 'denied';
+
+      async function publicKeyAl() {
+        const r = await fetch('/api/vapid-public-key');
+        const j = await r.json();
+        return j.publicKey;
+      }
+
+      async function aboneOl() {
+        if (!DESTEK) return { basarili: false, hata: 'Tarayıcı desteklemiyor.' };
+        if (izinDurumu === 'default') {
+          izinDurumu = await Notification.requestPermission();
+        }
+        if (izinDurumu !== 'granted') {
+          return { basarili: false, hata: 'Bildirim izni verilmedi.' };
+        }
+        const reg = await navigator.serviceWorker.ready;
+        let abone = await reg.pushManager.getSubscription();
+        if (!abone) {
+          const key = await publicKeyAl();
+          abone = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(key)
+          });
+        }
+        const r = await fetch('/api/push/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subscription: abone.toJSON() })
+        });
+        const j = await r.json();
+        return { basarili: !!j.basarili };
+      }
+
+      async function aboneliktenCik() {
+        if (!DESTEK) return { basarili: false };
+        const reg = await navigator.serviceWorker.ready;
+        const abone = await reg.pushManager.getSubscription();
+        if (!abone) return { basarili: true };
+        const endpoint = abone.endpoint;
+        await abone.unsubscribe();
+        await fetch('/api/push/unsubscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint })
+        });
+        return { basarili: true };
+      }
+
+      async function durum() {
+        if (!DESTEK) return { destek: false, izin: 'denied', abone: false };
+        const izin = Notification.permission;
+        let abone = false;
+        if (izin === 'granted' && navigator.serviceWorker.controller) {
+          const reg = await navigator.serviceWorker.ready;
+          abone = !!(await reg.pushManager.getSubscription());
+        }
+        return { destek: true, izin, abone };
+      }
+
+      function urlBase64ToUint8Array(b64) {
+        const padding = '='.repeat((4 - b64.length % 4) % 4);
+        const base64 = (b64 + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const raw = atob(base64);
+        const out = new Uint8Array(raw.length);
+        for (let i = 0; i < raw.length; ++i) out[i] = raw.charCodeAt(i);
+        return out;
+      }
+
+      return { destek: DESTEK, aboneOl, aboneliktenCik, durum };
+    })();
   </script>
 </head>
 <body>
@@ -83,6 +159,10 @@
             </div>
           </div>
           <a href="/panel" class="nav-cta <%= aktifSayfa === 'panel' ? 'active' : '' %>">Panelim</a>
+          <button type="button" id="pushToggleBtn" class="nav-push-btn" hidden title="Push bildirimlerini aç/kapat">
+            <span class="push-on">🔔 Bildirim Aç</span>
+            <span class="push-off">🔕 Bildirim Alınıyor</span>
+          </button>
           <a href="/cikis" class="nav-logout">Çıkış</a>
         <% } else { %>
           <a href="/giris" class="nav-cta <%= aktifSayfa === 'giris' ? 'active' : '' %>">Giriş Yap</a>
@@ -179,5 +259,84 @@
           btn.setAttribute('aria-expanded', 'false');
         }
       });
+    })();
+
+    // Push bildirim butonu davranışı
+    (function() {
+      var btn = document.getElementById('pushToggleBtn');
+      if (!btn) return;
+      if (!window.PushBildirim || !window.PushBildirim.destek) {
+        btn.setAttribute('hidden', '');
+        return;
+      }
+      btn.removeAttribute('hidden');
+
+      async function guncelle() {
+        var d = await window.PushBildirim.durum();
+        btn.classList.remove('abone', 'izin-yok');
+        if (d.izin === 'denied') {
+          btn.classList.add('izin-yok');
+          btn.title = 'Bildirim izni reddedildi. Tarayıcı ayarlarından izin verin.';
+        } else if (d.abone) {
+          btn.classList.add('abone');
+          btn.title = 'Bildirimler açık. Tıklayarak kapatın.';
+        } else {
+          btn.title = 'Yeni duyurulardan anında haberdar olun.';
+        }
+      }
+      btn.addEventListener('click', async function() {
+        var d = await window.PushBildirim.durum();
+        if (d.izin === 'denied') {
+          alert('Bildirim izni reddedilmiş. Tarayıcı ayarlarından bu site için bildirim iznini açın.');
+          return;
+        }
+        if (d.abone) {
+          await window.PushBildirim.aboneliktenCik();
+        } else {
+          await window.PushBildirim.aboneOl();
+        }
+        guncelle();
+      });
+      guncelle();
+    })();
+
+    // PWA install banner + iOS için "Add to Home Screen" ipucu
+    (function() {
+      var kapaliAnahtar = 'pwa-install-banner-kapali';
+      var kapatildi = false;
+      try { kapatildi = localStorage.getItem(kapaliAnahtar) === '1'; } catch (e) {}
+      if (kapatildi) return;
+      // Sadece standalone değilse veya ilk ziyarette
+      var standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+      if (standalone) return;
+      // 3 saniye sonra göster (sayfa yüklendikten sonra)
+      setTimeout(function() {
+        var banner = document.createElement('div');
+        banner.className = 'pwa-install-banner';
+        banner.id = 'pwaInstallBanner';
+        var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        if (isIOS) {
+          banner.innerHTML =
+            '<span class="pwa-banner-icon">📱</span>' +
+            '<div class="pwa-banner-text">' +
+              '<strong>Uygulamayı Ana Ekrana Ekleyin</strong>' +
+              'Safari paylaş menüsünden <strong>\"Ana Ekrana Ekle\"</strong> seçeneğine dokunun.' +
+            '</div>' +
+            '<button type="button" class="pwa-banner-close" aria-label="Kapat">×</button>';
+        } else {
+          banner.innerHTML =
+            '<span class="pwa-banner-icon">📲</span>' +
+            '<div class="pwa-banner-text">' +
+              '<strong>Cumhuriyet Sitesi Uygulaması</strong>' +
+              'Hızlı erişim için tarayıcı menüsünden <strong>\"Ana Ekrana Ekle\"</strong> deneyin.' +
+            '</div>' +
+            '<button type="button" class="pwa-banner-close" aria-label="Kapat">×</button>';
+        }
+        document.body.appendChild(banner);
+        banner.querySelector('.pwa-banner-close').addEventListener('click', function() {
+          try { localStorage.setItem(kapaliAnahtar, '1'); } catch (e) {}
+          banner.remove();
+        });
+      }, 3000);
     })();
   </script>

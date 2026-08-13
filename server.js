@@ -19,8 +19,69 @@ const sanitizeHtml = require('sanitize-html');
 
 const { q, pool, init } = require('./database');
 const { gonder: mailGonder, kodUret } = require('./services/mailer');
+const webPush = require('web-push');
 
 const fs = require('fs');
+
+// --- Web Push (VAPID) ayarları ---
+// .env dosyasında VAPID_PUBLIC_KEY ve VAPID_PRIVATE_KEY yoksa üret ve yaz.
+// Production'da anahtarları sabit tutmak için .env'e kaydedin.
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@cumhuriyetsitesi.org';
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || 'BKds6B3H5pEkH5auWaDxF3M0U90mZxlAhsY2DhQPaOwUZcaKxELGxJ5K111xpcrlHfEUHcV11OS80DGnG0ULg1w';
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || 'MAT62hGXjYdo-gpmeQrEceoxsEfe018XPxonFHxAjz8';
+webPush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+
+// Tüm (veya belirli bir üyeye ait) push abonalarına bildirim gönder.
+// Hata alan abonelikleri (410 Gone, 404) otomatik siler.
+async function pushAboneliklereGonder(payloadObj, uyeId) {
+  if (!payloadObj || typeof payloadObj !== 'object') return { gonderildi: 0, hata: 0 };
+  const payload = JSON.stringify(payloadObj);
+  const params = [];
+  let sql = 'SELECT id, uye_id, endpoint, p256dh, auth FROM push_subscriptions';
+  if (uyeId) {
+    sql += ' WHERE uye_id = $1';
+    params.push(uyeId);
+  }
+  let rows;
+  try {
+    const sonuc = await q(sql, params);
+    rows = sonuc.rows;
+  } catch (e) {
+    console.warn('Push abonelikleri okunamadı:', e.message);
+    return { gonderildi: 0, hata: 0 };
+  }
+  if (rows.length === 0) return { gonderildi: 0, hata: 0 };
+
+  let gonderildi = 0;
+  let hata = 0;
+  const silinecekler = [];
+  await Promise.all(
+    rows.map(async (r) => {
+      const sub = {
+        endpoint: r.endpoint,
+        keys: { p256dh: r.p256dh, auth: r.auth }
+      };
+      try {
+        await webPush.sendNotification(sub, payload, { TTL: 60 * 60 });
+        gonderildi++;
+      } catch (e) {
+        hata++;
+        // 404 / 410: abonelik artık geçerli değil, veritabanından sil
+        if (e.statusCode === 404 || e.statusCode === 410) {
+          silinecekler.push(r.id);
+        }
+      }
+    })
+  );
+  if (silinecekler.length > 0) {
+    try {
+      await q('DELETE FROM push_subscriptions WHERE id = ANY($1::int[])', [silinecekler]);
+    } catch (e) {
+      console.warn('Eski push abonelikleri silinemedi:', e.message);
+    }
+  }
+  return { gonderildi, hata };
+}
 
 // Excel yüklemesi için bellekte tutan multer (max 10 MB, sadece .xlsx)
 const upload = multer({
@@ -755,6 +816,15 @@ app.post('/yonetim/duyurular/ekle', adminGerekli, dosyaCok('duyurular'), ah(asyn
   }
   req.flash('basari', 'Duyuru eklendi.' + (ekSayisi ? ` ${ekSayisi} ek dosya yüklendi.` : ''));
   res.redirect('/yonetim/duyurular');
+  // Tüm abonelere push bildirim gönder (yanıtı beklemeden)
+  pushAboneliklereGonder({
+    baslik: 'Yeni Duyuru: ' + baslik.trim(),
+    icerik: (temizIcerik || '').replace(/<[^>]+>/g, ' ').trim().slice(0, 180),
+    url: '/duyurular',
+    kategori: (kategori || 'Genel').trim(),
+    onemli: onemli ? 1 : 0,
+    ikon: '/icons/icon-192.png'
+  }).catch((e) => console.warn('Push gönderilemedi:', e.message));
 }));
 
 app.post('/yonetim/duyurular/sil/:id', adminGerekli, ah(async (req, res) => {
@@ -892,6 +962,15 @@ app.post('/yonetim/kentsel-donusum/ekle', adminGerekli, dosyaCok('kentsel'), ah(
   }
   req.flash('basari', 'Kayıt eklendi.' + (ekSayisi ? ' ' + ekSayisi + ' ek dosya yüklendi.' : ''));
   res.redirect('/yonetim/kentsel-donusum');
+  // Tüm abonelere push bildirim gönder (yanıtı beklemeden)
+  pushAboneliklereGonder({
+    baslik: 'Kentsel Dönüşüm: ' + baslik.trim(),
+    icerik: (temizIcerik || '').replace(/<[^>]+>/g, ' ').trim().slice(0, 180),
+    url: '/kentsel-donusum',
+    kategori: 'Kentsel Dönüşüm',
+    onemli: 1,
+    ikon: '/icons/icon-192.png'
+  }).catch((e) => console.warn('Push gönderilemedi:', e.message));
 }));
 
 app.post('/yonetim/kentsel-donusum/sil/:id', adminGerekli, ah(async (req, res) => {
@@ -1449,6 +1528,70 @@ app.use((err, req, res, next) => {
   console.error('Sunucu hatası:', err);
   res.status(500).send('Sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin.');
 });
+
+// =====================================================================
+//  WEB PUSH BİLDİRİM API
+// =====================================================================
+
+// Service Worker'ın ihtiyaç duyduğu VAPID public key
+app.get('/api/vapid-public-key', (req, res) => {
+  res.json({ publicKey: VAPID_PUBLIC_KEY });
+});
+
+// Abone ol (misafir veya üye). Üye ise uye_id bağlanır.
+app.post('/api/push/subscribe', ah(async (req, res) => {
+  const sub = req.body && req.body.subscription;
+  if (!sub || !sub.endpoint || !sub.keys || !sub.keys.p256dh || !sub.keys.auth) {
+    return res.status(400).json({ hata: 'Geçersiz abonelik bilgisi.' });
+  }
+  const uyeId = (req.session && req.session.uye && req.session.uye.id) || null;
+  try {
+    await q(
+      `INSERT INTO push_subscriptions (uye_id, endpoint, p256dh, auth, user_agent)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (endpoint) DO UPDATE
+         SET p256dh = EXCLUDED.p256dh,
+             auth = EXCLUDED.auth,
+             user_agent = EXCLUDED.user_agent,
+             uye_id = COALESCE(EXCLUDED.uye_id, push_subscriptions.uye_id)`,
+      [uyeId, sub.endpoint, sub.keys.p256dh, sub.keys.auth, (req.get('user-agent') || '').slice(0, 250)]
+    );
+    res.json({ basarili: true });
+  } catch (e) {
+    console.error('Push abonelik kaydı başarısız:', e.message);
+    res.status(500).json({ hata: 'Abonelik kaydedilemedi.' });
+  }
+}));
+
+// Abonelikten çık (mevcut endpoint'i sil)
+app.post('/api/push/unsubscribe', ah(async (req, res) => {
+  const endpoint = req.body && req.body.endpoint;
+  if (!endpoint) return res.json({ basarili: true });
+  try {
+    await q('DELETE FROM push_subscriptions WHERE endpoint = $1', [endpoint]);
+    res.json({ basarili: true });
+  } catch (e) {
+    res.status(500).json({ hata: 'Abonelik silinemedi.' });
+  }
+}));
+
+// Test bildirimi (giriş yapmış üye kendine gönderirsin)
+app.post('/api/push/test', uyeGerekli, ah(async (req, res) => {
+  const sonuc = await pushAboneliklereGonder({
+    baslik: 'Test bildirimi',
+    icerik: 'Bu bir test bildirimidir. Cumhuriyet Sitesi push bildirimleri çalışıyor!',
+    url: '/',
+    kategori: 'Test',
+    onemli: 0,
+    ikon: '/icons/icon-192.png'
+  }, req.session.uye.id);
+  if (sonuc.gonderildi === 0) {
+    req.flash('hata', 'Bu cihaz için aktif abonelik bulunamadı. Tarayıcı izinlerini kontrol edin.');
+  } else {
+    req.flash('basari', `Test bildirimi ${sonuc.gonderildi} cihaza gönderildi.`);
+  }
+  res.redirect(req.body.returnTo || '/panel');
+}));
 
 // Veritabanını hazırlayıp sunucuyu başlat
 init()
