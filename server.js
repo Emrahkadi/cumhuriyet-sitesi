@@ -1517,28 +1517,13 @@ app.post('/yonetim/anketler/sil/:id', adminGerekli, ah(async (req, res) => {
 }));
 
 // =====================================================================
-//  404 ve HATA YÖNETİMİ
-// =====================================================================
-app.use((req, res) => {
-  res.status(404).render('404', { aktifSayfa: '' });
-});
-
-// Merkezi hata yakalayıcı
-app.use((err, req, res, next) => {
-  console.error('Sunucu hatası:', err);
-  res.status(500).send('Sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin.');
-});
-
-// =====================================================================
-//  WEB PUSH BİLDİRİM API
+//  WEB PUSH BİLDİRİM API (404 catch-all'dan ÖNCE olmalı!)
 // =====================================================================
 
-// Service Worker'ın ihtiyaç duyduğu VAPID public key
 app.get('/api/vapid-public-key', (req, res) => {
   res.json({ publicKey: VAPID_PUBLIC_KEY });
 });
 
-// Abone ol (misafir veya üye). Üye ise uye_id bağlanır.
 app.post('/api/push/subscribe', ah(async (req, res) => {
   const sub = req.body && req.body.subscription;
   if (!sub || !sub.endpoint || !sub.keys || !sub.keys.p256dh || !sub.keys.auth) {
@@ -1563,7 +1548,6 @@ app.post('/api/push/subscribe', ah(async (req, res) => {
   }
 }));
 
-// Abonelikten çık (mevcut endpoint'i sil)
 app.post('/api/push/unsubscribe', ah(async (req, res) => {
   const endpoint = req.body && req.body.endpoint;
   if (!endpoint) return res.json({ basarili: true });
@@ -1575,7 +1559,6 @@ app.post('/api/push/unsubscribe', ah(async (req, res) => {
   }
 }));
 
-// Test bildirimi (giriş yapmış üye kendine gönderirsin)
 app.post('/api/push/test', uyeGerekli, ah(async (req, res) => {
   const sonuc = await pushAboneliklereGonder({
     baslik: 'Test bildirimi',
@@ -1592,6 +1575,23 @@ app.post('/api/push/test', uyeGerekli, ah(async (req, res) => {
   }
   res.redirect(req.body.returnTo || '/panel');
 }));
+
+// =====================================================================
+//  404 ve HATA YÖNETİMİ
+// =====================================================================
+app.use((req, res) => {
+  res.status(404).render('404', { aktifSayfa: '' });
+});
+
+// Merkezi hata yakalayıcı
+app.use((err, req, res, next) => {
+  console.error('Sunucu hatası:', err);
+  res.status(500).send('Sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin.');
+});
+
+// =====================================================================
+//  WEB PUSH BİLDİRİM API
+// =====================================================================
 
 // Veritabanını hazırlayıp sunucuyu başlat
 init()
