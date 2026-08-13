@@ -1,0 +1,70 @@
+{
+  "packageId": "com.cumhuriyetsitesi.app",
+  "host": "cumhuriyetsitesi.org",
+  "name": "Cumhuriyet Sitesi",
+  "launcherName": "Cumhuriyet",
+  "display": "standalone",
+  "orientation": "portrait",
+  "themeColor": "#1e5aa8",
+  "backgroundColor": "#ffffff",
+  "startUrl": "/?utm_source=twa",
+  "iconUrl": "https://cumhuriyetsitesi.org/icons/icon-512.png",
+  "splashColor": "#1e5aa8",
+  "enableNotifications": true,
+  "signingKey": {
+    "path": "./twa-release-key.jks",
+    "alias": "twa"
+  },
+  "appVersion": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [
+    {
+      "name": "Duyurular",
+      "shortcutId": "duyurular",
+      "url": "/duyurular?utm_source=twa",
+      "iconUrl": "https://cumhuriyetsitesi.org/icons/icon-96.png"
+    },
+    {
+      "name": "İletişim",
+      "shortcutId": "iletisim",
+      "url": "/iletisim?utm_source=twa",
+      "iconUrl": "https://cumhuriyetsitesi.org/icons/icon-96.png"
+    },
+    {
+      "name": "Anketler",
+      "shortcutId": "anketler",
+      "url": "/anketler?utm_source=twa",
+      "iconUrl": "https://cumhuriyetsitesi.org/icons/icon-96.png"
+    }
+  ],
+  "generatorApp": "Cumhuriyet Sitesi TWA Builder",
+  "webManifestUrl": "https://cumhuriyetsitesi.org/manifest.json",
+  "fallbackType": "customtabs",
+  "features": {
+    "appsFlyerEnabled": false,
+    "forceDarkModeAllowed": false,
+    "pwaDisplayOverride": "standalone"
+  },
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "librariesImport": "androidx.browser:browser:1.7.0",
+  "minSdkVersion": 24,
+  "targetSdkVersion": 34,
+  "additionalTrustedOrigins": [],
+  "relaunchButton": true,
+  "safeBrowsingEnabled": true,
+  "siteSettings": {
+    "title": "Cumhuriyet Sitesi",
+    "subTitle": "cümhuriyetsitesi.org"
+  },
+  "splashScreenLayout": {
+    "imageFillType": "fit",
+    "progressBarColor": "#1e5aa8",
+    "backgroundColor": "#ffffff"
+  },
+  "version": "1.0.1"
+}

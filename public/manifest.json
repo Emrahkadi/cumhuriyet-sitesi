@@ -1,8 +1,9 @@
 {
+  "id": "/?utm_source=twa",
   "name": "Cumhuriyet Sitesi",
   "short_name": "Cumhuriyet",
   "description": "Cumhuriyet Sitesi yönetim ve iletişim portalı. Duyurular, anketler, aidatlar, mesajlar.",
-  "start_url": "/?utm_source=pwa",
+  "start_url": "/?utm_source=pwa&utm_medium=twa",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
@@ -11,6 +12,8 @@
   "lang": "tr-TR",
   "dir": "ltr",
   "categories": ["lifestyle", "communication", "utilities"],
+  "prefer_related_applications": false,
+  "handle_links": "preferred",
   "icons": [
     {
       "src": "/icons/icon-72.png",

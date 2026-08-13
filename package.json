@@ -7,7 +7,14 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "init-db": "node database.js"
+    "init-db": "node database.js",
+    "twa:init": "bubblewrap init --manifest=https://cumhuriyetsitesi.org/manifest.json",
+    "twa:build": "bubblewrap build",
+    "twa:update": "bubblewrap update",
+    "twa:sign": "bubblewrap sign",
+    "twa:verify": "bubblewrap verify",
+    "twa:install": "bubblewrap install",
+    "twa:doctor": "bubblewrap doctor"
   },
   "keywords": [
     "site",
