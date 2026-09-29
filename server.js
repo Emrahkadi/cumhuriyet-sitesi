@@ -1160,72 +1160,76 @@ const MALIK_DURUMLAR = ['Imzaladi', 'Beklemede', 'Red', 'Tamamlandi', 'Diger'];
 
 // Liste + filtre + arama
 app.get('/yonetim/sakin-bilgileri', adminGerekli, ah(async (req, res) => {
-  const blok = (req.query.blok || '').trim();
-  const durum = (req.query.durum || '').trim();
-  const ara = (req.query.ara || '').trim();
+  try {
+    const blok = (req.query.blok || '').trim();
+    const durum = (req.query.durum || '').trim();
+    const ara = (req.query.ara || '').trim();
 
-  const kosullar = [];
-  const params = [];
-  if (blok) {
-    params.push(blok);
-    kosullar.push(`blok = $${params.length}`);
+    const kosullar = [];
+    const params = [];
+    if (blok) {
+      params.push(blok);
+      kosullar.push(`blok = $${params.length}`);
+    }
+    if (durum && MALIK_DURUMLAR.includes(durum)) {
+      params.push(durum);
+      kosullar.push(`durum = $${params.length}`);
+    }
+    if (ara) {
+      params.push('%' + ara.toLowerCase() + '%');
+      const i = params.length;
+      kosullar.push(`(LOWER(blok) LIKE $${i} OR LOWER(kat) LIKE $${i} OR LOWER(daire) LIKE $${i} OR LOWER(malik) LIKE $${i} OR LOWER(telefon) LIKE $${i} OR LOWER(aciklama) LIKE $${i} OR LOWER(notlar) LIKE $${i})`);
+    }
+    const where = kosullar.length ? 'WHERE ' + kosullar.join(' AND ') : '';
+
+    const malikler = (await q(
+      `SELECT * FROM malik_bilgileri ${where}
+       ORDER BY
+         CASE blok WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 WHEN 'D' THEN 4 WHEN 'E' THEN 5
+                   WHEN 'F' THEN 6 WHEN 'G' THEN 7 WHEN 'H' THEN 8 WHEN 'I' THEN 9 WHEN 'İ' THEN 10
+                   WHEN 'J' THEN 11 ELSE 99 END,
+         CASE WHEN LOWER(kat) = 'zemin' THEN 0
+              WHEN LOWER(kat) = 'giris' THEN 0
+              ELSE 999 END,
+         NULLIF(regexp_replace(COALESCE(daire, '0'), '\\D', '', 'g'), '')::int ASC NULLS LAST,
+         sira::int ASC NULLS LAST, id ASC`
+    )).rows;
+
+    // İstatistikler (malik)
+    const istatistik = (await q(
+      `SELECT durum, COUNT(*)::int AS adet FROM malik_bilgileri GROUP BY durum`
+    )).rows;
+
+    // Blok listesi (malik)
+    const bloklar = (await q(
+      `SELECT DISTINCT blok FROM malik_bilgileri WHERE blok IS NOT NULL AND blok <> '' ORDER BY blok`
+    )).rows.map(r => r.blok);
+
+    const tab = (req.query.tab || 'malik').trim();
+
+    // Toplam sakin sayısı (sidebar rozet için)
+    const sakinSayisi = (await q('SELECT COUNT(*)::int AS c FROM sakinler')).rows[0].c;
+    const sakinBloklar = (await q(
+      `SELECT DISTINCT COALESCE(NULLIF(TRIM(blok), ''), 'Diğer') AS blok
+       FROM sakinler ORDER BY 1`
+    )).rows.map(r => r.blok);
+
+    res.render('admin/sakin-bilgileri', {
+      aktifSayfa: 'sakinler',
+      altSayfa: 'sakin-bilgileri',
+      tab,
+      malikler,
+      bloklar,
+      istatistik,
+      filtre: { blok, durum, ara },
+      sakinToplam: sakinSayisi,
+      sakinBloklar
+    });
+  } catch (e) {
+    console.error('sakin-bilgileri GET hata:', e.message, '\nStack:', e.stack);
+    req.flash('hata', 'Sayfa yükleme hatası: ' + e.message);
+    res.redirect('/yonetim/sakinler');
   }
-  if (durum && MALIK_DURUMLAR.includes(durum)) {
-    params.push(durum);
-    kosullar.push(`durum = $${params.length}`);
-  }
-  if (ara) {
-    params.push('%' + ara.toLowerCase() + '%');
-    const i = params.length;
-    kosullar.push(`(LOWER(blok) LIKE $${i} OR LOWER(kat) LIKE $${i} OR LOWER(daire) LIKE $${i} OR LOWER(malik) LIKE $${i} OR LOWER(telefon) LIKE $${i} OR LOWER(aciklama) LIKE $${i} OR LOWER(notlar) LIKE $${i})`);
-  }
-  const where = kosullar.length ? 'WHERE ' + kosullar.join(' AND ') : '';
-
-  const malikler = (await q(
-    `SELECT * FROM malik_bilgileri ${where}
-     ORDER BY
-       CASE blok WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 WHEN 'D' THEN 4 WHEN 'E' THEN 5
-                 WHEN 'F' THEN 6 WHEN 'G' THEN 7 WHEN 'H' THEN 8 WHEN 'I' THEN 9 WHEN 'İ' THEN 10
-                 WHEN 'J' THEN 11 ELSE 99 END,
-       CASE WHEN LOWER(kat) = 'zemin' THEN 0
-            WHEN LOWER(kat) = 'giris' THEN 0
-            ELSE 999 END,
-       NULLIF(regexp_replace(COALESCE(daire, '0'), '\\D', '', 'g'), '')::int ASC NULLS LAST,
-       sira::int ASC NULLS LAST, id ASC`
-  )).rows;
-
-  // İstatistikler (malik)
-  const istatistik = (await q(
-    `SELECT durum, COUNT(*)::int AS adet FROM malik_bilgileri GROUP BY durum`
-  )).rows;
-
-  // Blok listesi (malik)
-  const bloklar = (await q(
-    `SELECT DISTINCT blok FROM malik_bilgileri WHERE blok IS NOT NULL AND blok <> '' ORDER BY blok`
-  )).rows.map(r => r.blok);
-
-  // === SAKİNLER TABLOSU: sadece tablo sayısı (sakin tab mantığı kaldırıldı) ===
-  // Sakinlerin detaylı listesi için /yonetim/sakinler sayfasına yönlendirilir.
-  const tab = (req.query.tab || 'malik').trim();
-
-  // Toplam sakin sayısı (sidebar rozet için)
-  const sakinSayisi = (await q('SELECT COUNT(*)::int AS c FROM sakinler')).rows[0].c;
-  const sakinBloklar = (await q(
-    `SELECT DISTINCT COALESCE(NULLIF(TRIM(blok), ''), 'Diğer') AS blok
-     FROM sakinler ORDER BY 1`
-  )).rows.map(r => r.blok);
-
-  res.render('admin/sakin-bilgileri', {
-    aktifSayfa: 'sakinler',  // Sakinler sidebar'ı altında göstermek için
-    altSayfa: 'sakin-bilgileri',
-    tab,
-    malikler,
-    bloklar,
-    istatistik,
-    filtre: { blok, durum, ara },
-    sakinToplam: sakinSayisi,
-    sakinBloklar
-  });
 }));
 
 // Yeni malik ekle
