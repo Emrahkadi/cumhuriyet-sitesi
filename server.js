@@ -1203,48 +1203,16 @@ app.get('/yonetim/sakin-bilgileri', adminGerekli, ah(async (req, res) => {
     `SELECT DISTINCT blok FROM malik_bilgileri WHERE blok IS NOT NULL AND blok <> '' ORDER BY blok`
   )).rows.map(r => r.blok);
 
-  // === SAKİNLER TABLOSU (tüm sakinler - kat maliki + kiracı + diğer) ===
-  // Aktif sekme: malik (varsayılan) veya sakin
+  // === SAKİNLER TABLOSU: sadece tablo sayısı (sakin tab mantığı kaldırıldı) ===
+  // Sakinlerin detaylı listesi için /yonetim/sakinler sayfasına yönlendirilir.
   const tab = (req.query.tab || 'malik').trim();
 
-  // Sakin filtreleri
-  const sakinBlok = (req.query.sakinBlok || '').trim();
-  const sakinAra = (req.query.sakinAra || '').trim();
-
-  const sakinKosullar = [];
-  const sakinParams = [];
-  if (sakinBlok) {
-    sakinParams.push(sakinBlok);
-    sakinKosullar.push(`COALESCE(NULLIF(TRIM(blok), ''), 'Diğer') = $${sakinParams.length}`);
-  }
-  if (sakinAra) {
-    sakinParams.push('%' + sakinAra.toLowerCase() + '%');
-    const i = sakinParams.length;
-    sakinKosullar.push(`(LOWER(isim_soyisim) LIKE $${i} OR LOWER(daire) LIKE $${i} OR LOWER(adres) LIKE $${i} OR LOWER(iletisim) LIKE $${i} OR LOWER(bilgi) LIKE $${i})`);
-  }
-  const sakinWhere = sakinKosullar.length ? 'WHERE ' + sakinKosullar.join(' AND ') : '';
-
-  const sakinler = (await q(
-    `SELECT * FROM sakinler ${sakinWhere}
-     ORDER BY
-       CASE COALESCE(NULLIF(TRIM(blok), ''), 'Diğer')
-         WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 WHEN 'D' THEN 4 WHEN 'E' THEN 5
-         WHEN 'F' THEN 6 WHEN 'G' THEN 7 WHEN 'H' THEN 8 WHEN 'I' THEN 9 WHEN 'İ' THEN 10
-         WHEN 'J' THEN 11 ELSE 99 END,
-       NULLIF(regexp_replace(COALESCE(daire, '0'), '\\D', '', 'g'), '')::int ASC NULLS LAST,
-       id ASC`
-  )).rows;
-
+  // Toplam sakin sayısı (sidebar rozet için)
+  const sakinSayisi = (await q('SELECT COUNT(*)::int AS c FROM sakinler')).rows[0].c;
   const sakinBloklar = (await q(
     `SELECT DISTINCT COALESCE(NULLIF(TRIM(blok), ''), 'Diğer') AS blok
      FROM sakinler ORDER BY 1`
   )).rows.map(r => r.blok);
-
-  const sakinIstatistik = (await q(
-    `SELECT COALESCE(NULLIF(TRIM(blok), ''), 'Diğer') AS blok, COUNT(*)::int AS adet
-     FROM sakinler GROUP BY 1 ORDER BY 1`
-  )).rows;
-  const sakinToplam = sakinIstatistik.reduce((a, s) => a + s.adet, 0);
 
   res.render('admin/sakin-bilgileri', {
     aktifSayfa: 'sakinler',  // Sakinler sidebar'ı altında göstermek için
@@ -1254,10 +1222,8 @@ app.get('/yonetim/sakin-bilgileri', adminGerekli, ah(async (req, res) => {
     bloklar,
     istatistik,
     filtre: { blok, durum, ara },
-    sakinler,
+    sakinToplam: sakinSayisi,
     sakinBloklar,
-    sakinIstatistik,
-    sakinToplam,
     sakinFiltre: { blok: sakinBlok, ara: sakinAra }
   });
 }));
