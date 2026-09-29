@@ -2,10 +2,10 @@
 
 <style>
   /* Malik Bilgileri & Notlar - özel stil (cumhuriyet.html'in görsel ruhunu koruyarak) */
-  .mb-ozet{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px}
-  .mb-card{background:linear-gradient(135deg,#f5f7fb,#ffffff);padding:12px 14px;border-radius:8px;border-left:4px solid #1e3c72;box-shadow:0 1px 3px rgba(0,0,0,.08)}
-  .mb-card .l{font-size:.7em;color:#5a6271;text-transform:uppercase;font-weight:600;letter-spacing:.4px}
-  .mb-card .v{font-size:1.6em;font-weight:700;color:#1e3c72;margin-top:4px}
+  .mb-ozet{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:14px}
+  .mb-card{background:linear-gradient(135deg,#f5f7fb,#ffffff);padding:10px 12px;border-radius:8px;border-left:4px solid #1e3c72;box-shadow:0 1px 3px rgba(0,0,0,.08);min-width:0}
+  .mb-card .l{font-size:.65em;color:#5a6271;text-transform:uppercase;font-weight:600;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mb-card .v{font-size:1.35em;font-weight:700;color:#1e3c72;margin-top:3px;line-height:1.1}
   .mb-card.imza{border-left-color:#42b72a}.mb-card.imza .v{color:#42b72a}
   .mb-card.bek{border-left-color:#f7b928}.mb-card.bek .v{color:#b8860b}
   .mb-card.red{border-left-color:#e74c3c}.mb-card.red .v{color:#e74c3c}
@@ -13,14 +13,14 @@
 
   .mb-filtre{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;padding:10px;background:#f8f9fa;border-radius:6px;align-items:center}
   .mb-filtre label{font-size:.78em;color:#5a6271;font-weight:600}
-  .mb-filtre input,.mb-filtre select{padding:7px 10px;border:1px solid #ccd0d5;border-radius:4px;font-size:.9em;background:#fff}
-  .mb-filtre input{flex:1;min-width:160px}
-  .mb-filtre button{padding:7px 12px;background:#2a5298;color:#fff;border:none;border-radius:4px;font-size:.85em;font-weight:600;cursor:pointer}
+  .mb-filtre input,.mb-filtre select{padding:7px 10px;border:1px solid #ccd0d5;border-radius:4px;font-size:.88em;background:#fff;min-width:0}
+  .mb-filtre input{flex:1;min-width:140px}
+  .mb-filtre button{padding:7px 12px;background:#2a5298;color:#fff;border:none;border-radius:4px;font-size:.85em;font-weight:600;cursor:pointer;white-space:nowrap}
   .mb-filtre button.secondary{background:#65676b}
   .mb-filtre button.success{background:#42b72a}
 
-  .mb-tablo-wrap{overflow-x:auto;background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
-  table.mb-tablo{width:100%;border-collapse:collapse;font-size:.85em;min-width:1100px}
+  .mb-tablo-wrap{overflow-x:auto;background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.08);max-width:100%}
+  table.mb-tablo{width:100%;border-collapse:collapse;font-size:.82em;min-width:0}
   table.mb-tablo th{background:#1e3c72;color:#fff;padding:9px 8px;text-align:left;font-weight:600;text-transform:uppercase;font-size:.7em;letter-spacing:.4px;white-space:nowrap}
   table.mb-tablo td{padding:6px 8px;border-bottom:1px solid #e4e6eb;vertical-align:middle}
   table.mb-tablo tr:hover{background:#f5f6f7}
@@ -63,8 +63,10 @@
   .mb-not-yok{color:#adb5bd}
 
   @media(max-width:900px){
-    table.mb-tablo{font-size:.78em;min-width:900px}
+    table.mb-tablo{font-size:.76em;min-width:0}
     .mb-filtre input{min-width:120px}
+    .mb-ozet{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
+    .mb-card .v{font-size:1.15em}
   }
 </style>
 
@@ -96,11 +98,11 @@
 <% var malikAktif = tab !== 'sakin'; %>
 <% var sakinAktif = tab === 'sakin'; %>
 <div class="mb-tabs" style="display:flex;gap:0;background:#f8f9fa;border-radius:8px;padding:4px;margin-bottom:14px;border-bottom:2px solid #2a5298">
-  <a href="/yonetim/sakin-bilgileri" class="mb-tab" style="flex:1;text-align:center;padding:12px;text-decoration:none;font-weight:600;border-radius:6px;margin-bottom:-2px;color:#1e3c72;background:#fff;border-bottom:2px solid #1e3c72">
-    📋 Malik Listesi (Kat Malikleri) — <%= (istatistik || []).reduce(function(t, i){ return t + i.adet; }, 0) %>
+  <a href="/yonetim/sakin-bilgileri" class="mb-tab" style="flex:1;min-width:0;text-align:center;padding:10px 8px;text-decoration:none;font-weight:600;border-radius:6px;margin-bottom:-2px;color:#1e3c72;background:#fff;border-bottom:2px solid #1e3c72;font-size:.92em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+    📋 Malik Listesi — <%= (istatistik || []).reduce(function(t, i){ return t + i.adet; }, 0) %>
   </a>
-  <a href="/yonetim/sakinler" class="mb-tab" style="flex:1;text-align:center;padding:12px;text-decoration:none;font-weight:600;border-radius:6px;margin-bottom:-2px;color:#65676b;background:transparent;border-bottom:none">
-    🏠 Tüm Sakinler (Blok Bazlı) — <%= sakinToplam || 0 %>
+  <a href="/yonetim/sakinler" class="mb-tab" style="flex:1;min-width:0;text-align:center;padding:10px 8px;text-decoration:none;font-weight:600;border-radius:6px;margin-bottom:-2px;color:#65676b;background:transparent;border-bottom:none;font-size:.92em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+    🏠 Tüm Sakinler — <%= sakinToplam || 0 %>
   </a>
 </div>
 

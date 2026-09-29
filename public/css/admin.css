@@ -81,7 +81,7 @@
 .admin-logout:hover { background: rgba(255, 138, 138, 0.12); }
 
 /* ---------- Main ---------- */
-.admin-main { flex: 1; margin-left: 250px; min-width: 0; }
+.admin-main { flex: 1; margin-left: 250px; min-width: 0; overflow-x: hidden; }
 .admin-topbar {
   background: #fff;
   padding: 14px 24px;
