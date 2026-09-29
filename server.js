@@ -1319,6 +1319,53 @@ app.post('/yonetim/sakin-bilgileri/not/:id', adminGerekli, ah(async (req, res) =
   res.redirect('/yonetim/sakin-bilgileri' + (req.body.blok ? '?blok=' + encodeURIComponent(req.body.blok) : ''));
 }));
 
+// JSON'dan toplu içe aktar (malikler.json -> malik_bilgileri tablosu)
+app.post('/yonetim/sakin-bilgileri/import-json', adminGerekli, ah(async (req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+  const dosyaYolu = path.join(__dirname, 'malikler.json');
+  if (!fs.existsSync(dosyaYolu)) {
+    req.flash('hata', 'malikler.json dosyası bulunamadı.');
+    return res.redirect('/yonetim/sakin-bilgileri');
+  }
+  let data;
+  try {
+    data = JSON.parse(fs.readFileSync(dosyaYolu, 'utf8'));
+  } catch (e) {
+    req.flash('hata', 'malikler.json parse hatası: ' + e.message);
+    return res.redirect('/yonetim/sakin-bilgileri');
+  }
+  if (!Array.isArray(data) || data.length === 0) {
+    req.flash('hata', 'malikler.json boş veya geçersiz.');
+    return res.redirect('/yonetim/sakin-bilgileri');
+  }
+  // ?temizle=1 ile mevcut kayıtları sil
+  const temizle = req.body.temizle === '1' || req.query.temizle === '1';
+  if (temizle) {
+    await q('DELETE FROM malik_bilgileri');
+  }
+  const sql = `INSERT INTO malik_bilgileri
+    (sira, blok, kat, daire, malik, telefon, durum, aciklama, notlar)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`;
+  let eklenen = 0;
+  for (const m of data) {
+    await q(sql, [
+      String(m.sira || '').slice(0, 20),
+      String(m.blok || '').slice(0, 20),
+      String(m.kat || '').slice(0, 20),
+      String(m.daire || '').slice(0, 20),
+      String(m.malik || '').slice(0, 250),
+      String(m.telefon || '').slice(0, 50),
+      ['Imzaladi', 'Beklemede', 'Red', 'Tamamlandi', 'Diger'].includes(m.durum) ? m.durum : 'Beklemede',
+      String(m.aciklama || '').slice(0, 4000),
+      String(m.notlar || '').slice(0, 4000)
+    ]);
+    eklenen++;
+  }
+  req.flash('basari', `${eklenen} malik kaydı içe aktarıldı${temizle ? ' (mevcut kayıtlar silindi)' : ''}.`);
+  res.redirect('/yonetim/sakin-bilgileri');
+}));
+
 // Malik sil
 app.post('/yonetim/sakin-bilgileri/sil/:id', adminGerekli, ah(async (req, res) => {
   const id = parseInt(req.params.id, 10);

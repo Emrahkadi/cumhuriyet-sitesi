@@ -130,6 +130,19 @@
   <button type="submit">Filtrele</button>
   <a href="/yonetim/sakin-bilgileri?tab=malik" class="mb-filtre button secondary" style="padding:7px 12px;background:#65676b;color:#fff;border-radius:4px;font-size:.85em;font-weight:600;text-decoration:none">Temizle</a>
   <a href="/yonetim/sakin-bilgileri/csv?tab=malik" style="padding:7px 12px;background:#42b72a;color:#fff;border-radius:4px;font-size:.85em;font-weight:600;text-decoration:none">⬇ CSV</a>
+  <button type="button" onclick="document.getElementById('importJsonForm').toggleAttribute('hidden')" style="padding:7px 12px;background:#f7b928;color:#1e3c72;border:none;border-radius:4px;font-size:.85em;font-weight:600;cursor:pointer">📥 JSON'dan İçe Aktar</button>
+</form>
+
+<!-- JSON İçe Aktarma Formu -->
+<form id="importJsonForm" hidden action="/yonetim/sakin-bilgileri/import-json" method="POST" style="background:#fffde7;padding:12px 14px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:14px;border:1px dashed #f7b928">
+  <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+    <span style="font-size:.88em;color:#1e3c72">📦 <strong>malikler.json</strong> dosyasındaki 300 kaydı tabloya yükler</span>
+    <label style="font-size:.82em;display:flex;align-items:center;gap:5px;color:#5a6271">
+      <input type="checkbox" name="temizle" value="1" checked /> Önce mevcut kayıtları sil
+    </label>
+    <button type="submit" style="padding:7px 14px;background:#2a5298;color:#fff;border:none;border-radius:4px;font-size:.85em;font-weight:600;cursor:pointer">İçe Aktar (300 kayıt)</button>
+    <button type="button" onclick="document.getElementById('importJsonForm').setAttribute('hidden','')" style="padding:7px 10px;background:#65676b;color:#fff;border:none;border-radius:4px;font-size:.85em;cursor:pointer">İptal</button>
+  </div>
 </form>
 
 <!-- Yeni Malik Ekle Butonu -->
