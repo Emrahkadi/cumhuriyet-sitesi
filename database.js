@@ -135,6 +135,29 @@ async function createTables() {
       bilgi_iletisim TEXT DEFAULT '',
       olusturma_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
     );
+
+    -- ============================================================
+    -- MALİK BİLGİLERİ (Kentsel Dönüşüm Malik Listesi)
+    -- cumhuriyet.html'deki tablo yapısı: sira, blok, kat, daire, malik, telefon, durum, aciklama
+    -- Durum: Imzaladi / Beklemede / Red / Tamamlandi / Diger
+    -- ============================================================
+    CREATE TABLE IF NOT EXISTS malik_bilgileri (
+      id SERIAL PRIMARY KEY,
+      sira TEXT DEFAULT '',
+      blok TEXT NOT NULL DEFAULT '',
+      kat TEXT DEFAULT '',
+      daire TEXT DEFAULT '',
+      malik TEXT NOT NULL DEFAULT '',
+      telefon TEXT DEFAULT '',
+      durum TEXT NOT NULL DEFAULT 'Beklemede',
+      aciklama TEXT DEFAULT '',
+      notlar TEXT DEFAULT '',
+      olusturma_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS'),
+      guncelleme_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
+    );
+    CREATE INDEX IF NOT EXISTS idx_malik_blok ON malik_bilgileri (blok);
+    CREATE INDEX IF NOT EXISTS idx_malik_durum ON malik_bilgileri (durum);
+
 CREATE TABLE IF NOT EXISTS duyuru_ekleri (
       id SERIAL PRIMARY KEY,
       duyuru_id INTEGER NOT NULL REFERENCES duyurular(id) ON DELETE CASCADE,
@@ -323,6 +346,53 @@ async function seedContent() {
       ]
     );
   }
+
+  // Malik listesi seed (cumhuriyet.html'den 300 kayıt)
+  await seedMalikler();
+}
+
+// --- Malik listesi seed (ilk kurulumda cumhuriyet.html'den 300 kayıt yüklenir) ---
+async function seedMalikler() {
+  const fs = require('fs');
+  const path = require('path');
+  const dosyaYolu = path.join(__dirname, 'malikler.json');
+  if (!fs.existsSync(dosyaYolu)) {
+    console.log('malikler.json bulunamadı, seed atlandı.');
+    return;
+  }
+  const mevcut = await pool.query('SELECT COUNT(*)::int AS c FROM malik_bilgileri');
+  if (mevcut.rows[0].c > 0) {
+    return; // zaten seed edilmiş
+  }
+  let data;
+  try {
+    data = JSON.parse(fs.readFileSync(dosyaYolu, 'utf8'));
+  } catch (e) {
+    console.error('malikler.json parse hatası:', e.message);
+    return;
+  }
+  if (!Array.isArray(data) || data.length === 0) {
+    console.log('malikler.json boş, seed atlandı.');
+    return;
+  }
+  // Toplu ekleme (performans için batch)
+  const sql = `INSERT INTO malik_bilgileri
+    (sira, blok, kat, daire, malik, telefon, durum, aciklama, notlar)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`;
+  for (const m of data) {
+    await pool.query(sql, [
+      String(m.sira || '').slice(0, 20),
+      String(m.blok || '').slice(0, 10),
+      String(m.kat || '').slice(0, 30),
+      String(m.daire || '').slice(0, 30),
+      String(m.malik || '').slice(0, 250),
+      String(m.telefon || '').slice(0, 50),
+      ['Imzaladi', 'Beklemede', 'Red', 'Tamamlandi', 'Diger'].includes(m.durum) ? m.durum : 'Beklemede',
+      String(m.aciklama || '').slice(0, 4000),
+      String(m.notlar || '').slice(0, 4000)
+    ]);
+  }
+  console.log(`malik_bilgileri seed tamamlandı: ${data.length} kayıt eklendi.`);
 }
 
 async function init() {

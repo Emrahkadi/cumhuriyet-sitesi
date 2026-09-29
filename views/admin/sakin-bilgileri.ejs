@@ -1,0 +1,289 @@
+<%- include('partials/header', { sayfaBaslik: 'Sakin Bilgileri & Notlar' }) %>
+
+<style>
+  /* Malik Bilgileri & Notlar - özel stil (cumhuriyet.html'in görsel ruhunu koruyarak) */
+  .mb-ozet{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px}
+  .mb-card{background:linear-gradient(135deg,#f5f7fb,#ffffff);padding:12px 14px;border-radius:8px;border-left:4px solid #1e3c72;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  .mb-card .l{font-size:.7em;color:#5a6271;text-transform:uppercase;font-weight:600;letter-spacing:.4px}
+  .mb-card .v{font-size:1.6em;font-weight:700;color:#1e3c72;margin-top:4px}
+  .mb-card.imza{border-left-color:#42b72a}.mb-card.imza .v{color:#42b72a}
+  .mb-card.bek{border-left-color:#f7b928}.mb-card.bek .v{color:#b8860b}
+  .mb-card.red{border-left-color:#e74c3c}.mb-card.red .v{color:#e74c3c}
+  .mb-card.tam{border-left-color:#2a5298}.mb-card.tam .v{color:#1e3c72}
+
+  .mb-filtre{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;padding:10px;background:#f8f9fa;border-radius:6px;align-items:center}
+  .mb-filtre label{font-size:.78em;color:#5a6271;font-weight:600}
+  .mb-filtre input,.mb-filtre select{padding:7px 10px;border:1px solid #ccd0d5;border-radius:4px;font-size:.9em;background:#fff}
+  .mb-filtre input{flex:1;min-width:160px}
+  .mb-filtre button{padding:7px 12px;background:#2a5298;color:#fff;border:none;border-radius:4px;font-size:.85em;font-weight:600;cursor:pointer}
+  .mb-filtre button.secondary{background:#65676b}
+  .mb-filtre button.success{background:#42b72a}
+
+  .mb-tablo-wrap{overflow-x:auto;background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  table.mb-tablo{width:100%;border-collapse:collapse;font-size:.85em;min-width:1100px}
+  table.mb-tablo th{background:#1e3c72;color:#fff;padding:9px 8px;text-align:left;font-weight:600;text-transform:uppercase;font-size:.7em;letter-spacing:.4px;white-space:nowrap}
+  table.mb-tablo td{padding:6px 8px;border-bottom:1px solid #e4e6eb;vertical-align:middle}
+  table.mb-tablo tr:hover{background:#f5f6f7}
+  table.mb-tablo input[type="text"],table.mb-tablo select,table.mb-tablo textarea{width:100%;padding:5px 7px;border:1px solid #d0d4dc;border-radius:3px;font-size:.85em;font-family:inherit;background:#fff}
+  table.mb-tablo textarea{min-height:34px;resize:vertical}
+  table.mb-tablo textarea.kisa{min-height:30px;max-height:120px}
+  table.mb-tablo .col-sira{width:48px}
+  table.mb-tablo .col-blok{width:50px}
+  table.mb-tablo .col-kat{width:64px}
+  table.mb-tablo .col-daire{width:60px}
+  table.mb-tablo .col-durum{width:115px}
+  table.mb-tablo .col-tel{width:120px}
+  table.mb-tablo .col-islem{width:130px;white-space:nowrap}
+  .mb-blok-h{background:linear-gradient(135deg,#1e3c72,#2a5298)!important}
+  .mb-blok-h td{padding:10px 14px!important;color:#fff!important;border-bottom:2px solid #ffc107!important}
+  .mb-blok-tag{display:inline-block;background:#ffc107;color:#1e3c72;font-weight:800;font-size:1.1em;padding:2px 11px;border-radius:6px;margin-right:10px;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+  .mb-blok-name{font-weight:700;font-size:.95em}
+  .mb-blok-cnt{float:right;background:rgba(255,255,255,.2);padding:2px 9px;border-radius:10px;font-size:.78em}
+  .mb-row-toggle{cursor:pointer;text-align:center;width:22px;color:#1e3c72;font-weight:700;user-select:none}
+  .mb-detail-row{display:none;background:#f1f8ff}
+  .mb-detail-row.show{display:table-row}
+  .mb-detail-row td{padding:12px 14px;border-bottom:2px solid #2a5298}
+  .mb-detail-row label{display:block;font-size:.7em;text-transform:uppercase;color:#2a5298;font-weight:700;margin-bottom:4px}
+  .mb-detail-row textarea{width:100%;min-height:70px;padding:8px;border:1px solid #ccd0d5;border-radius:4px;font-family:inherit;font-size:.85em;resize:vertical}
+  .mb-badge{display:inline-block;background:#e3f2fd;color:#1565c0;padding:2px 7px;border-radius:8px;font-size:.78em;font-weight:700}
+  .mb-pill{display:inline-block;padding:2px 9px;border-radius:10px;font-size:.78em;font-weight:700}
+  .mb-pill.Imzaladi{background:#d4edda;color:#155724}
+  .mb-pill.Beklemede{background:#fff3cd;color:#856404}
+  .mb-pill.Red{background:#f8d7da;color:#721c24}
+  .mb-pill.Tamamlandi{background:#d1ecf1;color:#0c5460}
+  .mb-pill.Diger{background:#e2e3e5;color:#383d41}
+  .mb-actions button{margin:0 2px;padding:4px 8px;border:none;border-radius:4px;font-size:.78em;font-weight:600;cursor:pointer;color:#fff}
+  .mb-actions .save{background:#2a5298}
+  .mb-actions .del{background:#e74c3c}
+  .mb-actions .note{background:#f7b928;color:#1e3c72}
+  .mb-actions button:hover{opacity:.85}
+  .mb-acik-var{color:#2a5298;font-weight:600}
+  .mb-acik-yok{color:#adb5bd}
+  .mb-not-var{color:#856404;font-weight:600}
+  .mb-not-yok{color:#adb5bd}
+
+  @media(max-width:900px){
+    table.mb-tablo{font-size:.78em;min-width:900px}
+    .mb-filtre input{min-width:120px}
+  }
+</style>
+
+<!-- İstatistik Kartları -->
+<div class="mb-ozet">
+  <% var toplamSayi = 0; %>
+  <% (istatistik || []).forEach(function(i){ toplamSayi += i.adet; }); %>
+  <div class="mb-card">
+    <div class="l">Toplam Malik</div>
+    <div class="v"><%= toplamSayi %></div>
+  </div>
+  <% var sayim = {}; %>
+  <% (istatistik || []).forEach(function(i){ sayim[i.durum] = i.adet; }); %>
+  <div class="mb-card imza">
+    <div class="l">İmzaladı</div>
+    <div class="v"><%= sayim['Imzaladi'] || 0 %></div>
+  </div>
+  <div class="mb-card bek">
+    <div class="l">Beklemede</div>
+    <div class="v"><%= sayim['Beklemede'] || 0 %></div>
+  </div>
+  <div class="mb-card red">
+    <div class="l">Red</div>
+    <div class="v"><%= sayim['Red'] || 0 %></div>
+  </div>
+  <div class="mb-card tam">
+    <div class="l">Tamamlandı</div>
+    <div class="v"><%= sayim['Tamamlandi'] || 0 %></div>
+  </div>
+</div>
+
+<!-- Filtre Bar -->
+<form method="GET" action="/yonetim/sakin-bilgileri" class="mb-filtre">
+  <label>Blok:</label>
+  <select name="blok">
+    <option value="">Tümü</option>
+    <% (bloklar || []).forEach(function(b){ %>
+      <option value="<%= b %>" <%= filtre.blok === b ? 'selected' : '' %>><%= b %></option>
+    <% }); %>
+  </select>
+  <label>Durum:</label>
+  <select name="durum">
+    <option value="">Tümü</option>
+    <% ['Imzaladi','Beklemede','Red','Tamamlandi','Diger'].forEach(function(d){ %>
+      <option value="<%= d %>" <%= filtre.durum === d ? 'selected' : '' %>><%= d %></option>
+    <% }); %>
+  </select>
+  <label>Ara:</label>
+  <input type="text" name="ara" value="<%= filtre.ara %>" placeholder="blok, kat, malik, telefon..." />
+  <button type="submit">Filtrele</button>
+  <a href="/yonetim/sakin-bilgileri" class="mb-filtre button secondary" style="padding:7px 12px;background:#65676b;color:#fff;border-radius:4px;font-size:.85em;font-weight:600;text-decoration:none">Temizle</a>
+  <a href="/yonetim/sakin-bilgileri/csv" style="padding:7px 12px;background:#42b72a;color:#fff;border-radius:4px;font-size:.85em;font-weight:600;text-decoration:none">⬇ CSV</a>
+</form>
+
+<!-- Yeni Malik Ekle Butonu -->
+<div style="margin-bottom:10px">
+  <button type="button" onclick="document.getElementById('ekleForm').toggleAttribute('hidden')" style="padding:8px 14px;background:#42b72a;color:#fff;border:none;border-radius:4px;font-weight:600;cursor:pointer">➕ Yeni Malik Ekle</button>
+</div>
+
+<details id="ekleForm" hidden style="background:#fff;padding:14px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:14px">
+  <summary style="cursor:pointer;font-weight:600;margin-bottom:10px">Yeni Malik Ekle</summary>
+  <form action="/yonetim/sakin-bilgileri/ekle" method="POST">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:10px">
+      <label>Sıra<input type="text" name="sira" placeholder="301" /></label>
+      <label>Blok<input type="text" name="blok" required maxlength="10" placeholder="A" /></label>
+      <label>Kat<input type="text" name="kat" placeholder="1 veya ZEMİN" /></label>
+      <label>Daire<input type="text" name="daire" /></label>
+      <label>Malik *<input type="text" name="malik" required maxlength="250" /></label>
+      <label>Telefon<input type="text" name="telefon" /></label>
+      <label>Durum
+        <select name="durum">
+          <% ['Imzaladi','Beklemede','Red','Tamamlandi','Diger'].forEach(function(d){ %>
+            <option value="<%= d %>" <%= d === 'Beklemede' ? 'selected' : '' %>><%= d %></option>
+          <% }); %>
+        </select>
+      </label>
+    </div>
+    <label style="display:block;margin-bottom:10px">Açıklama<textarea name="aciklama" style="width:100%;min-height:60px;padding:8px;border:1px solid #ccd0d5;border-radius:4px;font-family:inherit"></textarea></label>
+    <label style="display:block;margin-bottom:10px">Notlar (yönetici için)<textarea name="notlar" style="width:100%;min-height:60px;padding:8px;border:1px solid #ccd0d5;border-radius:4px;font-family:inherit"></textarea></label>
+    <button type="submit" style="padding:8px 18px;background:#42b72a;color:#fff;border:none;border-radius:4px;font-weight:600;cursor:pointer">Kaydet</button>
+  </form>
+</details>
+
+<!-- Malik Tablosu -->
+<% if (malikler.length === 0) { %>
+  <div class="admin-panel-box" style="text-align:center;padding:30px">
+    <h3 style="color:#65676b">Kayıt bulunamadı</h3>
+    <p>Filtreyi değiştirin veya yeni malik ekleyin.</p>
+  </div>
+<% } else { %>
+  <div class="mb-tablo-wrap">
+    <table class="mb-tablo">
+      <thead>
+        <tr>
+          <th></th>
+          <th class="col-sira">Sıra</th>
+          <th class="col-blok">Blok</th>
+          <th class="col-kat">Kat</th>
+          <th class="col-daire">Daire</th>
+          <th>Malik</th>
+          <th class="col-tel">Telefon</th>
+          <th class="col-durum">Durum</th>
+          <th>Açıklama</th>
+          <th>Notlar</th>
+          <th class="col-islem">İşlem</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% var oncekiBlok = null; %>
+        <% malikler.forEach(function(m){ %>
+          <% if (m.blok !== oncekiBlok) { %>
+            <% var blokAdet = malikler.filter(function(x){ return x.blok === m.blok; }).length; %>
+            <tr class="mb-blok-h">
+              <td colspan="11">
+                <span class="mb-blok-tag"><%= m.blok %></span>
+                <span class="mb-blok-name">BLOK <%= m.blok %></span>
+                <span class="mb-blok-cnt"><%= blokAdet %> malik</span>
+              </td>
+            </tr>
+            <% oncekiBlok = m.blok; %>
+          <% } %>
+
+          <% var guncelFormId = 'mb-form-' + m.id; %>
+          <% var detayFormId = 'mb-note-' + m.id; %>
+          <form id="<%= guncelFormId %>" action="/yonetim/sakin-bilgileri/guncelle/<%= m.id %>" method="POST"></form>
+          <form id="mb-sil-<%= m.id %>" action="/yonetim/sakin-bilgileri/sil/<%= m.id %>" method="POST" data-confirm="Bu malik kaydı silinsin mi?"></form>
+
+          <tr data-id="<%= m.id %>">
+            <td class="mb-row-toggle" onclick="mbToggle('<%= m.id %>')">▶</td>
+            <td><input type="text" form="<%= guncelFormId %>" name="sira" value="<%= m.sira %>" /></td>
+            <td><input type="text" form="<%= guncelFormId %>" name="blok" value="<%= m.blok %>" maxlength="10" /></td>
+            <td><input type="text" form="<%= guncelFormId %>" name="kat" value="<%= m.kat %>" maxlength="30" /></td>
+            <td><input type="text" form="<%= guncelFormId %>" name="daire" value="<%= m.daire %>" maxlength="30" /></td>
+            <td><input type="text" form="<%= guncelFormId %>" name="malik" value="<%= m.malik %>" required maxlength="250" /></td>
+            <td><input type="text" form="<%= guncelFormId %>" name="telefon" value="<%= m.telefon %>" maxlength="50" /></td>
+            <td>
+              <select form="<%= guncelFormId %>" name="durum">
+                <% ['Imzaladi','Beklemede','Red','Tamamlandi','Diger'].forEach(function(d){ %>
+                  <option value="<%= d %>" <%= m.durum === d ? 'selected' : '' %>><%= d %></option>
+                <% }); %>
+              </select>
+            </td>
+            <td>
+              <% if (m.aciklama && m.aciklama.trim()) { %>
+                <span class="mb-acik-var" title="<%= m.aciklama.slice(0,100) %>">Var</span>
+              <% } else { %>
+                <span class="mb-acik-yok">--</span>
+              <% } %>
+            </td>
+            <td>
+              <% if (m.notlar && m.notlar.trim()) { %>
+                <span class="mb-not-var" title="<%= m.notlar.slice(0,100) %>">Var</span>
+              <% } else { %>
+                <span class="mb-not-yok">--</span>
+              <% } %>
+            </td>
+            <td class="mb-actions">
+              <button type="submit" form="<%= guncelFormId %>" class="save" title="Kaydet">💾</button>
+              <button type="button" class="note" onclick="mbToggle('<%= m.id %>')" title="Detay/Not">📝</button>
+              <button type="submit" form="mb-sil-<%= m.id %>" class="del" title="Sil">🗑</button>
+            </td>
+          </tr>
+
+          <tr class="mb-detail-row" id="mb-detail-<%= m.id %>">
+            <td colspan="11">
+              <form id="<%= detayFormId %>" action="/yonetim/sakin-bilgileri/not/<%= m.id %>" method="POST">
+                <input type="hidden" name="blok" value="<%= filtre.blok %>" />
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+                  <div>
+                    <label>Açıklama (tapu/ipotek vs. — kayıt orijinali)</label>
+                    <textarea form="<%= guncelFormId %>" name="aciklama" style="width:100%;min-height:120px;padding:10px;border:1px solid #ccd0d5;border-radius:4px;font-family:inherit;font-size:.85em"><%= m.aciklama || '' %></textarea>
+                  </div>
+                  <div>
+                    <label>📝 Notlar (yönetici için — sadece admin görür)</label>
+                    <textarea name="notlar" style="width:100%;min-height:120px;padding:10px;border:1px solid #ccd0d5;border-radius:4px;font-family:inherit;font-size:.85em"><%= m.notlar || '' %></textarea>
+                    <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+                      <button type="submit" form="<%= detayFormId %>" style="padding:6px 14px;background:#f7b928;color:#1e3c72;border:none;border-radius:4px;font-weight:600;cursor:pointer">Sadece Notu Kaydet</button>
+                      <button type="submit" form="<%= guncelFormId %>" style="padding:6px 14px;background:#2a5298;color:#fff;border:none;border-radius:4px;font-weight:600;cursor:pointer">Tüm Satırı Kaydet</button>
+                      <span style="font-size:.78em;color:#5a6271">
+                        Son güncelleme:
+                        <% if (m.guncelleme_tarihi) { %>
+                          <%= m.guncelleme_tarihi %>
+                        <% } else { %>
+                          --
+                        <% } %>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </form>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+<% } %>
+
+<script>
+  function mbToggle(id){
+    var row = document.getElementById('mb-detail-' + id);
+    var main = document.querySelector('tr[data-id="' + id + '"]');
+    if (row && main) {
+      row.classList.toggle('show');
+      var t = main.querySelector('.mb-row-toggle');
+      if (t) t.textContent = row.classList.contains('show') ? '▼' : '▶';
+    }
+  }
+  // Aktif filtre varsa otomatik açık
+  <% if (filtre.ara && filtre.ara.length > 2) { %>
+    document.addEventListener('DOMContentLoaded', function(){
+      var first = document.querySelector('tr.mb-detail-row');
+      if (first) {
+        first.classList.add('show');
+        var t = first.previousElementSibling.querySelector('.mb-row-toggle');
+        if (t) t.textContent = '▼';
+      }
+    });
+  <% } %>
+</script>
+
+<%- include('partials/footer') %>

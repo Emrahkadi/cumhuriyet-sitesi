@@ -22,7 +22,10 @@
       <a href="/yonetim" class="<%= aktifSayfa === 'ozet' ? 'active' : '' %>">📊 Özet</a>
       <a href="/yonetim/duyurular" class="<%= aktifSayfa === 'duyurular' ? 'active' : '' %>">📢 Duyurular</a>
       <a href="/yonetim/uyeler" class="<%= aktifSayfa === 'uyeler' ? 'active' : '' %>">👥 Üyeler</a>
-      <a href="/yonetim/sakinler" class="<%= aktifSayfa === 'sakinler' ? 'active' : '' %>">📋 Sakinler</a>
+      <a href="/yonetim/sakinler" class="<%= aktifSayfa === 'sakinler' && !altSayfa ? 'active' : '' %>">📋 Sakinler</a>
+      <% if (aktifSayfa === 'sakinler') { %>
+        <a href="/yonetim/sakin-bilgileri" class="admin-nav-sub <%= altSayfa === 'sakin-bilgileri' ? 'active' : '' %>" style="display:block;padding-left:36px;font-size:.85em;opacity:.85">📝 Sakin Bilgileri &amp; Notlar</a>
+      <% } %>
       <a href="/yonetim/aidatlar" class="<%= aktifSayfa === 'aidatlar' ? 'active' : '' %>">💳 Aidatlar</a>
       <a href="/yonetim/mesaj-gonder" class="<%= aktifSayfa === 'mesaj-gonder' ? 'active' : '' %>">📨 Mesaj Gönder</a>
       <a href="/yonetim/anketler" class="<%= aktifSayfa === 'anketler' ? 'active' : '' %>">🗳️ Anketler</a>

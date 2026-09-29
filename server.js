@@ -1148,6 +1148,198 @@ const SAKIN_ALANLAR = [
   'adres', 'iletisim', 'bilgi', 'yakinlik', 'bilgi_iletisim'
 ];
 
+// =====================================================================
+//  MALİK BİLGİLERİ & NOTLAR (Kentsel Dönüşüm Malik Listesi)
+//  cumhuriyet.html'deki yapı: sıra, blok, kat, daire, malik, telefon,
+//                              durum (Imzaladi/Beklemede/Red/Tamamlandi/Diger),
+//                              açıklama, notlar
+//  Tam CRUD + toplu durum güncelleme + not ekleme
+// =====================================================================
+const MALIK_DURUMLAR = ['Imzaladi', 'Beklemede', 'Red', 'Tamamlandi', 'Diger'];
+
+// Liste + filtre + arama
+app.get('/yonetim/sakin-bilgileri', adminGerekli, ah(async (req, res) => {
+  const blok = (req.query.blok || '').trim();
+  const durum = (req.query.durum || '').trim();
+  const ara = (req.query.ara || '').trim();
+
+  const kosullar = [];
+  const params = [];
+  if (blok) {
+    params.push(blok);
+    kosullar.push(`blok = $${params.length}`);
+  }
+  if (durum && MALIK_DURUMLAR.includes(durum)) {
+    params.push(durum);
+    kosullar.push(`durum = $${params.length}`);
+  }
+  if (ara) {
+    params.push('%' + ara.toLowerCase() + '%');
+    const i = params.length;
+    kosullar.push(`(LOWER(blok) LIKE $${i} OR LOWER(kat) LIKE $${i} OR LOWER(daire) LIKE $${i} OR LOWER(malik) LIKE $${i} OR LOWER(telefon) LIKE $${i} OR LOWER(aciklama) LIKE $${i} OR LOWER(notlar) LIKE $${i})`);
+  }
+  const where = kosullar.length ? 'WHERE ' + kosullar.join(' AND ') : '';
+
+  const malikler = (await q(
+    `SELECT * FROM malik_bilgileri ${where}
+     ORDER BY
+       CASE blok WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 WHEN 'D' THEN 4 WHEN 'E' THEN 5
+                 WHEN 'F' THEN 6 WHEN 'G' THEN 7 WHEN 'H' THEN 8 WHEN 'I' THEN 9 WHEN 'İ' THEN 10
+                 WHEN 'J' THEN 11 ELSE 99 END,
+       CASE WHEN LOWER(kat) = 'zemin' THEN 0
+            WHEN LOWER(kat) = 'giris' THEN 0
+            ELSE 999 END,
+       NULLIF(regexp_replace(COALESCE(daire, '0'), '\\D', '', 'g'), '')::int ASC NULLS LAST,
+       sira::int ASC NULLS LAST, id ASC`
+  )).rows;
+
+  // İstatistikler
+  const istatistik = (await q(
+    `SELECT durum, COUNT(*)::int AS adet FROM malik_bilgileri GROUP BY durum`
+  )).rows;
+
+  // Blok listesi
+  const bloklar = (await q(
+    `SELECT DISTINCT blok FROM malik_bilgileri WHERE blok IS NOT NULL AND blok <> '' ORDER BY blok`
+  )).rows.map(r => r.blok);
+
+  res.render('admin/sakin-bilgileri', {
+    aktifSayfa: 'sakinler',  // Sakinler sidebar'ı altında göstermek için
+    altSayfa: 'sakin-bilgileri',
+    malikler,
+    bloklar,
+    istatistik,
+    filtre: { blok, durum, ara }
+  });
+}));
+
+// Yeni malik ekle
+app.post('/yonetim/sakin-bilgileri/ekle', adminGerekli, ah(async (req, res) => {
+  const { sira, blok, kat, daire, malik, telefon, durum, aciklama, notlar } = req.body;
+  if (!blok || !malik) {
+    req.flash('hata', 'Blok ve Malik adı zorunludur.');
+    return res.redirect('/yonetim/sakin-bilgileri');
+  }
+  await q(
+    `INSERT INTO malik_bilgileri (sira, blok, kat, daire, malik, telefon, durum, aciklama, notlar)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    [
+      String(sira || '').slice(0, 20),
+      String(blok || '').slice(0, 10).toUpperCase(),
+      String(kat || '').slice(0, 30),
+      String(daire || '').slice(0, 30),
+      String(malik || '').slice(0, 250),
+      String(telefon || '').slice(0, 50),
+      MALIK_DURUMLAR.includes(durum) ? durum : 'Beklemede',
+      String(aciklama || '').slice(0, 4000),
+      String(notlar || '').slice(0, 4000)
+    ]
+  );
+  req.flash('basari', 'Yeni malik eklendi.');
+  res.redirect('/yonetim/sakin-bilgileri');
+}));
+
+// Malik güncelle
+app.post('/yonetim/sakin-bilgileri/guncelle/:id', adminGerekli, ah(async (req, res) => {
+  const { sira, blok, kat, daire, malik, telefon, durum, aciklama, notlar } = req.body;
+  const id = parseInt(req.params.id, 10);
+  if (!id) {
+    req.flash('hata', 'Geçersiz kayıt.');
+    return res.redirect('/yonetim/sakin-bilgileri');
+  }
+  await q(
+    `UPDATE malik_bilgileri SET
+       sira = $1, blok = $2, kat = $3, daire = $4, malik = $5, telefon = $6,
+       durum = $7, aciklama = $8, notlar = $9,
+       guncelleme_tarihi = to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
+     WHERE id = $10`,
+    [
+      String(sira || '').slice(0, 20),
+      String(blok || '').slice(0, 10).toUpperCase(),
+      String(kat || '').slice(0, 30),
+      String(daire || '').slice(0, 30),
+      String(malik || '').slice(0, 250),
+      String(telefon || '').slice(0, 50),
+      MALIK_DURUMLAR.includes(durum) ? durum : 'Beklemede',
+      String(aciklama || '').slice(0, 4000),
+      String(notlar || '').slice(0, 4000),
+      id
+    ]
+  );
+  req.flash('basari', 'Malik bilgisi güncellendi.');
+  res.redirect('/yonetim/sakin-bilgileri' + (req.body.blok ? '?blok=' + encodeURIComponent(req.body.blok) : ''));
+}));
+
+// Hızlı durum güncelleme (toplu)
+app.post('/yonetim/sakin-bilgileri/durum/:id', adminGerekli, ah(async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const yeniDurum = req.body.durum;
+  if (!id || !MALIK_DURUMLAR.includes(yeniDurum)) {
+    req.flash('hata', 'Geçersiz istek.');
+    return res.redirect('/yonetim/sakin-bilgileri');
+  }
+  await q(
+    `UPDATE malik_bilgileri SET durum = $1,
+       guncelleme_tarihi = to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
+     WHERE id = $2`,
+    [yeniDurum, id]
+  );
+  res.redirect('/yonetim/sakin-bilgileri' + (req.body.blok ? '?blok=' + encodeURIComponent(req.body.blok) : ''));
+}));
+
+// Sadece not güncelleme (hızlı, panel içinden)
+app.post('/yonetim/sakin-bilgileri/not/:id', adminGerekli, ah(async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!id) {
+    req.flash('hata', 'Geçersiz kayıt.');
+    return res.redirect('/yonetim/sakin-bilgileri');
+  }
+  await q(
+    `UPDATE malik_bilgileri SET notlar = $1,
+       guncelleme_tarihi = to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
+     WHERE id = $2`,
+    [String(req.body.notlar || '').slice(0, 4000), id]
+  );
+  req.flash('basari', 'Not güncellendi.');
+  res.redirect('/yonetim/sakin-bilgileri' + (req.body.blok ? '?blok=' + encodeURIComponent(req.body.blok) : ''));
+}));
+
+// Malik sil
+app.post('/yonetim/sakin-bilgileri/sil/:id', adminGerekli, ah(async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!id) {
+    req.flash('hata', 'Geçersiz kayıt.');
+    return res.redirect('/yonetim/sakin-bilgileri');
+  }
+  await q('DELETE FROM malik_bilgileri WHERE id = $1', [id]);
+  req.flash('basari', 'Malik kaydı silindi.');
+  res.redirect('/yonetim/sakin-bilgileri');
+}));
+
+// CSV export
+app.get('/yonetim/sakin-bilgileri/csv', adminGerekli, ah(async (req, res) => {
+  const malikler = (await q(
+    `SELECT sira, blok, kat, daire, malik, telefon, durum, aciklama, notlar
+     FROM malik_bilgileri
+     ORDER BY
+       CASE blok WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 WHEN 'D' THEN 4 WHEN 'E' THEN 5
+                 WHEN 'F' THEN 6 WHEN 'G' THEN 7 WHEN 'H' THEN 8 WHEN 'I' THEN 9 WHEN 'İ' THEN 10
+                 WHEN 'J' THEN 11 ELSE 99 END,
+       NULLIF(regexp_replace(COALESCE(daire, '0'), '\\D', '', 'g'), '')::int ASC NULLS LAST,
+       sira::int ASC NULLS LAST, id ASC`
+  )).rows;
+  const cols = ['Sira', 'Blok', 'Kat', 'Daire', 'Malik', 'Telefon', 'Durum', 'Aciklama', 'Notlar'];
+  let csv = '\uFEFF' + cols.join(',') + '\n';
+  malikler.forEach(m => {
+    csv += [m.sira, m.blok, m.kat, m.daire, m.malik, m.telefon, m.durum, m.aciklama, m.notlar].map(v => {
+      return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    }).join(',') + '\n';
+  });
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename=malik_listesi.csv');
+  res.send(csv);
+}));
+
 app.get('/yonetim/sakinler', adminGerekli, ah(async (req, res) => {
   const blok = (req.query.blok || '').trim();
   const ara = (req.query.ara || '').trim();
@@ -1599,15 +1791,21 @@ app.use((err, req, res, next) => {
 //  WEB PUSH BİLDİRİM API
 // =====================================================================
 
-// Veritabanını hazırlayıp sunucuyu başlat
+// Hostinger 3 saniye kuralı: Önce port'u aç ki reverse-proxy "ready" sinyali alsın,
+// sonra DB init'i arka planda başlat. DB başarısız olursa zaten process zaten
+// kapanır ama port çoktan açıldığı için 503 dönmek yerine düzgün hata sayfası gösterir.
+const server = app.listen(PORT, () => {
+  console.log(`Cumhuriyet Sitesi çalışıyor: http://localhost:${PORT}`);
+  console.log(`Yönetim paneli: http://localhost:${PORT}/giris`);
+});
+
+// Veritabanı init'i arka planda
 init()
   .then(() => {
-    app.listen(PORT, () => {
-      console.log(`Cumhuriyet Sitesi çalışıyor: http://localhost:${PORT}`);
-      console.log(`Yönetim paneli: http://localhost:${PORT}/giris`);
-    });
+    console.log('Veritabanı hazır.');
   })
   .catch((err) => {
     console.error('Veritabanı başlatılamadı:', err.message);
-    process.exit(1);
+    // 5 saniye sonra kapat ki loglar düşsün
+    setTimeout(() => process.exit(1), 5000);
   });
