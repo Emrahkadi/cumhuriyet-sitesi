@@ -70,148 +70,40 @@
 
 <!-- İstatistik Kartları -->
 <div class="mb-ozet">
-  <% var toplamSayi = 0; %>
-  <% (istatistik || []).forEach(function(i){ toplamSayi += i.adet; }); %>
   <div class="mb-card">
     <div class="l">Toplam Malik</div>
-    <div class="v"><%= toplamSayi %></div>
+    <div class="v"><%= (istatistik || []).reduce(function(t, i){ return t + i.adet; }, 0) %></div>
   </div>
-  <% var sayim = {}; %>
-  <% (istatistik || []).forEach(function(i){ sayim[i.durum] = i.adet; }); %>
   <div class="mb-card imza">
     <div class="l">İmzaladı</div>
-    <div class="v"><%= sayim['Imzaladi'] || 0 %></div>
+    <div class="v"><%= (istatistik || []).filter(function(i){ return i.durum === 'Imzaladi'; })[0]?.adet || 0 %></div>
   </div>
   <div class="mb-card bek">
     <div class="l">Beklemede</div>
-    <div class="v"><%= sayim['Beklemede'] || 0 %></div>
+    <div class="v"><%= (istatistik || []).filter(function(i){ return i.durum === 'Beklemede'; })[0]?.adet || 0 %></div>
   </div>
   <div class="mb-card red">
     <div class="l">Red</div>
-    <div class="v"><%= sayim['Red'] || 0 %></div>
+    <div class="v"><%= (istatistik || []).filter(function(i){ return i.durum === 'Red'; })[0]?.adet || 0 %></div>
   </div>
   <div class="mb-card tam">
     <div class="l">Tamamlandı</div>
-    <div class="v"><%= sayim['Tamamlandi'] || 0 %></div>
+    <div class="v"><%= (istatistik || []).filter(function(i){ return i.durum === 'Tamamlandi'; })[0]?.adet || 0 %></div>
   </div>
 </div>
 
 <!-- SEKMELER: Malik (Kentsel Dönüşüm) | Tüm Sakinler (Blok Bazlı) -->
+<% var malikAktif = tab !== 'sakin'; %>
+<% var sakinAktif = tab === 'sakin'; %>
 <div class="mb-tabs" style="display:flex;gap:0;background:#f8f9fa;border-radius:8px;padding:4px;margin-bottom:14px;border-bottom:2px solid #2a5298">
-  <a href="?tab=malik" class="mb-tab <%= tab !== 'sakin' ? 'on' : '' %>" style="flex:1;text-align:center;padding:12px;text-decoration:none;font-weight:600;color:<%= tab !== 'sakin' ? '#1e3c72' : '#65676b' %>;border-radius:6px;background:<%= tab !== 'sakin' ? '#fff' : 'transparent' %>;border-bottom:<%= tab !== 'sakin' ? '2px solid #1e3c72' : 'none' %>;margin-bottom:-2px">
-    📋 Malik Listesi (Kat Malikleri) — <%= toplamSayi %>
+  <a href="/yonetim/sakin-bilgileri" class="mb-tab" style="flex:1;text-align:center;padding:12px;text-decoration:none;font-weight:600;border-radius:6px;margin-bottom:-2px;color:#1e3c72;background:#fff;border-bottom:2px solid #1e3c72">
+    📋 Malik Listesi (Kat Malikleri) — <%= (istatistik || []).reduce(function(t, i){ return t + i.adet; }, 0) %>
   </a>
-  <a href="?tab=sakin" class="mb-tab <%= tab === 'sakin' ? 'on' : '' %>" style="flex:1;text-align:center;padding:12px;text-decoration:none;font-weight:600;color:<%= tab === 'sakin' ? '#1e3c72' : '#65676b' %>;border-radius:6px;background:<%= tab === 'sakin' ? '#fff' : 'transparent' %>;border-bottom:<%= tab === 'sakin' ? '2px solid #1e3c72' : 'none' %>;margin-bottom:-2px">
+  <a href="/yonetim/sakinler" class="mb-tab" style="flex:1;text-align:center;padding:12px;text-decoration:none;font-weight:600;border-radius:6px;margin-bottom:-2px;color:#65676b;background:transparent;border-bottom:none">
     🏠 Tüm Sakinler (Blok Bazlı) — <%= sakinToplam || 0 %>
   </a>
 </div>
 
-<% if (tab === 'sakin') { %>
-  <!-- ============ TÜM SAKİNLER (sakinler tablosu) ============ -->
-  <form method="GET" action="/yonetim/sakin-bilgileri" class="mb-filtre">
-    <input type="hidden" name="tab" value="sakin" />
-    <label>Blok:</label>
-    <select name="sakinBlok">
-      <option value="">Tümü</option>
-      <% (sakinBloklar || []).forEach(function(b){ %>
-        <option value="<%= b %>" <%= sakinFiltre.blok === b ? 'selected' : '' %>><%= b %></option>
-      <% }); %>
-    </select>
-    <label>Ara:</label>
-    <input type="text" name="sakinAra" value="<%= sakinFiltre.ara %>" placeholder="isim, daire, adres, iletişim..." />
-    <button type="submit">Filtrele</button>
-    <a href="/yonetim/sakin-bilgileri?tab=sakin" style="padding:7px 12px;background:#65676b;color:#fff;border-radius:4px;font-size:.85em;font-weight:600;text-decoration:none">Temizle</a>
-    <a href="/yonetim/sakinler" style="padding:7px 12px;background:#42b72a;color:#fff;border-radius:4px;font-size:.85em;font-weight:600;text-decoration:none">📋 Tam Liste (Blok Haritası)</a>
-    <a href="/yonetim/sakin-bilgileri/csv?tab=sakin" style="padding:7px 12px;background:#42b72a;color:#fff;border-radius:4px;font-size:.85em;font-weight:600;text-decoration:none">⬇ CSV</a>
-  </form>
-
-  <div style="margin-bottom:10px">
-    <button type="button" onclick="document.getElementById('sakinEkleForm').toggleAttribute('hidden')" style="padding:8px 14px;background:#42b72a;color:#fff;border:none;border-radius:4px;font-weight:600;cursor:pointer">➕ Yeni Sakin Ekle</button>
-  </div>
-
-  <details id="sakinEkleForm" hidden style="background:#fff;padding:14px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:14px">
-    <summary style="cursor:pointer;font-weight:600;margin-bottom:10px">Yeni Sakin Ekle</summary>
-    <form action="/yonetim/sakinler/ekle" method="POST">
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:10px">
-        <label>Blok<input type="text" name="blok" required maxlength="10" placeholder="A" /></label>
-        <label>Daire<input type="text" name="daire" /></label>
-        <label>Eksik<input type="text" name="eksik" /></label>
-        <label>İsim Soyisim<input type="text" name="isim_soyisim" /></label>
-        <label>PTT<input type="text" name="ptt" /></label>
-        <label>PTT 2<input type="text" name="ptt2" /></label>
-        <label>Adres<input type="text" name="adres" /></label>
-        <label>İletişim<input type="text" name="iletisim" /></label>
-        <label>Bilgi<input type="text" name="bilgi" /></label>
-        <label>Yakınlık<input type="text" name="yakinlik" /></label>
-        <label>Bilgi İletişim<input type="text" name="bilgi_iletisim" /></label>
-      </div>
-      <button type="submit" style="padding:8px 18px;background:#42b72a;color:#fff;border:none;border-radius:4px;font-weight:600;cursor:pointer">Kaydet</button>
-    </form>
-  </details>
-
-  <% if (sakinler.length === 0) { %>
-    <div class="admin-panel-box" style="text-align:center;padding:30px">
-      <h3 style="color:#65676b">Sakin kaydı bulunamadı</h3>
-      <p>Filtreyi değiştirin veya yeni sakin ekleyin. Verileri Excel ile içe aktarmak için <a href="/yonetim/sakinler" style="color:#2a5298">Sakinler sayfası</a>'na gidin.</p>
-    </div>
-  <% } else { %>
-    <div class="mb-tablo-wrap">
-      <table class="mb-tablo">
-        <thead>
-          <tr>
-            <th>Blok</th>
-            <th>Daire</th>
-            <th>İsim Soyisim</th>
-            <th>Telefon</th>
-            <th>İletişim</th>
-            <th>Adres</th>
-            <th>Bilgi</th>
-            <th>Yakınlık</th>
-            <th>İşlem</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% var oncekiBlokS = null; %>
-          <% sakinler.forEach(function(s){ %>
-            <% var bAd = s.blok || 'Diğer'; %>
-            <% if (bAd !== oncekiBlokS) { %>
-              <% var bAdet = sakinler.filter(function(x){ return (x.blok || 'Diğer') === bAd; }).length; %>
-              <tr class="mb-blok-h">
-                <td colspan="9">
-                  <span class="mb-blok-tag"><%= bAd %></span>
-                  <span class="mb-blok-name">BLOK <%= bAd %></span>
-                  <span class="mb-blok-cnt"><%= bAdet %> kişi</span>
-                </td>
-              </tr>
-              <% oncekiBlokS = bAd; %>
-            <% } %>
-
-            <% var sFormId = 'sakin-form-' + s.id; %>
-            <form id="<%= sFormId %>" action="/yonetim/sakinler/guncelle/<%= s.id %>" method="POST"></form>
-            <form id="sakin-sil-<%= s.id %>" action="/yonetim/sakinler/sil/<%= s.id %>" method="POST" data-confirm="Bu sakin kaydı silinsin mi?">
-              <input type="hidden" name="donus_blok" value="<%= s.blok %>" />
-            </form>
-
-            <tr>
-              <td><input type="text" form="<%= sFormId %>" name="blok" value="<%= s.blok %>" maxlength="10" /></td>
-              <td><input type="text" form="<%= sFormId %>" name="daire" value="<%= s.daire %>" /></td>
-              <td><input type="text" form="<%= sFormId %>" name="isim_soyisim" value="<%= s.isim_soyisim %>" /></td>
-              <td><input type="text" form="<%= sFormId %>" name="ptt" value="<%= s.ptt %>" /></td>
-              <td><input type="text" form="<%= sFormId %>" name="iletisim" value="<%= s.iletisim %>" /></td>
-              <td><input type="text" form="<%= sFormId %>" name="adres" value="<%= s.adres %>" /></td>
-              <td><input type="text" form="<%= sFormId %>" name="bilgi" value="<%= s.bilgi %>" /></td>
-              <td><input type="text" form="<%= sFormId %>" name="yakinlik" value="<%= s.yakinlik %>" /></td>
-              <td class="mb-actions">
-                <button type="submit" form="<%= sFormId %>" class="save" title="Kaydet">💾</button>
-                <button type="submit" form="sakin-sil-<%= s.id %>" class="del" title="Sil">🗑</button>
-              </td>
-            </tr>
-          <% }); %>
-        </tbody>
-      </table>
-    </div>
-  <% } %>
-<% } else { %>
 <!-- ============ MALİK LİSTESİ (kentsel dönüşüm) ============ -->
 
 <!-- Filtre Bar -->
