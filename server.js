@@ -1262,27 +1262,33 @@ app.post('/yonetim/sakin-bilgileri/guncelle/:id', adminGerekli, ah(async (req, r
     req.flash('hata', 'Geçersiz kayıt.');
     return res.redirect('/yonetim/sakin-bilgileri');
   }
-  await q(
-    `UPDATE malik_bilgileri SET
-       sira = $1, blok = $2, kat = $3, daire = $4, malik = $5, telefon = $6,
-       durum = $7, aciklama = $8, notlar = $9,
-       guncelleme_tarihi = to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
-     WHERE id = $10`,
-    [
-      String(sira || '').slice(0, 20),
-      String(blok || '').slice(0, 10).toUpperCase(),
-      String(kat || '').slice(0, 30),
-      String(daire || '').slice(0, 30),
-      String(malik || '').slice(0, 250),
-      String(telefon || '').slice(0, 50),
-      MALIK_DURUMLAR.includes(durum) ? durum : 'Beklemede',
-      String(aciklama || '').slice(0, 4000),
-      String(notlar || '').slice(0, 4000),
-      id
-    ]
-  );
-  req.flash('basari', 'Malik bilgisi güncellendi.');
-  res.redirect('/yonetim/sakin-bilgileri' + (req.body.blok ? '?blok=' + encodeURIComponent(req.body.blok) : ''));
+  try {
+    await q(
+      `UPDATE malik_bilgileri SET
+         sira = $1, blok = $2, kat = $3, daire = $4, malik = $5, telefon = $6,
+         durum = $7, aciklama = $8, notlar = $9,
+         guncelleme_tarihi = to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
+       WHERE id = $10`,
+      [
+        String(sira == null ? '' : sira).slice(0, 20),
+        String(blok == null ? '' : blok).slice(0, 10).toUpperCase(),
+        String(kat == null ? '' : kat).slice(0, 30),
+        String(daire == null ? '' : daire).slice(0, 30),
+        String(malik == null ? '' : malik).slice(0, 250),
+        String(telefon == null ? '' : telefon).slice(0, 50),
+        MALIK_DURUMLAR.includes(durum) ? durum : 'Beklemede',
+        String(aciklama == null ? '' : aciklama).slice(0, 4000),
+        String(notlar == null ? '' : notlar).slice(0, 4000),
+        id
+      ]
+    );
+    req.flash('basari', 'Malik bilgisi güncellendi.');
+    res.redirect('/yonetim/sakin-bilgileri' + (req.body.blok ? '?blok=' + encodeURIComponent(req.body.blok) : ''));
+  } catch (e) {
+    console.error('malik guncelle hata:', e.message, 'id=', id, 'body=', JSON.stringify(req.body).slice(0, 200));
+    req.flash('hata', 'Güncelleme hatası: ' + e.message);
+    res.redirect('/yonetim/sakin-bilgileri' + (req.body.blok ? '?blok=' + encodeURIComponent(req.body.blok) : ''));
+  }
 }));
 
 // Hızlı durum güncelleme (toplu)
@@ -1468,33 +1474,43 @@ app.get('/yonetim/sakinler', adminGerekli, ah(async (req, res) => {
 }));
 
 app.post('/yonetim/sakinler/ekle', adminGerekli, ah(async (req, res) => {
-  const d = SAKIN_ALANLAR.map((a) => {
-    let val = (req.body[a] || '').trim();
-    if (a === 'durum' && !SAKIN_DURUMLAR.includes(val)) val = 'Kat Maliki';
-    return val.slice(0, a === 'durum' ? 30 : 1000);
-  });
-  await q(
-    `INSERT INTO sakinler (blok, daire, eksik, isim_soyisim, ptt, ptt2, adres, iletisim, bilgi, yakinlik, bilgi_iletisim, durum)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
-    d
-  );
-  req.flash('basari', 'Yeni kayıt eklendi.');
+  try {
+    const d = SAKIN_ALANLAR.map((a) => {
+      let val = (req.body[a] == null ? '' : req.body[a]).trim();
+      if (a === 'durum' && !SAKIN_DURUMLAR.includes(val)) val = 'Kat Maliki';
+      return val.slice(0, a === 'durum' ? 30 : 1000);
+    });
+    await q(
+      `INSERT INTO sakinler (blok, daire, eksik, isim_soyisim, ptt, ptt2, adres, iletisim, bilgi, yakinlik, bilgi_iletisim, durum)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+      d
+    );
+    req.flash('basari', 'Yeni kayıt eklendi.');
+  } catch (e) {
+    console.error('sakinler ekle hata:', e.message);
+    req.flash('hata', 'Ekleme hatası: ' + e.message);
+  }
   res.redirect('/yonetim/sakinler?blok=' + encodeURIComponent((req.body.blok || '').trim()));
 }));
 
 app.post('/yonetim/sakinler/guncelle/:id', adminGerekli, ah(async (req, res) => {
-  const d = SAKIN_ALANLAR.map((a) => {
-    let val = (req.body[a] || '').trim();
-    if (a === 'durum' && !SAKIN_DURUMLAR.includes(val)) val = 'Kat Maliki';
-    return val.slice(0, a === 'durum' ? 30 : 1000);
-  });
-  d.push(req.params.id);
-  await q(
-    `UPDATE sakinler SET blok=$1, daire=$2, eksik=$3, isim_soyisim=$4, ptt=$5, ptt2=$6,
-     adres=$7, iletisim=$8, bilgi=$9, yakinlik=$10, bilgi_iletisim=$11, durum=$12 WHERE id=$13`,
-    d
-  );
-  req.flash('basari', 'Kayıt güncellendi.');
+  try {
+    const d = SAKIN_ALANLAR.map((a) => {
+      let val = (req.body[a] == null ? '' : req.body[a]).trim();
+      if (a === 'durum' && !SAKIN_DURUMLAR.includes(val)) val = 'Kat Maliki';
+      return val.slice(0, a === 'durum' ? 30 : 1000);
+    });
+    d.push(req.params.id);
+    await q(
+      `UPDATE sakinler SET blok=$1, daire=$2, eksik=$3, isim_soyisim=$4, ptt=$5, ptt2=$6,
+       adres=$7, iletisim=$8, bilgi=$9, yakinlik=$10, bilgi_iletisim=$11, durum=$12 WHERE id=$13`,
+      d
+    );
+    req.flash('basari', 'Kayıt güncellendi.');
+  } catch (e) {
+    console.error('sakinler guncelle hata:', e.message, 'id=', req.params.id);
+    req.flash('hata', 'Güncelleme hatası: ' + e.message);
+  }
   res.redirect('/yonetim/sakinler?blok=' + encodeURIComponent((req.body.blok || '').trim()));
 }));
 

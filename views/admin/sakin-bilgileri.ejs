@@ -24,16 +24,19 @@
   table.mb-tablo th{background:#1e3c72;color:#fff;padding:9px 8px;text-align:left;font-weight:600;text-transform:uppercase;font-size:.7em;letter-spacing:.4px;white-space:nowrap}
   table.mb-tablo td{padding:6px 8px;border-bottom:1px solid #e4e6eb;vertical-align:middle}
   table.mb-tablo tr:hover{background:#f5f6f7}
-  table.mb-tablo input[type="text"],table.mb-tablo select,table.mb-tablo textarea{width:100%;padding:5px 7px;border:1px solid #d0d4dc;border-radius:3px;font-size:.85em;font-family:inherit;background:#fff}
+  table.mb-tablo input[type="text"],table.mb-tablo select,table.mb-tablo textarea{width:100%;min-width:80px;padding:5px 7px;border:1px solid #d0d4dc;border-radius:3px;font-size:.85em;font-family:inherit;background:#fff;box-sizing:border-box}
   table.mb-tablo textarea{min-height:34px;resize:vertical}
   table.mb-tablo textarea.kisa{min-height:30px;max-height:120px}
-  table.mb-tablo .col-sira{width:48px}
-  table.mb-tablo .col-blok{width:50px}
-  table.mb-tablo .col-kat{width:64px}
-  table.mb-tablo .col-daire{width:60px}
-  table.mb-tablo .col-durum{width:115px}
-  table.mb-tablo .col-tel{width:120px}
-  table.mb-tablo .col-islem{width:130px;white-space:nowrap}
+  table.mb-tablo .col-sira{width:60px;min-width:60px}
+  table.mb-tablo .col-blok{width:70px;min-width:70px}
+  table.mb-tablo .col-kat{width:80px;min-width:80px}
+  table.mb-tablo .col-daire{width:80px;min-width:80px}
+  table.mb-tablo .col-malik{width:180px;min-width:160px}
+  table.mb-tablo .col-tel{width:140px;min-width:130px}
+  table.mb-tablo .col-durum{width:130px;min-width:120px}
+  table.mb-tablo .col-acik{width:90px;min-width:80px}
+  table.mb-tablo .col-not{width:90px;min-width:80px}
+  table.mb-tablo .col-islem{width:140px;min-width:130px;white-space:nowrap}
   .mb-blok-h{background:linear-gradient(135deg,#1e3c72,#2a5298)!important}
   .mb-blok-h td{padding:10px 14px!important;color:#fff!important;border-bottom:2px solid #ffc107!important}
   .mb-blok-tag{display:inline-block;background:#ffc107;color:#1e3c72;font-weight:800;font-size:1.1em;padding:2px 11px;border-radius:6px;margin-right:10px;box-shadow:0 1px 3px rgba(0,0,0,.2)}
@@ -63,8 +66,8 @@
   .mb-not-yok{color:#adb5bd}
 
   @media(max-width:900px){
-    table.mb-tablo{font-size:.75em;min-width:1100px}
-    .mb-tablo-wrap{box-shadow:none;border-radius:0}
+    table.mb-tablo{font-size:.85em;min-width:1300px}
+    .mb-tablo-wrap{box-shadow:none;border-radius:0;-webkit-overflow-scrolling:touch}
     .mb-filtre input{min-width:120px;flex:1 1 100%}
     .mb-filtre select{flex:1 1 calc(50% - 4px)}
     .mb-filtre button{flex:1 1 calc(33% - 6px)}
@@ -200,11 +203,11 @@
           <th class="col-blok">Blok</th>
           <th class="col-kat">Kat</th>
           <th class="col-daire">Daire</th>
-          <th>Malik</th>
+          <th class="col-malik">Malik</th>
           <th class="col-tel">Telefon</th>
           <th class="col-durum">Durum</th>
-          <th>Açıklama</th>
-          <th>Notlar</th>
+          <th class="col-acik">Açıklama</th>
+          <th class="col-not">Notlar</th>
           <th class="col-islem">İşlem</th>
         </tr>
       </thead>
