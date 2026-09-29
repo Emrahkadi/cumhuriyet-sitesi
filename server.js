@@ -1193,23 +1193,72 @@ app.get('/yonetim/sakin-bilgileri', adminGerekli, ah(async (req, res) => {
        sira::int ASC NULLS LAST, id ASC`
   )).rows;
 
-  // İstatistikler
+  // İstatistikler (malik)
   const istatistik = (await q(
     `SELECT durum, COUNT(*)::int AS adet FROM malik_bilgileri GROUP BY durum`
   )).rows;
 
-  // Blok listesi
+  // Blok listesi (malik)
   const bloklar = (await q(
     `SELECT DISTINCT blok FROM malik_bilgileri WHERE blok IS NOT NULL AND blok <> '' ORDER BY blok`
   )).rows.map(r => r.blok);
 
+  // === SAKİNLER TABLOSU (tüm sakinler - kat maliki + kiracı + diğer) ===
+  // Aktif sekme: malik (varsayılan) veya sakin
+  const tab = (req.query.tab || 'malik').trim();
+
+  // Sakin filtreleri
+  const sakinBlok = (req.query.sakinBlok || '').trim();
+  const sakinAra = (req.query.sakinAra || '').trim();
+
+  const sakinKosullar = [];
+  const sakinParams = [];
+  if (sakinBlok) {
+    sakinParams.push(sakinBlok);
+    sakinKosullar.push(`COALESCE(NULLIF(TRIM(blok), ''), 'Diğer') = $${sakinParams.length}`);
+  }
+  if (sakinAra) {
+    sakinParams.push('%' + sakinAra.toLowerCase() + '%');
+    const i = sakinParams.length;
+    sakinKosullar.push(`(LOWER(isim_soyisim) LIKE $${i} OR LOWER(daire) LIKE $${i} OR LOWER(adres) LIKE $${i} OR LOWER(iletisim) LIKE $${i} OR LOWER(bilgi) LIKE $${i})`);
+  }
+  const sakinWhere = sakinKosullar.length ? 'WHERE ' + sakinKosullar.join(' AND ') : '';
+
+  const sakinler = (await q(
+    `SELECT * FROM sakinler ${sakinWhere}
+     ORDER BY
+       CASE COALESCE(NULLIF(TRIM(blok), ''), 'Diğer')
+         WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 WHEN 'D' THEN 4 WHEN 'E' THEN 5
+         WHEN 'F' THEN 6 WHEN 'G' THEN 7 WHEN 'H' THEN 8 WHEN 'I' THEN 9 WHEN 'İ' THEN 10
+         WHEN 'J' THEN 11 ELSE 99 END,
+       NULLIF(regexp_replace(COALESCE(daire, '0'), '\\D', '', 'g'), '')::int ASC NULLS LAST,
+       id ASC`
+  )).rows;
+
+  const sakinBloklar = (await q(
+    `SELECT DISTINCT COALESCE(NULLIF(TRIM(blok), ''), 'Diğer') AS blok
+     FROM sakinler ORDER BY 1`
+  )).rows.map(r => r.blok);
+
+  const sakinIstatistik = (await q(
+    `SELECT COALESCE(NULLIF(TRIM(blok), ''), 'Diğer') AS blok, COUNT(*)::int AS adet
+     FROM sakinler GROUP BY 1 ORDER BY 1`
+  )).rows;
+  const sakinToplam = sakinIstatistik.reduce((a, s) => a + s.adet, 0);
+
   res.render('admin/sakin-bilgileri', {
     aktifSayfa: 'sakinler',  // Sakinler sidebar'ı altında göstermek için
     altSayfa: 'sakin-bilgileri',
+    tab,
     malikler,
     bloklar,
     istatistik,
-    filtre: { blok, durum, ara }
+    filtre: { blok, durum, ara },
+    sakinler,
+    sakinBloklar,
+    sakinIstatistik,
+    sakinToplam,
+    sakinFiltre: { blok: sakinBlok, ara: sakinAra }
   });
 }));
 
@@ -1316,27 +1365,53 @@ app.post('/yonetim/sakin-bilgileri/sil/:id', adminGerekli, ah(async (req, res) =
   res.redirect('/yonetim/sakin-bilgileri');
 }));
 
-// CSV export
+// CSV export (malik veya sakin)
 app.get('/yonetim/sakin-bilgileri/csv', adminGerekli, ah(async (req, res) => {
-  const malikler = (await q(
-    `SELECT sira, blok, kat, daire, malik, telefon, durum, aciklama, notlar
-     FROM malik_bilgileri
-     ORDER BY
-       CASE blok WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 WHEN 'D' THEN 4 WHEN 'E' THEN 5
-                 WHEN 'F' THEN 6 WHEN 'G' THEN 7 WHEN 'H' THEN 8 WHEN 'I' THEN 9 WHEN 'İ' THEN 10
-                 WHEN 'J' THEN 11 ELSE 99 END,
-       NULLIF(regexp_replace(COALESCE(daire, '0'), '\\D', '', 'g'), '')::int ASC NULLS LAST,
-       sira::int ASC NULLS LAST, id ASC`
-  )).rows;
-  const cols = ['Sira', 'Blok', 'Kat', 'Daire', 'Malik', 'Telefon', 'Durum', 'Aciklama', 'Notlar'];
+  const tab = (req.query.tab || 'malik').trim();
+  let cols, rows, dosyaAdi;
+
+  if (tab === 'sakin') {
+    // Sakinler tablosu export
+    const sakinler = (await q(
+      `SELECT blok, daire, eksik, isim_soyisim, ptt, ptt2, adres, iletisim, bilgi, yakinlik, bilgi_iletisim
+       FROM sakinler
+       ORDER BY
+         CASE COALESCE(NULLIF(TRIM(blok), ''), 'Diğer')
+           WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 WHEN 'D' THEN 4 WHEN 'E' THEN 5
+           WHEN 'F' THEN 6 WHEN 'G' THEN 7 WHEN 'H' THEN 8 WHEN 'I' THEN 9 WHEN 'İ' THEN 10
+           WHEN 'J' THEN 11 ELSE 99 END,
+         NULLIF(regexp_replace(COALESCE(daire, '0'), '\\D', '', 'g'), '')::int ASC NULLS LAST,
+         id ASC`
+    )).rows;
+    cols = ['Blok', 'Daire', 'Eksik', 'Isim Soyisim', 'PTT', 'PTT 2', 'Adres', 'İletişim', 'Bilgi', 'Yakınlık', 'Bilgi İletişim'];
+    rows = sakinler.map(s => [s.blok, s.daire, s.eksik, s.isim_soyisim, s.ptt, s.ptt2, s.adres, s.iletisim, s.bilgi, s.yakinlik, s.bilgi_iletisim]);
+    dosyaAdi = 'sakinler.csv';
+  } else {
+    // Malik listesi export
+    const malikler = (await q(
+      `SELECT sira, blok, kat, daire, malik, telefon, durum, aciklama, notlar
+       FROM malik_bilgileri
+       ORDER BY
+         CASE blok WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 WHEN 'D' THEN 4 WHEN 'E' THEN 5
+                   WHEN 'F' THEN 6 WHEN 'G' THEN 7 WHEN 'H' THEN 8 WHEN 'I' THEN 9 WHEN 'İ' THEN 10
+                   WHEN 'J' THEN 11 ELSE 99 END,
+         NULLIF(regexp_replace(COALESCE(daire, '0'), '\\D', '', 'g'), '')::int ASC NULLS LAST,
+         sira::int ASC NULLS LAST, id ASC`
+    )).rows;
+    cols = ['Sira', 'Blok', 'Kat', 'Daire', 'Malik', 'Telefon', 'Durum', 'Aciklama', 'Notlar'];
+    rows = malikler.map(m => [m.sira, m.blok, m.kat, m.daire, m.malik, m.telefon, m.durum, m.aciklama, m.notlar]);
+    dosyaAdi = 'malik_listesi.csv';
+  }
+
+  // CSV üretimi
   let csv = '\uFEFF' + cols.join(',') + '\n';
-  malikler.forEach(m => {
-    csv += [m.sira, m.blok, m.kat, m.daire, m.malik, m.telefon, m.durum, m.aciklama, m.notlar].map(v => {
+  rows.forEach(row => {
+    csv += row.map(v => {
       return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
     }).join(',') + '\n';
   });
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', 'attachment; filename=malik_listesi.csv');
+  res.setHeader('Content-Disposition', 'attachment; filename=' + dosyaAdi);
   res.send(csv);
 }));
 
