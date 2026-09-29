@@ -248,6 +248,9 @@ CREATE TABLE IF NOT EXISTS duyuru_ekleri (
     -- Anket tablolarına hane (daire) bazında kontrol için daire_no eklendi
     ALTER TABLE anket_oylar ADD COLUMN IF NOT EXISTS daire_no TEXT;
     ALTER TABLE anket_katilimlar ADD COLUMN IF NOT EXISTS daire_no TEXT;
+    -- Sakinler tablosuna durum kolonu (Kat Maliki / Kiracı / Diğer)
+    ALTER TABLE sakinler ADD COLUMN IF NOT EXISTS durum TEXT NOT NULL DEFAULT 'Kat Maliki';
+    CREATE INDEX IF NOT EXISTS idx_sakinler_durum ON sakinler (durum);
     -- Bu index'ler ALTER'den SONRA oluşturulmalı (kolon mevcut olmalı)
     CREATE INDEX IF NOT EXISTS idx_anket_oylar_daire ON anket_oylar (anket_id, daire_no);
     CREATE INDEX IF NOT EXISTS idx_anket_katilimlar_daire ON anket_katilimlar (anket_id, daire_no);

@@ -89,9 +89,15 @@
 
     <form action="/yonetim/sakinler" method="GET" class="blok-arama">
       <input type="hidden" name="blok" value="<%= blok %>" />
+      <select name="durum" onchange="this.form.submit()" style="padding:7px 10px;border:1px solid #ccd0d5;border-radius:4px;font-size:.9em">
+        <option value="">Tümü (Kat Maliki/Kiracı)</option>
+        <% ['Kat Maliki','Kiracı','Diğer'].forEach(function(d){ %>
+          <option value="<%= d %>" <%= (typeof sakinDurum !== 'undefined' && sakinDurum === d) ? 'selected' : '' %>><%= d %></option>
+        <% }); %>
+      </select>
       <input type="text" name="ara" value="<%= ara %>" placeholder="Bu blokta ara: isim, daire, telefon, adres..." />
       <button type="submit" class="btn btn-primary">Ara</button>
-      <% if (ara) { %>
+      <% if (ara || (typeof sakinDurum !== 'undefined' && sakinDurum)) { %>
         <a href="/yonetim/sakinler?blok=<%= encodeURIComponent(blok) %>" class="btn btn-outline">Temizle</a>
       <% } %>
     </form>
@@ -112,6 +118,13 @@
         <label>Bilgi<input type="text" name="bilgi" /></label>
         <label>Yakınlık<input type="text" name="yakinlik" /></label>
         <label>Bilgi İletişim<input type="text" name="bilgi_iletisim" /></label>
+        <label>Durum
+          <select name="durum">
+            <option value="Kat Maliki">Kat Maliki</option>
+            <option value="Kiracı">Kiracı</option>
+            <option value="Diğer">Diğer</option>
+          </select>
+        </label>
       </div>
       <button type="submit" class="btn btn-primary">Ekle</button>
     </form>
@@ -136,7 +149,7 @@
             <tr>
               <th>Blok</th><th>Daire</th><th>Eksik</th><th>İsim Soyisim</th>
               <th>PTT</th><th>PTT 2</th><th>Adres</th><th>İletişim</th>
-              <th>Bilgi</th><th>Yakınlık</th><th>Bilgi İletişim</th><th>İşlem</th>
+              <th>Bilgi</th><th>Yakınlık</th><th>Bilgi İletişim</th><th>Durum</th><th>İşlem</th>
             </tr>
           </thead>
           <tbody>
@@ -153,6 +166,13 @@
                 <td><input type="text" form="guncelle-<%= s.id %>" name="bilgi" value="<%= s.bilgi %>" /></td>
                 <td><input type="text" form="guncelle-<%= s.id %>" name="yakinlik" value="<%= s.yakinlik %>" /></td>
                 <td><input type="text" form="guncelle-<%= s.id %>" name="bilgi_iletisim" value="<%= s.bilgi_iletisim %>" /></td>
+                <td>
+                  <select form="guncelle-<%= s.id %>" name="durum">
+                    <% ['Kat Maliki','Kiracı','Diğer'].forEach(function(d){ %>
+                      <option value="<%= d %>" <%= (s.durum || 'Kat Maliki') === d ? 'selected' : '' %>><%= d %></option>
+                    <% }); %>
+                  </select>
+                </td>
                 <td class="sakin-islem">
                   <button type="submit" form="guncelle-<%= s.id %>" class="btn-onayla">Kaydet</button>
                   <button type="submit" form="sil-<%= s.id %>" class="btn-sil">Sil</button>

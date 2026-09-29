@@ -1145,8 +1145,9 @@ app.post('/yonetim/mesaj-gonder', adminGerekli, ah(async (req, res) => {
 // --- Site sakinleri (blok bazlı kişi bilgileri) ---
 const SAKIN_ALANLAR = [
   'blok', 'daire', 'eksik', 'isim_soyisim', 'ptt', 'ptt2',
-  'adres', 'iletisim', 'bilgi', 'yakinlik', 'bilgi_iletisim'
+  'adres', 'iletisim', 'bilgi', 'yakinlik', 'bilgi_iletisim', 'durum'
 ];
+const SAKIN_DURUMLAR = ['Kat Maliki', 'Kiracı', 'Diğer'];
 
 // =====================================================================
 //  MALİK BİLGİLERİ & NOTLAR (Kentsel Dönüşüm Malik Listesi)
@@ -1223,8 +1224,7 @@ app.get('/yonetim/sakin-bilgileri', adminGerekli, ah(async (req, res) => {
     istatistik,
     filtre: { blok, durum, ara },
     sakinToplam: sakinSayisi,
-    sakinBloklar,
-    sakinFiltre: { blok: sakinBlok, ara: sakinAra }
+    sakinBloklar
   });
 }));
 
@@ -1384,43 +1384,51 @@ app.get('/yonetim/sakin-bilgileri/csv', adminGerekli, ah(async (req, res) => {
 app.get('/yonetim/sakinler', adminGerekli, ah(async (req, res) => {
   const blok = (req.query.blok || '').trim();
   const ara = (req.query.ara || '').trim();
+  const sakinDurum = (req.query.durum || '').trim();
   const siraSql = "ORDER BY NULLIF(regexp_replace(daire, '\\D', '', 'g'), '')::int ASC NULLS LAST, id ASC";
 
   // Bina ızgarası (blok seçilmemiş)
   if (!blok) {
     const gruplar = (await q(
-      `SELECT COALESCE(NULLIF(TRIM(blok), ''), 'Diğer') AS blok, COUNT(*)::int AS adet
+      `SELECT COALESCE(NULLIF(TRIM(blok), ''), 'Diğer') AS blok,
+              COUNT(*)::int AS adet,
+              COUNT(*) FILTER (WHERE durum = 'Kiracı')::int AS kiraci,
+              COUNT(*) FILTER (WHERE durum = 'Kat Maliki' OR durum IS NULL)::int AS malik
        FROM sakinler GROUP BY 1 ORDER BY 1`
     )).rows;
     const toplam = gruplar.reduce((a, g) => a + g.adet, 0);
     return res.render('admin/sakinler', { aktifSayfa: 'sakinler', mod: 'grid', gruplar, toplam });
   }
 
-  // Blok detayı (isteğe bağlı arama ile)
-  let sakinler;
+  // Blok detayı (isteğe bağlı arama + durum filtresi ile)
+  const kosullar = [`COALESCE(NULLIF(TRIM(blok), ''), 'Diğer') = $1`];
+  const params = [blok];
   if (ara) {
-    const like = '%' + ara + '%';
-    sakinler = (await q(
-      `SELECT * FROM sakinler
-       WHERE COALESCE(NULLIF(TRIM(blok), ''), 'Diğer') = $1
-       AND (isim_soyisim ILIKE $2 OR daire ILIKE $2 OR adres ILIKE $2 OR iletisim ILIKE $2 OR ptt ILIKE $2 OR bilgi ILIKE $2 OR yakinlik ILIKE $2)
-       ${siraSql}`,
-      [blok, like]
-    )).rows;
-  } else {
-    sakinler = (await q(
-      `SELECT * FROM sakinler WHERE COALESCE(NULLIF(TRIM(blok), ''), 'Diğer') = $1 ${siraSql}`,
-      [blok]
-    )).rows;
+    params.push('%' + ara + '%');
+    const i = params.length;
+    kosullar.push(`(isim_soyisim ILIKE $${i} OR daire ILIKE $${i} OR adres ILIKE $${i} OR iletisim ILIKE $${i} OR ptt ILIKE $${i} OR bilgi ILIKE $${i} OR yakinlik ILIKE $${i})`);
   }
-  res.render('admin/sakinler', { aktifSayfa: 'sakinler', mod: 'detay', blok, ara, sakinler });
+  if (sakinDurum && SAKIN_DURUMLAR.includes(sakinDurum)) {
+    params.push(sakinDurum);
+    kosullar.push(`durum = $${params.length}`);
+  }
+  const where = 'WHERE ' + kosullar.join(' AND ');
+  const sakinler = (await q(
+    `SELECT * FROM sakinler ${where} ${siraSql}`,
+    params
+  )).rows;
+  res.render('admin/sakinler', { aktifSayfa: 'sakinler', mod: 'detay', blok, ara, sakinDurum, sakinler });
 }));
 
 app.post('/yonetim/sakinler/ekle', adminGerekli, ah(async (req, res) => {
-  const d = SAKIN_ALANLAR.map((a) => (req.body[a] || '').trim());
+  const d = SAKIN_ALANLAR.map((a) => {
+    let val = (req.body[a] || '').trim();
+    if (a === 'durum' && !SAKIN_DURUMLAR.includes(val)) val = 'Kat Maliki';
+    return val.slice(0, a === 'durum' ? 30 : 1000);
+  });
   await q(
-    `INSERT INTO sakinler (blok, daire, eksik, isim_soyisim, ptt, ptt2, adres, iletisim, bilgi, yakinlik, bilgi_iletisim)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+    `INSERT INTO sakinler (blok, daire, eksik, isim_soyisim, ptt, ptt2, adres, iletisim, bilgi, yakinlik, bilgi_iletisim, durum)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
     d
   );
   req.flash('basari', 'Yeni kayıt eklendi.');
@@ -1428,11 +1436,15 @@ app.post('/yonetim/sakinler/ekle', adminGerekli, ah(async (req, res) => {
 }));
 
 app.post('/yonetim/sakinler/guncelle/:id', adminGerekli, ah(async (req, res) => {
-  const d = SAKIN_ALANLAR.map((a) => (req.body[a] || '').trim());
+  const d = SAKIN_ALANLAR.map((a) => {
+    let val = (req.body[a] || '').trim();
+    if (a === 'durum' && !SAKIN_DURUMLAR.includes(val)) val = 'Kat Maliki';
+    return val.slice(0, a === 'durum' ? 30 : 1000);
+  });
   d.push(req.params.id);
   await q(
     `UPDATE sakinler SET blok=$1, daire=$2, eksik=$3, isim_soyisim=$4, ptt=$5, ptt2=$6,
-     adres=$7, iletisim=$8, bilgi=$9, yakinlik=$10, bilgi_iletisim=$11 WHERE id=$12`,
+     adres=$7, iletisim=$8, bilgi=$9, yakinlik=$10, bilgi_iletisim=$11, durum=$12 WHERE id=$13`,
     d
   );
   req.flash('basari', 'Kayıt güncellendi.');
