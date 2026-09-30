@@ -1226,8 +1226,8 @@ app.get('/yonetim/sakin-bilgileri', adminGerekli, ah(async (req, res) => {
       sakinBloklar
     });
   } catch (e) {
-    console.error('sakin-bilgileri GET hata:', e.message, '\nStack:', e.stack);
-    req.flash('hata', 'Sayfa yükleme hatası: ' + e.message);
+    console.error('sakin-bilgileri GET hata:', e.message, '\nStack:', e.stack, '\nQuery:', e.query || 'yok', '\nParams:', e.parameters || 'yok');
+    req.flash('hata', 'HATA: ' + e.message + ' (Stack: ' + (e.stack || '').split('\n').slice(0, 3).join(' | ').slice(0, 400) + ')');
     res.redirect('/yonetim/sakinler');
   }
 }));
@@ -1439,42 +1439,48 @@ app.get('/yonetim/sakin-bilgileri/csv', adminGerekli, ah(async (req, res) => {
 }));
 
 app.get('/yonetim/sakinler', adminGerekli, ah(async (req, res) => {
-  const blok = (req.query.blok || '').trim();
-  const ara = (req.query.ara || '').trim();
-  const sakinDurum = (req.query.durum || '').trim();
-  const siraSql = "ORDER BY NULLIF(regexp_replace(daire, '\\D', '', 'g'), '')::int ASC NULLS LAST, id ASC";
+  try {
+    const blok = (req.query.blok || '').trim();
+    const ara = (req.query.ara || '').trim();
+    const sakinDurum = (req.query.durum || '').trim();
+    const siraSql = "ORDER BY NULLIF(regexp_replace(daire, '\\D', '', 'g'), '')::int ASC NULLS LAST, id ASC";
 
-  // Bina ızgarası (blok seçilmemiş)
-  if (!blok) {
-    const gruplar = (await q(
-      `SELECT COALESCE(NULLIF(TRIM(blok), ''), 'Diğer') AS blok,
-              COUNT(*)::int AS adet,
-              COUNT(*) FILTER (WHERE durum = 'Kiracı')::int AS kiraci,
-              COUNT(*) FILTER (WHERE durum = 'Kat Maliki' OR durum IS NULL)::int AS malik
-       FROM sakinler GROUP BY 1 ORDER BY 1`
+    // Bina ızgarası (blok seçilmemiş)
+    if (!blok) {
+      const gruplar = (await q(
+        `SELECT COALESCE(NULLIF(TRIM(blok), ''), 'Diğer') AS blok,
+                COUNT(*)::int AS adet,
+                COUNT(*) FILTER (WHERE durum = 'Kiracı')::int AS kiraci,
+                COUNT(*) FILTER (WHERE durum = 'Kat Maliki' OR durum IS NULL)::int AS malik
+         FROM sakinler GROUP BY 1 ORDER BY 1`
+      )).rows;
+      const toplam = gruplar.reduce((a, g) => a + g.adet, 0);
+      return res.render('admin/sakinler', { aktifSayfa: 'sakinler', mod: 'grid', gruplar, toplam });
+    }
+
+    // Blok detayı (isteğe bağlı arama + durum filtresi ile)
+    const kosullar = [`COALESCE(NULLIF(TRIM(blok), ''), 'Diğer') = $1`];
+    const params = [blok];
+    if (ara) {
+      params.push('%' + ara + '%');
+      const i = params.length;
+      kosullar.push(`(isim_soyisim ILIKE $${i} OR daire ILIKE $${i} OR adres ILIKE $${i} OR iletisim ILIKE $${i} OR ptt ILIKE $${i} OR bilgi ILIKE $${i} OR yakinlik ILIKE $${i})`);
+    }
+    if (sakinDurum && SAKIN_DURUMLAR.includes(sakinDurum)) {
+      params.push(sakinDurum);
+      kosullar.push(`durum = $${params.length}`);
+    }
+    const where = 'WHERE ' + kosullar.join(' AND ');
+    const sakinler = (await q(
+      `SELECT * FROM sakinler ${where} ${siraSql}`,
+      params
     )).rows;
-    const toplam = gruplar.reduce((a, g) => a + g.adet, 0);
-    return res.render('admin/sakinler', { aktifSayfa: 'sakinler', mod: 'grid', gruplar, toplam });
+    res.render('admin/sakinler', { aktifSayfa: 'sakinler', mod: 'detay', blok, ara, sakinDurum, sakinler });
+  } catch (e) {
+    console.error('sakinler GET hata:', e.message, '\nStack:', e.stack);
+    req.flash('hata', 'SAKINLER HATA: ' + e.message);
+    res.redirect('/yonetim/panel');
   }
-
-  // Blok detayı (isteğe bağlı arama + durum filtresi ile)
-  const kosullar = [`COALESCE(NULLIF(TRIM(blok), ''), 'Diğer') = $1`];
-  const params = [blok];
-  if (ara) {
-    params.push('%' + ara + '%');
-    const i = params.length;
-    kosullar.push(`(isim_soyisim ILIKE $${i} OR daire ILIKE $${i} OR adres ILIKE $${i} OR iletisim ILIKE $${i} OR ptt ILIKE $${i} OR bilgi ILIKE $${i} OR yakinlik ILIKE $${i})`);
-  }
-  if (sakinDurum && SAKIN_DURUMLAR.includes(sakinDurum)) {
-    params.push(sakinDurum);
-    kosullar.push(`durum = $${params.length}`);
-  }
-  const where = 'WHERE ' + kosullar.join(' AND ');
-  const sakinler = (await q(
-    `SELECT * FROM sakinler ${where} ${siraSql}`,
-    params
-  )).rows;
-  res.render('admin/sakinler', { aktifSayfa: 'sakinler', mod: 'detay', blok, ara, sakinDurum, sakinler });
 }));
 
 app.post('/yonetim/sakinler/ekle', adminGerekli, ah(async (req, res) => {
