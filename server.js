@@ -825,6 +825,19 @@ app.get('/yonetim/debug/sema', adminGerekli, ah(async (req, res) => {
   });
 }));
 
+// --- DEBUG: Garbage blok kayitlarini temizle (TOPLAM, ─░ vb.) ---
+app.post('/yonetim/debug/temizle-sakinler', adminGerekli, ah(async (req, res) => {
+  const onceSayi = (await q('SELECT COUNT(*)::int AS c FROM sakinler')).rows[0].c;
+  const temizlenen = (await q(
+    `DELETE FROM sakinler
+     WHERE UPPER(TRIM(blok)) NOT IN ('A','B','C','D','E','F','G','H','I','İ','J','')
+       AND blok IS NOT NULL`
+  )).rowCount;
+  const sonraSayi = (await q('SELECT COUNT(*)::int AS c FROM sakinler')).rows[0].c;
+  req.flash('basari', `Sakinler temizlendi: ${temizlenen} garbage kayit silindi (${onceSayi} -> ${sonraSayi}).`);
+  res.redirect('/yonetim/sakinler');
+}));
+
 // --- Duyuru yönetimi ---
 app.get('/yonetim/duyurular', adminGerekli, ah(async (req, res) => {
   const duyurular = (await q('SELECT * FROM duyurular ORDER BY id DESC')).rows;

@@ -78,6 +78,16 @@
     </form>
   </details>
 
+  <details class="admin-panel-box import-kutu" style="margin-top:10px">
+    <summary><strong>🧹 Geçersiz blok kayıtlarını temizle</strong></summary>
+    <p class="admin-hint">
+      "TOPLAM", "─░" veya A-J dışındaki geçersiz blok adına sahip sakin kayıtlarını siler (normal: 301 kayıt).
+    </p>
+    <form action="/yonetim/debug/temizle-sakinler" method="POST" onsubmit="return confirm('Geçersiz kayıtlar silinsin mi? Bu işlem geri alınamaz.')" class="form">
+      <button type="submit" class="btn btn-primary" style="background:#e67e22">🧹 Garbage Kayıtları Sil</button>
+    </form>
+  </details>
+
 <% } else { %>
 
   <%# ---------------- BLOK DETAY ---------------- %>
