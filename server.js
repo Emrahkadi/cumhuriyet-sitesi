@@ -791,6 +791,24 @@ app.get('/yonetim', adminGerekli, ah(async (req, res) => {
   res.render('admin/panel', { aktifSayfa: 'ozet', istatistik });
 }));
 
+// --- DEBUG: Veritabanı şema kontrol (sadece admin) ---
+app.get('/yonetim/debug/sema', adminGerekli, ah(async (req, res) => {
+  const sakinlerCols = (await q(
+    "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'sakinler' ORDER BY ordinal_position"
+  )).rows;
+  const malikCols = (await q(
+    "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'malik_bilgileri' ORDER BY ordinal_position"
+  )).rows;
+  const sakinlerSayi = (await q('SELECT COUNT(*)::int AS c FROM sakinler')).rows[0].c;
+  const malikSayi = (await q('SELECT COUNT(*)::int AS c FROM malik_bilgileri')).rows[0].c;
+  res.json({
+    sakinler_columns: sakinlerCols,
+    malik_bilgileri_columns: malikCols,
+    sakinler_sayisi: sakinlerSayi,
+    malik_bilgileri_sayisi: malikSayi
+  });
+}));
+
 // --- Duyuru yönetimi ---
 app.get('/yonetim/duyurular', adminGerekli, ah(async (req, res) => {
   const duyurular = (await q('SELECT * FROM duyurular ORDER BY id DESC')).rows;
