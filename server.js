@@ -801,11 +801,27 @@ app.get('/yonetim/debug/sema', adminGerekli, ah(async (req, res) => {
   )).rows;
   const sakinlerSayi = (await q('SELECT COUNT(*)::int AS c FROM sakinler')).rows[0].c;
   const malikSayi = (await q('SELECT COUNT(*)::int AS c FROM malik_bilgileri')).rows[0].c;
+  // Aynı sorguyu dene
+  let gruplarResult = null, gruplarError = null;
+  try {
+    gruplarResult = (await q(
+      `SELECT COALESCE(NULLIF(TRIM(blok), ''), 'Diğer') AS blok,
+              COUNT(*)::int AS adet,
+              COUNT(*) FILTER (WHERE durum = 'Kiracı')::int AS kiraci,
+              COUNT(*) FILTER (WHERE durum = 'Kat Maliki' OR durum IS NULL)::int AS malik
+       FROM sakinler
+       GROUP BY COALESCE(NULLIF(TRIM(blok), ''), 'Diğer')
+       ORDER BY COALESCE(NULLIF(TRIM(blok), ''), 'Diğer')`
+    )).rows;
+  } catch (e) {
+    gruplarError = e.message + ' | SQL: ' + e.query + ' | Params: ' + JSON.stringify(e.parameters);
+  }
   res.json({
     sakinler_columns: sakinlerCols,
     malik_bilgileri_columns: malikCols,
     sakinler_sayisi: sakinlerSayi,
-    malik_bilgileri_sayisi: malikSayi
+    malik_bilgileri_sayisi: malikSayi,
+    gruplar_test: { result: gruplarResult, error: gruplarError }
   });
 }));
 
