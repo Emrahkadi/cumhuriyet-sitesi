@@ -1463,15 +1463,32 @@ app.get('/yonetim/sakinler', adminGerekli, ah(async (req, res) => {
     const sakinDurum = (req.query.durum || '').trim();
     const siraSql = "ORDER BY NULLIF(regexp_replace(daire, '\\D', '', 'g'), '')::int ASC NULLS LAST, id ASC";
 
-    // Bina ızgarası (blok seçilmemiş)
+    // Bina ızgarası (blok seçilmemiş) - durum kolonu varsa kiracı/malik say
     if (!blok) {
-      const gruplar = (await q(
-        `SELECT COALESCE(NULLIF(TRIM(blok), ''), 'Diğer') AS blok,
-                COUNT(*)::int AS adet,
-                COUNT(*) FILTER (WHERE durum = 'Kiracı')::int AS kiraci,
-                COUNT(*) FILTER (WHERE durum = 'Kat Maliki' OR durum IS NULL)::int AS malik
-         FROM sakinler GROUP BY 1 ORDER BY 1`
-      )).rows;
+      let gruplar;
+      try {
+        gruplar = (await q(
+          `SELECT COALESCE(NULLIF(TRIM(blok), ''), 'Diğer') AS blok,
+                  COUNT(*)::int AS adet,
+                  COUNT(*) FILTER (WHERE durum = 'Kiracı')::int AS kiraci,
+                  COUNT(*) FILTER (WHERE durum = 'Kat Maliki' OR durum IS NULL)::int AS malik
+           FROM sakinler
+           GROUP BY COALESCE(NULLIF(TRIM(blok), ''), 'Diğer')
+           ORDER BY COALESCE(NULLIF(TRIM(blok), ''), 'Diğer')`
+        )).rows;
+      } catch (eDurum) {
+        // durum kolonu yoksa basit sorgu
+        console.warn('sakinler.durum kolonu yok, basit sorgu kullanılıyor:', eDurum.message);
+        gruplar = (await q(
+          `SELECT COALESCE(NULLIF(TRIM(blok), ''), 'Diğer') AS blok,
+                  COUNT(*)::int AS adet,
+                  0::int AS kiraci,
+                  COUNT(*)::int AS malik
+           FROM sakinler
+           GROUP BY COALESCE(NULLIF(TRIM(blok), ''), 'Diğer')
+           ORDER BY COALESCE(NULLIF(TRIM(blok), ''), 'Diğer')`
+        )).rows;
+      }
       const toplam = gruplar.reduce((a, g) => a + g.adet, 0);
       return res.render('admin/sakinler', { aktifSayfa: 'sakinler', mod: 'grid', gruplar, toplam });
     }
