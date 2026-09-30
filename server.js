@@ -1245,7 +1245,10 @@ app.get('/yonetim/sakin-bilgileri', adminGerekli, ah(async (req, res) => {
     });
   } catch (e) {
     console.error('sakin-bilgileri GET hata:', e.message, '\nStack:', e.stack, '\nQuery:', e.query || 'yok', '\nParams:', e.parameters || 'yok');
-    req.flash('hata', 'HATA: ' + e.message + ' (Stack: ' + (e.stack || '').split('\n').slice(0, 3).join(' | ').slice(0, 400) + ')');
+    const detay = 'HATA: ' + e.message +
+      ' | SQL: ' + String(e.query || '').slice(0, 200) +
+      ' | Params: ' + JSON.stringify(e.parameters || []);
+    req.flash('hata', detay);
     res.redirect('/yonetim/sakinler');
   }
 }));
@@ -1512,8 +1515,11 @@ app.get('/yonetim/sakinler', adminGerekli, ah(async (req, res) => {
     )).rows;
     res.render('admin/sakinler', { aktifSayfa: 'sakinler', mod: 'detay', blok, ara, sakinDurum, sakinler });
   } catch (e) {
-    console.error('sakinler GET hata:', e.message, '\nStack:', e.stack);
-    req.flash('hata', 'SAKINLER HATA: ' + e.message);
+    console.error('sakinler GET hata:', e.message, '\nStack:', e.stack, '\nQuery:', e.query || 'yok', '\nParams:', e.parameters || 'yok');
+    const detay = 'HATA: ' + e.message +
+      ' | SQL: ' + String(e.query || '').slice(0, 200) +
+      ' | Params: ' + JSON.stringify(e.parameters || []);
+    req.flash('hata', detay);
     res.redirect('/yonetim/panel');
   }
 }));
