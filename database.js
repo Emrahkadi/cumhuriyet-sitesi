@@ -20,9 +20,12 @@ const yerel = /localhost|127\.0\.0\.1/.test(process.env.DATABASE_URL || '');
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: yerel ? false : { rejectUnauthorized: false },
-  max: 8,                       // ücretsiz PostgreSQL için makul havuz boyutu
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000
+  max: 20,                      // performans: daha fazla eszamanli baglanti
+  min: 2,                       // minimum hazir baglanti (soğuk başlangıç azaltma)
+  idleTimeoutMillis: 60000,     // 60 sn idle sonrasi kapat
+  connectionTimeoutMillis: 10000,
+  keepAlive: true,              // TCP keepalive
+  keepAliveInitialDelayMillis: 10000
 });
 
 // Beklenmeyen havuz hatalarında uygulamanın çökmemesi için

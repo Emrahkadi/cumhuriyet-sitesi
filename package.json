@@ -51,7 +51,7 @@
     "qs": "^6.13.1",
     "nanoid": "^3.3.8",
     "multer": "^2.4.0",
-    "file-type": "^16.5.4",
+    "file-type": "^19.6.0",
     "extract-zip": "^2.0.1",
     "tar": "^7.4.3",
     "@xmldom/xmldom": "^0.9.10",

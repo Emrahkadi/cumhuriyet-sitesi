@@ -190,10 +190,17 @@ const BLOK_LISTESI = ['A','B','C','D','E','F','G','H','I','İ','J'];
 // --- Görünüm motoru ---
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+// Production'da EJS template'leri cache'le (her istekte dosya okumaz)
+app.set('view cache', process.env.NODE_ENV === 'production');
+// Varsayılan view engine güvenilir proxy ayarları
+app.enable('view cache');
 
 // Ters proxy (Hostinger/Render) arkasında gerçek IP ve güvenli çerez için
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
+
+// ETag'leri aktif et (304 Not Modified için)
+app.set('etag', 'strong');
 
 // --- Güvenlik başlıkları (helmet) + CSP (tawk.to ve Google Fonts izinli) ---
 app.use(
@@ -260,10 +267,12 @@ app.use(
 
 // SEO: robots.txt ve sitemap.xml
 app.get('/robots.txt', (req, res) => {
+  res.set('Cache-Control', 'public, max-age=86400'); // 24 saat
   res.type('text/plain').send('User-agent: *\nAllow: /\nDisallow: /yonetim/\nDisallow: /giris\nDisallow: /kayit\nDisallow: /sifremi-unuttum\nSitemap: https://cumhuriyetsitesi.org/sitemap.xml\n');
 });
 
 app.get('/sitemap.xml', (req, res) => {
+  res.set('Cache-Control', 'public, max-age=3600'); // 1 saat
   const bugun = new Date().toISOString().split('T')[0];
   const sayfalar = [
     { loc: '/', oncelik: '1.0' },
@@ -367,6 +376,7 @@ app.get('/', ah(async (req, res) => {
 
 // Tüm duyurular
 app.get('/duyurular', ah(async (req, res) => {
+  res.set('Cache-Control', 'public, max-age=120');
   const duyurular = (await q('SELECT * FROM duyurular ORDER BY onemli DESC, id DESC')).rows;
   res.render('duyurular', { aktifSayfa: 'duyurular', duyurular });
 }));
@@ -382,6 +392,7 @@ app.get('/duyuru/:id', ah(async (req, res) => {
 
 // Hakkımızda
 app.get('/hakkinda', (req, res) => {
+  res.set('Cache-Control', 'public, max-age=3600');
   res.render('hakkinda', { aktifSayfa: 'hakkinda' });
 });
 
@@ -392,6 +403,7 @@ app.get('/gizlilik', (req, res) => {
 
 // Kentsel dönüşüm
 app.get('/kentsel-donusum', ah(async (req, res) => {
+  res.set('Cache-Control', 'public, max-age=300');
   const maddeler = (await q('SELECT * FROM kentsel_donusum ORDER BY id DESC')).rows;
   res.render('kentsel-donusum', { aktifSayfa: 'kentsel-donusum', maddeler });
 }));
@@ -1302,6 +1314,9 @@ app.get('/yonetim/sakin-bilgileri', adminGerekli, ah(async (req, res) => {
       kosullar.push(`(LOWER(blok) LIKE $${i} OR LOWER(kat) LIKE $${i} OR LOWER(daire) LIKE $${i} OR LOWER(malik) LIKE $${i} OR LOWER(telefon) LIKE $${i} OR LOWER(aciklama) LIKE $${i} OR LOWER(notlar) LIKE $${i})`);
     }
     const where = kosullar.length ? 'WHERE ' + kosullar.join(' AND ') : '';
+
+    // Admin paneli - private cache (browser tarafinda cache'lenmesin)
+    res.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
 
     // malikler sorgusu - tek basina try-catch
     let malikler = [];

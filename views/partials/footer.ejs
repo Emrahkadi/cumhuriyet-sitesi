@@ -54,9 +54,9 @@
   <!-- ============================================================= -->
 
   <!-- Quill.js zengin metin editörü (sadece formlarda kullanılıyor) -->
-  <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
-  <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
-  <script src="/js/main.js"></script>
+  <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet" media="print" onload="this.media='all'">
+  <script src="https://cdn.quilljs.com/1.3.7/quill.min.js" defer></script>
+  <script src="/js/main.js" defer></script>
   <script>
     // Quill editörü: data-quill attribute'lu tüm textarea'ları başlat
     document.querySelectorAll('textarea[data-quill]').forEach(function(ta) {
