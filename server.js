@@ -1285,36 +1285,45 @@ app.get('/yonetim/sakin-bilgileri', adminGerekli, ah(async (req, res) => {
 // Yeni malik ekle
 app.post('/yonetim/sakin-bilgileri/ekle', adminGerekli, ah(async (req, res) => {
   const { sira, blok, kat, daire, malik, telefon, durum, aciklama, notlar } = req.body;
+  const filtreBlok = (req.body.blok || '').trim();
+  const hedef = filtreBlok ? '/yonetim/sakin-bilgileri?blok=' + encodeURIComponent(filtreBlok) : (req.get('Referer') || '/yonetim/sakin-bilgileri');
   if (!blok || !malik) {
     req.flash('hata', 'Blok ve Malik adı zorunludur.');
-    return res.redirect('/yonetim/sakin-bilgileri');
+    return res.redirect(hedef);
   }
-  await q(
-    `INSERT INTO malik_bilgileri (sira, blok, kat, daire, malik, telefon, durum, aciklama, notlar)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-    [
-      String(sira || '').slice(0, 20),
-      String(blok || '').slice(0, 10).toUpperCase(),
-      String(kat || '').slice(0, 30),
-      String(daire || '').slice(0, 30),
-      String(malik || '').slice(0, 250),
-      String(telefon || '').slice(0, 50),
-      MALIK_DURUMLAR.includes(durum) ? durum : 'Beklemede',
-      String(aciklama || '').slice(0, 4000),
-      String(notlar || '').slice(0, 4000)
-    ]
-  );
-  req.flash('basari', 'Yeni malik eklendi.');
-  res.redirect('/yonetim/sakin-bilgileri');
+  try {
+    await q(
+      `INSERT INTO malik_bilgileri (sira, blok, kat, daire, malik, telefon, durum, aciklama, notlar)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [
+        String(sira == null ? '' : sira).slice(0, 20),
+        String(blok == null ? '' : blok).slice(0, 10).toUpperCase(),
+        String(kat == null ? '' : kat).slice(0, 30),
+        String(daire == null ? '' : daire).slice(0, 30),
+        String(malik == null ? '' : malik).slice(0, 250),
+        String(telefon == null ? '' : telefon).slice(0, 50),
+        MALIK_DURUMLAR.includes(durum) ? durum : 'Beklemede',
+        String(aciklama == null ? '' : aciklama).slice(0, 4000),
+        String(notlar == null ? '' : notlar).slice(0, 4000)
+      ]
+    );
+    req.flash('basari', 'Yeni malik eklendi.');
+  } catch (e) {
+    console.error('malik ekle hata:', e.message);
+    req.flash('hata', 'Kayıt eklenemedi. Lütfen tekrar deneyin.');
+  }
+  res.redirect(hedef);
 }));
 
 // Malik güncelle
 app.post('/yonetim/sakin-bilgileri/guncelle/:id', adminGerekli, ah(async (req, res) => {
   const { sira, blok, kat, daire, malik, telefon, durum, aciklama, notlar } = req.body;
   const id = parseInt(req.params.id, 10);
+  const filtreBlok = (req.body.blok || '').trim();
+  const hedef = filtreBlok ? '/yonetim/sakin-bilgileri?blok=' + encodeURIComponent(filtreBlok) : (req.get('Referer') || '/yonetim/sakin-bilgileri');
   if (!id) {
     req.flash('hata', 'Geçersiz kayıt.');
-    return res.redirect('/yonetim/sakin-bilgileri');
+    return res.redirect(hedef);
   }
   try {
     await q(
@@ -1337,46 +1346,59 @@ app.post('/yonetim/sakin-bilgileri/guncelle/:id', adminGerekli, ah(async (req, r
       ]
     );
     req.flash('basari', 'Malik bilgisi güncellendi.');
-    res.redirect('/yonetim/sakin-bilgileri' + (req.body.blok ? '?blok=' + encodeURIComponent(req.body.blok) : ''));
   } catch (e) {
-    console.error('malik guncelle hata:', e.message, 'id=', id, 'body=', JSON.stringify(req.body).slice(0, 200));
-    req.flash('hata', 'Güncelleme hatası: ' + e.message);
-    res.redirect('/yonetim/sakin-bilgileri' + (req.body.blok ? '?blok=' + encodeURIComponent(req.body.blok) : ''));
+    console.error('malik guncelle hata:', e.message, 'id=', id, 'body keys:', Object.keys(req.body || {}).join(','));
+    req.flash('hata', 'Kayıt güncellenemedi. Lütfen tekrar deneyin.');
   }
+  res.redirect(hedef);
 }));
 
 // Hızlı durum güncelleme (toplu)
 app.post('/yonetim/sakin-bilgileri/durum/:id', adminGerekli, ah(async (req, res) => {
   const id = parseInt(req.params.id, 10);
   const yeniDurum = req.body.durum;
+  const filtreBlok = (req.body.blok || '').trim();
+  const hedef = filtreBlok ? '/yonetim/sakin-bilgileri?blok=' + encodeURIComponent(filtreBlok) : (req.get('Referer') || '/yonetim/sakin-bilgileri');
   if (!id || !MALIK_DURUMLAR.includes(yeniDurum)) {
     req.flash('hata', 'Geçersiz istek.');
-    return res.redirect('/yonetim/sakin-bilgileri');
+    return res.redirect(hedef);
   }
-  await q(
-    `UPDATE malik_bilgileri SET durum = $1,
-       guncelleme_tarihi = to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
-     WHERE id = $2`,
-    [yeniDurum, id]
-  );
-  res.redirect('/yonetim/sakin-bilgileri' + (req.body.blok ? '?blok=' + encodeURIComponent(req.body.blok) : ''));
+  try {
+    await q(
+      `UPDATE malik_bilgileri SET durum = $1,
+         guncelleme_tarihi = to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
+       WHERE id = $2`,
+      [yeniDurum, id]
+    );
+  } catch (e) {
+    console.error('malik durum hata:', e.message);
+    req.flash('hata', 'Durum güncellenemedi. Lütfen tekrar deneyin.');
+  }
+  res.redirect(hedef);
 }));
 
 // Sadece not güncelleme (hızlı, panel içinden)
 app.post('/yonetim/sakin-bilgileri/not/:id', adminGerekli, ah(async (req, res) => {
   const id = parseInt(req.params.id, 10);
+  const filtreBlok = (req.body.blok || '').trim();
+  const hedef = filtreBlok ? '/yonetim/sakin-bilgileri?blok=' + encodeURIComponent(filtreBlok) : (req.get('Referer') || '/yonetim/sakin-bilgileri');
   if (!id) {
     req.flash('hata', 'Geçersiz kayıt.');
-    return res.redirect('/yonetim/sakin-bilgileri');
+    return res.redirect(hedef);
   }
-  await q(
-    `UPDATE malik_bilgileri SET notlar = $1,
-       guncelleme_tarihi = to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
-     WHERE id = $2`,
-    [String(req.body.notlar || '').slice(0, 4000), id]
-  );
-  req.flash('basari', 'Not güncellendi.');
-  res.redirect('/yonetim/sakin-bilgileri' + (req.body.blok ? '?blok=' + encodeURIComponent(req.body.blok) : ''));
+  try {
+    await q(
+      `UPDATE malik_bilgileri SET notlar = $1,
+         guncelleme_tarihi = to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
+       WHERE id = $2`,
+      [String(req.body.notlar || '').slice(0, 4000), id]
+    );
+    req.flash('basari', 'Not güncellendi.');
+  } catch (e) {
+    console.error('malik not hata:', e.message);
+    req.flash('hata', 'Not güncellenemedi. Lütfen tekrar deneyin.');
+  }
+  res.redirect(hedef);
 }));
 
 // JSON'dan toplu içe aktar (malikler.json -> malik_bilgileri tablosu)
@@ -1429,13 +1451,20 @@ app.post('/yonetim/sakin-bilgileri/import-json', adminGerekli, ah(async (req, re
 // Malik sil
 app.post('/yonetim/sakin-bilgileri/sil/:id', adminGerekli, ah(async (req, res) => {
   const id = parseInt(req.params.id, 10);
+  const filtreBlok = (req.body.blok || '').trim();
+  const hedef = filtreBlok ? '/yonetim/sakin-bilgileri?blok=' + encodeURIComponent(filtreBlok) : (req.get('Referer') || '/yonetim/sakin-bilgileri');
   if (!id) {
     req.flash('hata', 'Geçersiz kayıt.');
-    return res.redirect('/yonetim/sakin-bilgileri');
+    return res.redirect(hedef);
   }
-  await q('DELETE FROM malik_bilgileri WHERE id = $1', [id]);
-  req.flash('basari', 'Malik kaydı silindi.');
-  res.redirect('/yonetim/sakin-bilgileri');
+  try {
+    await q('DELETE FROM malik_bilgileri WHERE id = $1', [id]);
+    req.flash('basari', 'Malik kaydı silindi.');
+  } catch (e) {
+    console.error('malik sil hata:', e.message);
+    req.flash('hata', 'Kayıt silinemedi. Lütfen tekrar deneyin.');
+  }
+  res.redirect(hedef);
 }));
 
 // CSV export (malik veya sakin)
@@ -1554,6 +1583,8 @@ app.get('/yonetim/sakinler', adminGerekli, ah(async (req, res) => {
 }));
 
 app.post('/yonetim/sakinler/ekle', adminGerekli, ah(async (req, res) => {
+  const blok = (req.body.blok || '').trim();
+  const hedef = blok ? '/yonetim/sakinler?blok=' + encodeURIComponent(blok) : (req.get('Referer') || '/yonetim/sakinler');
   try {
     const d = SAKIN_ALANLAR.map((a) => {
       let val = (req.body[a] == null ? '' : req.body[a]).trim();
@@ -1568,12 +1599,15 @@ app.post('/yonetim/sakinler/ekle', adminGerekli, ah(async (req, res) => {
     req.flash('basari', 'Yeni kayıt eklendi.');
   } catch (e) {
     console.error('sakinler ekle hata:', e.message);
-    req.flash('hata', 'Ekleme hatası: ' + e.message);
+    req.flash('hata', 'Kayıt eklenemedi. Lütfen tekrar deneyin.');
   }
-  res.redirect('/yonetim/sakinler?blok=' + encodeURIComponent((req.body.blok || '').trim()));
+  res.redirect(hedef);
 }));
 
 app.post('/yonetim/sakinler/guncelle/:id', adminGerekli, ah(async (req, res) => {
+  // Hata olsa bile kullaniciyi detay sayfasinda tut
+  const blok = (req.body.blok || '').trim();
+  const hedef = blok ? '/yonetim/sakinler?blok=' + encodeURIComponent(blok) : (req.get('Referer') || '/yonetim/sakinler');
   try {
     const d = SAKIN_ALANLAR.map((a) => {
       let val = (req.body[a] == null ? '' : req.body[a]).trim();
@@ -1588,16 +1622,23 @@ app.post('/yonetim/sakinler/guncelle/:id', adminGerekli, ah(async (req, res) => 
     );
     req.flash('basari', 'Kayıt güncellendi.');
   } catch (e) {
-    console.error('sakinler guncelle hata:', e.message, 'id=', req.params.id);
-    req.flash('hata', 'Güncelleme hatası: ' + e.message);
+    console.error('sakinler guncelle hata:', e.message, 'id=', req.params.id, 'body keys:', Object.keys(req.body || {}).join(','));
+    req.flash('hata', 'Kayıt güncellenemedi. Lütfen tekrar deneyin.');
   }
-  res.redirect('/yonetim/sakinler?blok=' + encodeURIComponent((req.body.blok || '').trim()));
+  res.redirect(hedef);
 }));
 
 app.post('/yonetim/sakinler/sil/:id', adminGerekli, ah(async (req, res) => {
-  await q('DELETE FROM sakinler WHERE id = $1', [req.params.id]);
-  req.flash('basari', 'Kayıt silindi.');
-  res.redirect('/yonetim/sakinler?blok=' + encodeURIComponent((req.body.donus_blok || '').trim()));
+  const donusBlok = (req.body.donus_blok || '').trim();
+  const hedef = donusBlok ? '/yonetim/sakinler?blok=' + encodeURIComponent(donusBlok) : (req.get('Referer') || '/yonetim/sakinler');
+  try {
+    await q('DELETE FROM sakinler WHERE id = $1', [req.params.id]);
+    req.flash('basari', 'Kayıt silindi.');
+  } catch (e) {
+    console.error('sakinler sil hata:', e.message);
+    req.flash('hata', 'Kayıt silinemedi. Lütfen tekrar deneyin.');
+  }
+  res.redirect(hedef);
 }));
 
 // Excel (.xlsx) içe aktarma — "Adresler" benzeri 11 kolonlu sayfa
