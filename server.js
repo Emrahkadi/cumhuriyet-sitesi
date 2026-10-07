@@ -1274,11 +1274,8 @@ app.get('/yonetim/sakin-bilgileri', adminGerekli, ah(async (req, res) => {
     });
   } catch (e) {
     console.error('sakin-bilgileri GET hata:', e.message, '\nStack:', e.stack, '\nQuery:', e.query || 'yok', '\nParams:', e.parameters || 'yok');
-    const detay = 'HATA: ' + e.message +
-      ' | SQL: ' + String(e.query || '').slice(0, 200) +
-      ' | Params: ' + JSON.stringify(e.parameters || []);
-    req.flash('hata', detay);
-    res.redirect('/yonetim/sakinler');
+    req.flash('hata', 'Sayfa yüklenirken bir hata oluştu. Lütfen tekrar deneyin.');
+    res.redirect('/yonetim/sakin-bilgileri');
   }
 }));
 
@@ -1574,11 +1571,8 @@ app.get('/yonetim/sakinler', adminGerekli, ah(async (req, res) => {
     res.render('admin/sakinler', { aktifSayfa: 'sakinler', mod: 'detay', blok, ara, sakinDurum, sakinler });
   } catch (e) {
     console.error('sakinler GET hata:', e.message, '\nStack:', e.stack, '\nQuery:', e.query || 'yok', '\nParams:', e.parameters || 'yok');
-    const detay = 'HATA: ' + e.message +
-      ' | SQL: ' + String(e.query || '').slice(0, 200) +
-      ' | Params: ' + JSON.stringify(e.parameters || []);
-    req.flash('hata', detay);
-    res.redirect('/yonetim/panel');
+    req.flash('hata', 'Sayfa yüklenirken bir hata oluştu. Lütfen tekrar deneyin.');
+    res.redirect('/yonetim/sakinler');
   }
 }));
 
