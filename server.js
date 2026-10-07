@@ -838,6 +838,42 @@ app.post('/yonetim/debug/temizle-sakinler', adminGerekli, ah(async (req, res) =>
   res.redirect('/yonetim/sakinler');
 }));
 
+// --- DEBUG: sakin-bilgileri rotasindaki tum sorgulari test et ---
+app.get('/yonetim/debug/sorgu-test', adminGerekli, ah(async (req, res) => {
+  const sonuclar = {};
+  // 1) malikler sorgusu
+  try {
+    const r = (await q("SELECT COUNT(*)::int AS c FROM malik_bilgileri")).rows[0].c;
+    sonuclar.malikler_count = r;
+  } catch (e) { sonuclar.malikler_count = 'HATA: ' + e.message; }
+  // 2) istatistik
+  try {
+    const r = (await q("SELECT durum, COUNT(*)::int AS adet FROM malik_bilgileri GROUP BY durum")).rows;
+    sonuclar.istatistik = r;
+  } catch (e) { sonuclar.istatistik = 'HATA: ' + e.message; }
+  // 3) bloklar distinct
+  try {
+    const r = (await q("SELECT DISTINCT blok FROM malik_bilgileri WHERE blok IS NOT NULL AND blok <> '' ORDER BY blok")).rows;
+    sonuclar.bloklar = r;
+  } catch (e) { sonuclar.bloklar = 'HATA: ' + e.message; }
+  // 4) sakinler count
+  try {
+    const r = (await q("SELECT COUNT(*)::int AS c FROM sakinler")).rows[0].c;
+    sonuclar.sakinler_count = r;
+  } catch (e) { sonuclar.sakinler_count = 'HATA: ' + e.message; }
+  // 5) sakinler distinct blok ORDER BY 1
+  try {
+    const r = (await q("SELECT DISTINCT COALESCE(NULLIF(TRIM(blok), ''), 'Diğer') AS blok FROM sakinler ORDER BY 1")).rows;
+    sonuclar.sakinler_distinct_orderby1 = r;
+  } catch (e) { sonuclar.sakinler_distinct_orderby1 = 'HATA: ' + e.message; }
+  // 6) sakinler distinct blok tam ifade
+  try {
+    const r = (await q("SELECT DISTINCT COALESCE(NULLIF(TRIM(blok), ''), 'Diğer') AS blok FROM sakinler ORDER BY COALESCE(NULLIF(TRIM(blok), ''), 'Diğer')")).rows;
+    sonuclar.sakinler_distinct_full = r;
+  } catch (e) { sonuclar.sakinler_distinct_full = 'HATA: ' + e.message; }
+  res.json(sonuclar);
+}));
+
 // --- Duyuru yönetimi ---
 app.get('/yonetim/duyurular', adminGerekli, ah(async (req, res) => {
   const duyurular = (await q('SELECT * FROM duyurular ORDER BY id DESC')).rows;
