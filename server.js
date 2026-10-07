@@ -1303,28 +1303,44 @@ app.get('/yonetim/sakin-bilgileri', adminGerekli, ah(async (req, res) => {
     }
     const where = kosullar.length ? 'WHERE ' + kosullar.join(' AND ') : '';
 
-    const malikler = (await q(
-      `SELECT * FROM malik_bilgileri ${where}
-       ORDER BY
-         CASE blok WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 WHEN 'D' THEN 4 WHEN 'E' THEN 5
-                   WHEN 'F' THEN 6 WHEN 'G' THEN 7 WHEN 'H' THEN 8 WHEN 'I' THEN 9 WHEN 'İ' THEN 10
-                   WHEN 'J' THEN 11 ELSE 99 END,
-         CASE WHEN LOWER(kat) = 'zemin' THEN 0
-              WHEN LOWER(kat) = 'giris' THEN 0
-              ELSE 999 END,
-         NULLIF(regexp_replace(COALESCE(daire, '0'), '\\D', '', 'g'), '')::int ASC NULLS LAST,
-         sira::int ASC NULLS LAST, id ASC`
-    )).rows;
+    // malikler sorgusu - tek basina try-catch
+    let malikler = [];
+    try {
+      malikler = (await q(
+        `SELECT * FROM malik_bilgileri ${where}
+         ORDER BY
+           CASE blok WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 WHEN 'D' THEN 4 WHEN 'E' THEN 5
+                     WHEN 'F' THEN 6 WHEN 'G' THEN 7 WHEN 'H' THEN 8 WHEN 'I' THEN 9 WHEN 'İ' THEN 10
+                     WHEN 'J' THEN 11 ELSE 99 END,
+           CASE WHEN LOWER(COALESCE(kat, '')) = 'zemin' THEN 0
+                WHEN LOWER(COALESCE(kat, '')) = 'giris' THEN 0
+                ELSE 999 END,
+           NULLIF(regexp_replace(COALESCE(daire, '0'), '\\D', '', 'g'), '')::int ASC NULLS LAST,
+           id ASC`
+      )).rows;
+    } catch (eMalik) {
+      console.error('sakin-bilgileri malikler sorgusu:', eMalik.message);
+      // Basit sorgu fallback
+      malikler = (await q(
+        `SELECT * FROM malik_bilgileri ${where} ORDER BY blok, id ASC`
+      )).rows;
+    }
 
     // İstatistikler (malik)
-    const istatistik = (await q(
-      `SELECT durum, COUNT(*)::int AS adet FROM malik_bilgileri GROUP BY durum`
-    )).rows;
+    let istatistik = [];
+    try {
+      istatistik = (await q(
+        `SELECT durum, COUNT(*)::int AS adet FROM malik_bilgileri GROUP BY durum`
+      )).rows;
+    } catch (eIstat) { console.warn('istatistik:', eIstat.message); }
 
     // Blok listesi (malik)
-    const bloklar = (await q(
-      `SELECT DISTINCT blok FROM malik_bilgileri WHERE blok IS NOT NULL AND blok <> '' ORDER BY blok`
-    )).rows.map(r => r.blok);
+    let bloklar = [];
+    try {
+      bloklar = (await q(
+        `SELECT DISTINCT blok FROM malik_bilgileri WHERE blok IS NOT NULL AND blok <> '' ORDER BY blok`
+      )).rows.map(r => r.blok);
+    } catch (eBlok) { console.warn('bloklar:', eBlok.message); }
 
     const tab = (req.query.tab || 'malik').trim();
 
@@ -1353,7 +1369,7 @@ app.get('/yonetim/sakin-bilgileri', adminGerekli, ah(async (req, res) => {
       sakinBloklar
     });
   } catch (e) {
-    console.error('sakin-bilgileri GET hata:', e.message, '\nStack:', e.stack, '\nQuery:', e.query || 'yok', '\nParams:', e.parameters || 'yok');
+    console.error('sakin-bilgileri GET hata:', e.message, '\nStack:', e.stack);
     req.flash('hata', 'Sayfa yüklenirken bir hata oluştu. Lütfen tekrar deneyin.');
     res.redirect('/yonetim/sakin-bilgileri');
   }
