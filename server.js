@@ -1370,8 +1370,13 @@ app.get('/yonetim/sakin-bilgileri', adminGerekli, ah(async (req, res) => {
     });
   } catch (e) {
     console.error('sakin-bilgileri GET hata:', e.message, '\nStack:', e.stack);
-    req.flash('hata', 'Sayfa yüklenirken bir hata oluştu. Lütfen tekrar deneyin.');
-    res.redirect('/yonetim/sakin-bilgileri');
+    // Hata detayini response'a yaz (debug)
+    res.status(500).send(
+      '<h1>DEBUG HATA</h1>' +
+      '<p><b>Mesaj:</b> ' + e.message + '</p>' +
+      '<p><b>Stack:</b> <pre>' + (e.stack || '').replace(/</g, '&lt;').slice(0, 2000) + '</pre></p>' +
+      '<p><a href="/yonetim/sakin-bilgileri">Geri</a></p>'
+    );
   }
 }));
 
