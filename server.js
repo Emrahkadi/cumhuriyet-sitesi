@@ -871,6 +871,23 @@ app.get('/yonetim/debug/sorgu-test', adminGerekli, ah(async (req, res) => {
     const r = (await q("SELECT DISTINCT COALESCE(NULLIF(TRIM(blok), ''), 'Diğer') AS blok FROM sakinler ORDER BY COALESCE(NULLIF(TRIM(blok), ''), 'Diğer')")).rows;
     sonuclar.sakinler_distinct_full = r;
   } catch (e) { sonuclar.sakinler_distinct_full = 'HATA: ' + e.message; }
+  // 7) malikler filtreli (blok=A) - EN ONEMLI
+  try {
+    const r = (await q(
+      `SELECT * FROM malik_bilgileri WHERE blok = $1
+       ORDER BY
+         CASE blok WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 WHEN 'D' THEN 4 WHEN 'E' THEN 5
+                   WHEN 'F' THEN 6 WHEN 'G' THEN 7 WHEN 'H' THEN 8 WHEN 'I' THEN 9 WHEN 'İ' THEN 10
+                   WHEN 'J' THEN 11 ELSE 99 END,
+         CASE WHEN LOWER(kat) = 'zemin' THEN 0
+              WHEN LOWER(kat) = 'giris' THEN 0
+              ELSE 999 END,
+         NULLIF(regexp_replace(COALESCE(daire, '0'), '\\D', '', 'g'), '')::int ASC NULLS LAST,
+         sira::int ASC NULLS LAST, id ASC`,
+      ['A']
+    )).rows;
+    sonuclar.malikler_filtre_A = { count: r.length, sample: r[0] || null };
+  } catch (e) { sonuclar.malikler_filtre_A = 'HATA: ' + e.message; }
   res.json(sonuclar);
 }));
 
