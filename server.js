@@ -1316,13 +1316,15 @@ app.get('/yonetim/sakin-bilgileri', adminGerekli, ah(async (req, res) => {
                 WHEN LOWER(COALESCE(kat, '')) = 'giris' THEN 0
                 ELSE 999 END,
            NULLIF(regexp_replace(COALESCE(daire, '0'), '\\D', '', 'g'), '')::int ASC NULLS LAST,
-           id ASC`
+           id ASC`,
+        params
       )).rows;
     } catch (eMalik) {
       console.error('sakin-bilgileri malikler sorgusu:', eMalik.message);
-      // Basit sorgu fallback
+      // Basit sorgu fallback - params ile
       malikler = (await q(
-        `SELECT * FROM malik_bilgileri ${where} ORDER BY blok, id ASC`
+        `SELECT * FROM malik_bilgileri ${where} ORDER BY blok, id ASC`,
+        params
       )).rows;
     }
 
@@ -1370,13 +1372,8 @@ app.get('/yonetim/sakin-bilgileri', adminGerekli, ah(async (req, res) => {
     });
   } catch (e) {
     console.error('sakin-bilgileri GET hata:', e.message, '\nStack:', e.stack);
-    // Hata detayini response'a yaz (debug)
-    res.status(500).send(
-      '<h1>DEBUG HATA</h1>' +
-      '<p><b>Mesaj:</b> ' + e.message + '</p>' +
-      '<p><b>Stack:</b> <pre>' + (e.stack || '').replace(/</g, '&lt;').slice(0, 2000) + '</pre></p>' +
-      '<p><a href="/yonetim/sakin-bilgileri">Geri</a></p>'
-    );
+    req.flash('hata', 'Sayfa yüklenirken bir hata oluştu. Lütfen tekrar deneyin.');
+    res.redirect('/yonetim/sakin-bilgileri');
   }
 }));
 
