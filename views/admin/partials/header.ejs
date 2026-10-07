@@ -54,3 +54,43 @@
       <% if (hata && hata.length) { %>
         <div class="alert alert-error"><%= hata %></div>
       <% } %>
+
+      <script>
+        // Admin sidebar drawer (mobil/tablet)
+        (function() {
+          var sidebar = document.getElementById('adminSidebar');
+          var toggle = document.getElementById('adminSidebarToggle');
+          var closeBtn = document.getElementById('adminSidebarClose');
+          var overlay = document.getElementById('adminOverlay');
+          var body = document.body;
+          if (!sidebar || !toggle) return;
+          function openSidebar() {
+            sidebar.classList.add('open');
+            toggle.setAttribute('aria-expanded', 'true');
+            body.classList.add('menu-open');
+            if (overlay) overlay.classList.add('open');
+          }
+          function closeSidebar() {
+            sidebar.classList.remove('open');
+            toggle.setAttribute('aria-expanded', 'false');
+            body.classList.remove('menu-open');
+            if (overlay) overlay.classList.remove('open');
+          }
+          toggle.addEventListener('click', function() {
+            if (sidebar.classList.contains('open')) closeSidebar();
+            else openSidebar();
+          });
+          if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
+          if (overlay) overlay.addEventListener('click', closeSidebar);
+          // Link tıklaması ile sidebar'ı kapat (mobilde)
+          sidebar.querySelectorAll('a').forEach(function(link) {
+            link.addEventListener('click', function() {
+              if (window.innerWidth <= 900) closeSidebar();
+            });
+          });
+          // ESC ile kapat
+          document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && sidebar.classList.contains('open')) closeSidebar();
+          });
+        })();
+      </script>
