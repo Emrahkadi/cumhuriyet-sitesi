@@ -1254,12 +1254,18 @@ app.get('/yonetim/sakin-bilgileri', adminGerekli, ah(async (req, res) => {
 
     const tab = (req.query.tab || 'malik').trim();
 
-    // Toplam sakin sayısı (sidebar rozet için)
-    const sakinSayisi = (await q('SELECT COUNT(*)::int AS c FROM sakinler')).rows[0].c;
-    const sakinBloklar = (await q(
-      `SELECT DISTINCT COALESCE(NULLIF(TRIM(blok), ''), 'Diğer') AS blok
-       FROM sakinler ORDER BY 1`
-    )).rows.map(r => r.blok);
+    // Toplam sakin sayısı (sidebar rozet için) - hata olursa 0 goster
+    let sakinSayisi = 0;
+    let sakinBloklar = [];
+    try {
+      sakinSayisi = (await q('SELECT COUNT(*)::int AS c FROM sakinler')).rows[0].c;
+      sakinBloklar = (await q(
+        `SELECT DISTINCT COALESCE(NULLIF(TRIM(blok), ''), 'Diğer') AS blok
+         FROM sakinler ORDER BY COALESCE(NULLIF(TRIM(blok), ''), 'Diğer')`
+      )).rows.map(r => r.blok);
+    } catch (eSakin) {
+      console.warn('sakinler sorgusu basarisiz (sakin-bilgileri):', eSakin.message);
+    }
 
     res.render('admin/sakin-bilgileri', {
       aktifSayfa: 'sakinler',
