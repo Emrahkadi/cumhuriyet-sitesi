@@ -190,13 +190,9 @@ const BLOK_LISTESI = ['A','B','C','D','E','F','G','H','I','İ','J'];
 // --- Görünüm motoru ---
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
-// Production'da EJS template cache (performans)
-// NOT: app.enable() ile zorla acmak cache'i tutar ve deploy'da eski template gorulebilir
-// Bunu onlemek icin app.disable() ile basliyoruz, app.set() ile production'da aktif ediyoruz
+// View cache'i tamamen kapat - deploy sonrasi yeni template hemen gorulur
+// (Performans DB pool ve gzip ile zaten yeterince iyi)
 app.disable('view cache');
-if (process.env.NODE_ENV === 'production') {
-  app.enable('view cache');
-}
 
 // Ters proxy (Hostinger/Render) arkasında gerçek IP ve güvenli çerez için
 app.set('trust proxy', 1);
