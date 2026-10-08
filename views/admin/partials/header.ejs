@@ -9,6 +9,20 @@
   <link rel="stylesheet" href="/css/style.css?v=16" />
   <link rel="stylesheet" href="/css/admin.css?v=9" />
   <link rel="stylesheet" href="https://cdn.quilljs.com/1.3.7/quill.snow.css" />
+  <style>
+    /* KRITIK INLINE FIX - cache'den bagimsiz */
+    .admin-body { display: flex; min-height: 100vh; }
+    .admin-sidebar { position: fixed !important; top: 0 !important; bottom: 0 !important; left: 0 !important; width: 250px; z-index: 200 !important; background: #1a1f2e; color: #c8cdd8; display: flex; flex-direction: column; transition: transform 0.3s ease; }
+    .admin-main { margin-left: 250px; flex: 1; min-width: 0; }
+    .admin-topbar { background: #fff; padding: 14px 24px; display: flex; align-items: center; gap: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); position: sticky; top: 0; z-index: 10; }
+    .admin-sidebar-toggle { display: flex; background: none; border: none; padding: 8px; cursor: pointer; flex-direction: column; gap: 4px; align-items: center; justify-content: center; border-radius: 8px; width: 40px; height: 40px; flex-shrink: 0; }
+    .admin-sidebar-toggle span { width: 22px; height: 2.5px; background: #333; border-radius: 3px; transition: 0.3s; }
+    @media (max-width: 900px) {
+      .admin-main { margin-left: 0 !important; }
+      .admin-sidebar { transform: translateX(-100%); }
+      .admin-sidebar.open { transform: translateX(0); }
+    }
+  </style>
 </head>
 <body class="admin-body">
   <div class="admin-overlay" id="adminOverlay"></div>
