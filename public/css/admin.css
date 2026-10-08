@@ -101,7 +101,8 @@ body.menu-open { overflow: hidden; }
 
 /* Drawer açıkken hamburger butonu gizle */
 body.menu-open .admin-sidebar-toggle { opacity: 0; pointer-events: none; }
-  display: none;
+.admin-sidebar-toggle {
+  display: flex;
   background: none;
   border: none;
   padding: 8px;
@@ -114,6 +115,7 @@ body.menu-open .admin-sidebar-toggle { opacity: 0; pointer-events: none; }
   width: 40px; height: 40px;
   position: relative;
   z-index: 250;
+  flex-shrink: 0;
 }
 .admin-sidebar-toggle span {
   width: 22px; height: 2.5px;
