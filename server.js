@@ -264,6 +264,10 @@ app.use(
       if (/\.(jpe?g|png|webp|gif|svg|ico)$/i.test(dosyaYolu)) {
         res.setHeader('Cache-Control', 'public, max-age=2592000, immutable');
       }
+      // CSS/JS için kısa önbellek (deploy sonrası hemen yenilensin)
+      if (/\.(css|js)$/i.test(dosyaYolu)) {
+        res.setHeader('Cache-Control', 'public, max-age=300, must-revalidate');
+      }
     }
   })
 );
