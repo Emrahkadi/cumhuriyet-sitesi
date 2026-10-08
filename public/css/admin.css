@@ -1,6 +1,5 @@
 ﻿/* ============================================================
    Cumhuriyet Sitesi - Yönetim Paneli Stilleri
-   v9 - sidebar position fixed zorla
    ============================================================ */
 
 .admin-body {
@@ -16,18 +15,10 @@
   color: #c8cdd8;
   display: flex;
   flex-direction: column;
-  position: fixed !important;
-  top: 0 !important;
-  bottom: 0 !important;
-  left: 0 !important;
-  z-index: 200 !important;
-  transition: transform 0.3s ease, opacity 0.3s ease;
-}
-.admin-main {
-  margin-left: 250px !important;
-}
-@media (max-width: 900px) {
-  .admin-main { margin-left: 0 !important; }
+  position: fixed;
+  top: 0; bottom: 0; left: 0;
+  z-index: 200;
+  transition: transform 0.3s ease;
 }
 .admin-logo {
   padding: 22px 20px;
@@ -110,8 +101,7 @@ body.menu-open { overflow: hidden; }
 
 /* Drawer açıkken hamburger butonu gizle */
 body.menu-open .admin-sidebar-toggle { opacity: 0; pointer-events: none; }
-.admin-sidebar-toggle {
-  display: flex;
+  display: none;
   background: none;
   border: none;
   padding: 8px;
@@ -124,13 +114,6 @@ body.menu-open .admin-sidebar-toggle { opacity: 0; pointer-events: none; }
   width: 40px; height: 40px;
   position: relative;
   z-index: 250;
-  flex-shrink: 0;
-}
-.admin-sidebar-toggle span {
-  width: 22px; height: 2.5px;
-  background: var(--metin);
-  border-radius: 3px;
-  transition: 0.3s;
 }
 .admin-sidebar-toggle span {
   width: 22px; height: 2.5px;
