@@ -18,7 +18,8 @@
   position: fixed;
   top: 0; bottom: 0; left: 0;
   z-index: 200;
-  transition: transform 0.3s ease;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  /* desktop'ta gorunur, mobilde body.menu-open olunca .open sinifi ile gorunur */
 }
 .admin-logo {
   padding: 22px 20px;
