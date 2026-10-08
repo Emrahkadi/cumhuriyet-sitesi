@@ -100,15 +100,15 @@
 body.menu-open { overflow: hidden; }
 
 /* Drawer açıkken hamburger butonu gizle */
-body.menu-open .admin-sidebar-toggle { opacity: 0; pointer-events: none; }
+body.menu-open .admin-sidebar-toggle { opacity: 0.3; pointer-events: none; }
 .admin-sidebar-toggle {
-  display: flex;
-  background: none;
+  display: flex !important;
+  background: #1a1f2e;
   border: none;
   padding: 8px;
   cursor: pointer;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
   align-items: center;
   justify-content: center;
   border-radius: 8px;
@@ -116,6 +116,14 @@ body.menu-open .admin-sidebar-toggle { opacity: 0; pointer-events: none; }
   position: relative;
   z-index: 250;
   flex-shrink: 0;
+  margin-right: 8px;
+}
+.admin-sidebar-toggle span {
+  display: block !important;
+  width: 22px; height: 3px;
+  background: #fff !important;
+  border-radius: 3px;
+  transition: 0.3s;
 }
 .admin-sidebar-toggle span {
   width: 22px; height: 2.5px;
