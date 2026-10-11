@@ -1,7 +1,121 @@
 <%- include('partials/header', { sayfaBaslik: 'Form Yönetimi' }) %>
 
+<style>
+  .formlar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .formlar-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .formlar-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 720px;
+  }
+  .formlar-table th,
+  .formlar-table td {
+    padding: 12px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--cizgi, #e0e6ed);
+    vertical-align: top;
+  }
+  .formlar-table th {
+    background: var(--arka-acik, #f5f7fa);
+    font-weight: 600;
+    font-size: .85rem;
+    color: var(--metin-koyu, #1a3a5c);
+    white-space: nowrap;
+  }
+  .formlar-table td { font-size: .9rem; }
+  .formlar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .formlar-link-cell { max-width: 220px; }
+  .formlar-link-code {
+    font-size: .8em;
+    background: var(--arka-acik, #f5f7fa);
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+
+  @media (max-width: 768px) {
+    .formlar-table-wrap { overflow-x: visible; }
+    .formlar-table,
+    .formlar-table thead,
+    .formlar-table tbody,
+    .formlar-table tr,
+    .formlar-table th,
+    .formlar-table td {
+      display: block;
+      width: 100%;
+      min-width: 0;
+    }
+    .formlar-table thead { display: none; }
+    .formlar-table tr {
+      background: #fff;
+      border: 1px solid var(--cizgi, #e0e6ed);
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.04);
+    }
+    .formlar-table td {
+      padding: 6px 0;
+      border: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    .formlar-table td:before {
+      content: attr(data-label);
+      font-weight: 600;
+      font-size: .8rem;
+      color: var(--metin-acik, #6b7c93);
+      flex-shrink: 0;
+      min-width: 80px;
+    }
+    .formlar-table td[data-label="İşlem"] {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+      padding-top: 10px;
+      margin-top: 6px;
+      border-top: 1px solid var(--cizgi, #e0e6ed);
+    }
+    .formlar-table td[data-label="İşlem"]:before { display: none; }
+    .formlar-actions { width: 100%; }
+    .formlar-actions a,
+    .formlar-actions button {
+      flex: 1;
+      text-align: center;
+      padding: 8px 6px;
+      font-size: .85rem;
+    }
+    .formlar-link-cell { max-width: 100%; }
+    .formlar-link-code {
+      max-width: 100%;
+      word-break: break-all;
+      white-space: normal;
+    }
+  }
+</style>
+
 <div class="admin-panel-box">
-  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+  <div class="formlar-header">
     <div>
       <h2 style="margin:0;">📋 Dinamik Formlar</h2>
       <p class="admin-hint">Üye olmayan kişilerin doldurabileceği formlar oluşturun. Her forma özel paylaşılabilir link üretilir.</p>
@@ -17,62 +131,66 @@
     <a href="/yonetim/formlar/yeni" class="btn btn-primary">+ İlk Formumu Oluştur</a>
   </div>
 <% } else { %>
-  <div class="admin-panel-box" style="padding:0;overflow-x:auto;">
-    <table class="admin-table">
-      <thead>
-        <tr>
-          <th>Başlık</th>
-          <th>Alan</th>
-          <th>Yanıt</th>
-          <th>Durum</th>
-          <th>Link</th>
-          <th>Tarih</th>
-          <th>İşlem</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% formlar.forEach(function(f) { %>
+  <div class="admin-panel-box" style="padding:0;">
+    <div class="formlar-table-wrap">
+      <table class="formlar-table">
+        <thead>
           <tr>
-            <td>
-              <strong><%= f.baslik %></strong>
-              <% if (f.aciklama) { %>
-                <div style="font-size:.85em;color:var(--metin-acik);margin-top:4px;"><%= f.aciklama.slice(0, 80) %><%= f.aciklama.length > 80 ? '…' : '' %></div>
-              <% } %>
-            </td>
-            <td><span class="badge badge-durum"><%= f.alan_sayisi %> alan</span></td>
-            <td>
-              <% if (f.yanit_sayisi > 0) { %>
-                <a href="/yonetim/formlar/yanitlar/<%= f.id %>" class="badge badge-onayli"><%= f.yanit_sayisi %> yanıt</a>
-              <% } else { %>
-                <span style="color:var(--metin-acik);">0 yanıt</span>
-              <% } %>
-            </td>
-            <td>
-              <% if (f.durum === 1) { %>
-                <span class="badge badge-onayli">Açık</span>
-              <% } else { %>
-                <span class="badge badge-bekliyor">Kapalı</span>
-              <% } %>
-              <% if (f.tek_yanit) { %>
-                <div style="font-size:.75em;color:var(--metin-acik);margin-top:4px;">Tek yanıt</div>
-              <% } %>
-            </td>
-            <td>
-              <code style="font-size:.8em;background:var(--arka-acik);padding:4px 8px;border-radius:4px;display:inline-block;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="/form/<%= f.slug %>">/form/<%= f.slug %></code>
-              <button type="button" class="btn-duzenle" onclick="copyLink('<%= f.slug %>')" style="margin-top:4px;">📋 Kopyala</button>
-            </td>
-            <td style="font-size:.85em;color:var(--metin-acik);"><%= f.olusturma_tarihi %></td>
-            <td>
-              <a href="/yonetim/formlar/duzenle/<%= f.id %>" class="btn-duzenle">✏️ Düzenle</a>
-              <a href="/yonetim/formlar/yanitlar/<%= f.id %>" class="btn-duzenle">📊 Yanıtlar</a>
-              <form action="/yonetim/formlar/sil/<%= f.id %>" method="POST" data-confirm="Bu form ve TÜM yanıtları silinsin mi?" style="display:inline">
-                <button type="submit" class="btn-sil">🗑️ Sil</button>
-              </form>
-            </td>
+            <th>Başlık</th>
+            <th>Alan</th>
+            <th>Yanıt</th>
+            <th>Durum</th>
+            <th>Link</th>
+            <th>Tarih</th>
+            <th>İşlem</th>
           </tr>
-        <% }); %>
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          <% formlar.forEach(function(f) { %>
+            <tr>
+              <td data-label="Başlık">
+                <strong><%= f.baslik %></strong>
+                <% if (f.aciklama) { %>
+                  <div style="font-size:.85em;color:var(--metin-acik);margin-top:4px;"><%= f.aciklama.slice(0, 80) %><%= f.aciklama.length > 80 ? '…' : '' %></div>
+                <% } %>
+              </td>
+              <td data-label="Alan"><span class="badge badge-durum"><%= f.alan_sayisi %> alan</span></td>
+              <td data-label="Yanıt">
+                <% if (f.yanit_sayisi > 0) { %>
+                  <a href="/yonetim/formlar/yanitlar/<%= f.id %>" class="badge badge-onayli"><%= f.yanit_sayisi %> yanıt</a>
+                <% } else { %>
+                  <span style="color:var(--metin-acik);">0 yanıt</span>
+                <% } %>
+              </td>
+              <td data-label="Durum">
+                <% if (f.durum === 1) { %>
+                  <span class="badge badge-onayli">Açık</span>
+                <% } else { %>
+                  <span class="badge badge-bekliyor">Kapalı</span>
+                <% } %>
+                <% if (f.tek_yanit) { %>
+                  <div style="font-size:.75em;color:var(--metin-acik);margin-top:4px;">Tek yanıt</div>
+                <% } %>
+              </td>
+              <td data-label="Link" class="formlar-link-cell">
+                <code class="formlar-link-code" title="/form/<%= f.slug %>">/form/<%= f.slug %></code>
+                <button type="button" class="btn-duzenle" onclick="copyLink('<%= f.slug %>')" style="margin-top:4px;">📋 Kopyala</button>
+              </td>
+              <td data-label="Tarih" style="font-size:.85em;color:var(--metin-acik);white-space:nowrap;"><%= f.olusturma_tarihi %></td>
+              <td data-label="İşlem">
+                <div class="formlar-actions">
+                  <a href="/yonetim/formlar/duzenle/<%= f.id %>" class="btn-duzenle">✏️ Düzenle</a>
+                  <a href="/yonetim/formlar/yanitlar/<%= f.id %>" class="btn-duzenle">📊 Yanıtlar</a>
+                  <form action="/yonetim/formlar/sil/<%= f.id %>" method="POST" data-confirm="Bu form ve TÜM yanıtları silinsin mi?" style="display:inline">
+                    <button type="submit" class="btn-sil">🗑️ Sil</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
   </div>
 <% } %>
 

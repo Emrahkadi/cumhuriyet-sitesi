@@ -1,5 +1,71 @@
 <%- include('partials/header', { sayfaBaslik: 'Yanıt Detayı' }) %>
 
+<style>
+  .yanit-detay-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .yanit-detay-table th,
+  .yanit-detay-table td {
+    padding: 12px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--cizgi, #e0e6ed);
+    vertical-align: top;
+  }
+  .yanit-detay-table th {
+    background: var(--arka-acik, #f5f7fa);
+    font-weight: 600;
+    width: 30%;
+    color: var(--metin-koyu, #1a3a5c);
+  }
+  .yanit-detay-table td {
+    word-break: break-word;
+  }
+  .yanit-detay-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .yanit-detay-actions .btn { flex: 1; min-width: 140px; }
+
+  @media (max-width: 600px) {
+    .yanit-detay-table,
+    .yanit-detay-table tbody,
+    .yanit-detay-table tr,
+    .yanit-detay-table th,
+    .yanit-detay-table td {
+      display: block;
+      width: 100%;
+    }
+    .yanit-detay-table tr {
+      border: 1px solid var(--cizgi, #e0e6ed);
+      border-radius: 8px;
+      margin-bottom: 10px;
+      padding: 10px;
+      background: #fff;
+    }
+    .yanit-detay-table th {
+      width: 100%;
+      background: transparent;
+      padding: 4px 0;
+      font-size: .85rem;
+      color: var(--metin-acik, #6b7c93);
+      border-bottom: none;
+    }
+    .yanit-detay-table td {
+      padding: 4px 0 10px 0;
+      border-bottom: none;
+    }
+    .yanit-detay-actions {
+      flex-direction: column;
+    }
+    .yanit-detay-actions .btn {
+      width: 100%;
+      min-width: 0;
+    }
+  }
+</style>
+
 <a href="/yonetim/formlar/yanitlar/<%= yanit.form_id %>" class="back-link" style="display:inline-block;margin-bottom:14px;">← Tüm yanıtlara dön</a>
 
 <div class="admin-panel-box">
@@ -15,11 +81,11 @@
   <% if (alanlar.length === 0) { %>
     <p style="color:var(--metin-acik);">Bu formda alan yok.</p>
   <% } else { %>
-    <table class="admin-table">
+    <table class="yanit-detay-table">
       <tbody>
         <% alanlar.forEach(function(a) { %>
           <tr>
-            <th style="width:30%;"><%= a.etiket %><% if (a.zorunlu) { %> <span style="color:#c00;">*</span><% } %></th>
+            <th><%= a.etiket %><% if (a.zorunlu) { %> <span style="color:#c00;">*</span><% } %></th>
             <td>
               <% const v = degerler[a.id] || ''; %>
               <% if (!v) { %>
@@ -35,7 +101,7 @@
   <% } %>
 </div>
 
-<div style="display:flex;gap:8px;flex-wrap:wrap;">
+<div class="yanit-detay-actions">
   <form action="/yonetim/formlar/yanit/sil/<%= yanit.id %>" method="POST" data-confirm="Bu yanıt silinsin mi?" style="display:inline">
     <button type="submit" class="btn btn-outline" style="color:#c00;border-color:#c00;">🗑️ Yanıtı Sil</button>
   </form>

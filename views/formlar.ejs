@@ -1,5 +1,117 @@
 <%- include('partials/header', { sayfaBaslik: 'Formlar', aktifSayfa: 'formlar' }) %>
 
+<style>
+  .formlar-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 18px;
+  }
+  .formlar-card {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    background: #fff;
+    border: 1px solid var(--cizgi, #e0e6ed);
+    border-radius: 12px;
+    padding: 20px;
+    transition: all .2s;
+    box-shadow: 0 2px 8px rgba(0,0,0,.04);
+  }
+  .formlar-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,.08);
+  }
+  .formlar-card-top {
+    display: flex;
+    align-items: start;
+    gap: 12px;
+  }
+  .formlar-card-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+  }
+  .formlar-card-body { flex: 1; min-width: 0; }
+  .formlar-card-title {
+    margin: 0 0 6px 0;
+    font-size: 1.1rem;
+    color: var(--metin-koyu, #1a3a5c);
+    word-break: break-word;
+  }
+  .formlar-card-desc {
+    margin: 0 0 10px 0;
+    font-size: .9rem;
+    color: var(--metin-acik, #6b7c93);
+    line-height: 1.4;
+  }
+  .formlar-card-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    font-size: .8rem;
+  }
+  .formlar-tag {
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-weight: 600;
+  }
+  .formlar-tag-success {
+    background: #e8f5e9;
+    color: #2e7d32;
+  }
+  .formlar-tag-neutral {
+    background: var(--arka-acik, #f5f7fa);
+    color: var(--metin-acik, #6b7c93);
+  }
+  .formlar-card-footer {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--cizgi, #e0e6ed);
+    text-align: right;
+  }
+  .formlar-card-cta {
+    color: var(--birincil, #1a3a5c);
+    font-weight: 600;
+    font-size: .9rem;
+  }
+  .formlar-empty {
+    text-align: center;
+    padding: 60px 20px;
+    background: var(--arka-acik, #f5f7fa);
+    border-radius: 12px;
+  }
+  .formlar-empty-icon {
+    font-size: 3rem;
+    margin-bottom: 12px;
+  }
+  .formlar-tip {
+    margin-top: 40px;
+    padding: 20px;
+    background: var(--arka-acik, #f5f7fa);
+    border-radius: 12px;
+    text-align: center;
+  }
+  .formlar-tip p {
+    margin: 0;
+    color: var(--metin-acik, #6b7c93);
+    font-size: .9rem;
+  }
+
+  @media (max-width: 600px) {
+    .formlar-grid {
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+    .formlar-card {
+      padding: 16px;
+    }
+    .formlar-card-icon { font-size: 1.6rem; }
+    .formlar-card-title { font-size: 1rem; }
+    .formlar-empty { padding: 40px 16px; }
+    .formlar-empty-icon { font-size: 2.5rem; }
+    .formlar-tip { padding: 16px; margin-top: 24px; }
+  }
+</style>
+
 <section class="page-hero">
   <div class="container">
     <h1>📋 Formlar</h1>
@@ -9,39 +121,39 @@
 
 <section class="container" style="padding:40px 20px;">
   <% if (formlar.length === 0) { %>
-    <div class="empty-state" style="text-align:center;padding:60px 20px;background:var(--arka-acik,#f5f7fa);border-radius:12px;">
-      <div style="font-size:3rem;margin-bottom:12px;">📭</div>
+    <div class="formlar-empty">
+      <div class="formlar-empty-icon">📭</div>
       <h3 style="margin:0 0 8px 0;color:var(--metin-koyu,#1a3a5c);">Henüz açık form yok</h3>
       <p style="color:var(--metin-acik,#6b7c93);margin:0;">Site yönetimi yeni bir form paylaştığında burada görünecek.</p>
     </div>
-  <% } else { %>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;">
+  <% else { %>
+    <div class="formlar-grid">
       <% formlar.forEach(function(f) { %>
-        <a href="/form/<%= f.slug %>" style="text-decoration:none;color:inherit;display:block;background:#fff;border:1px solid var(--cizgi,#e0e6ed);border-radius:12px;padding:20px;transition:all .2s;box-shadow:0 2px 8px rgba(0,0,0,.04);" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(0,0,0,.08)';" onmouseout="this.style.transform='';this.style.boxShadow='0 2px 8px rgba(0,0,0,.04)';">
-          <div style="display:flex;align-items:start;gap:12px;">
-            <div style="font-size:2rem;flex-shrink:0;">📝</div>
-            <div style="flex:1;min-width:0;">
-              <h3 style="margin:0 0 6px 0;font-size:1.1rem;color:var(--metin-koyu,#1a3a5c);"><%= f.baslik %></h3>
+        <a href="/form/<%= f.slug %>" class="formlar-card">
+          <div class="formlar-card-top">
+            <div class="formlar-card-icon">📝</div>
+            <div class="formlar-card-body">
+              <h3 class="formlar-card-title"><%= f.baslik %></h3>
               <% if (f.aciklama) { %>
-                <p style="margin:0 0 10px 0;font-size:.9rem;color:var(--metin-acik,#6b7c93);line-height:1.4;"><%= f.aciklama.length > 100 ? f.aciklama.slice(0, 100) + '…' : f.aciklama %></p>
+                <p class="formlar-card-desc"><%= f.aciklama.length > 100 ? f.aciklama.slice(0, 100) + '…' : f.aciklama %></p>
               <% } %>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;font-size:.8rem;">
-                <span style="background:#e8f5e9;color:#2e7d32;padding:3px 10px;border-radius:12px;font-weight:600;">✅ Açık</span>
-                <span style="background:var(--arka-acik,#f5f7fa);color:var(--metin-acik,#6b7c93);padding:3px 10px;border-radius:12px;"><%= f.alan_sayisi %> alan</span>
-                <span style="background:var(--arka-acik,#f5f7fa);color:var(--metin-acik,#6b7c93);padding:3px 10px;border-radius:12px;"><%= f.olusturma_tarihi %></span>
+              <div class="formlar-card-tags">
+                <span class="formlar-tag formlar-tag-success">✅ Açık</span>
+                <span class="formlar-tag formlar-tag-neutral"><%= f.alan_sayisi %> alan</span>
+                <span class="formlar-tag formlar-tag-neutral"><%= f.olusturma_tarihi %></span>
               </div>
             </div>
           </div>
-          <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--cizgi,#e0e6ed);text-align:right;">
-            <span style="color:var(--birincil,#1a3a5c);font-weight:600;font-size:.9rem;">Doldurmak için tıklayın →</span>
+          <div class="formlar-card-footer">
+            <span class="formlar-card-cta">Doldurmak için tıklayın →</span>
           </div>
         </a>
       <% }); %>
     </div>
   <% } %>
 
-  <div style="margin-top:40px;padding:20px;background:var(--arka-acik,#f5f7fa);border-radius:12px;text-align:center;">
-    <p style="margin:0;color:var(--metin-acik,#6b7c93);font-size:.9rem;">
+  <div class="formlar-tip">
+    <p>
       💡 <strong>İpucu:</strong> Form linklerini WhatsApp grubunda veya e-postada paylaşabilirsiniz.
       Herkes üye olmadan doldurabilir.
     </p>

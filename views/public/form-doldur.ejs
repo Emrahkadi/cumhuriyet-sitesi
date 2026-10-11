@@ -2,18 +2,48 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title><%= form.baslik %> - Cumhuriyet Sitesi</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css?v=16" />
   <style>
-    body { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); min-height: 100vh; padding: 20px 0; }
-    .form-container { max-width: 640px; margin: 0 auto; background: #fff; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,.1); padding: 32px; }
-    .form-container h1 { margin: 0 0 8px 0; font-size: 1.6rem; color: #1a3a5c; }
-    .form-container .desc { color: #6b7c93; margin-bottom: 24px; }
+    * { box-sizing: border-box; }
+    body {
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+      padding: 20px 0;
+      margin: 0;
+      font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    .form-container {
+      max-width: 640px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,.1);
+      padding: 32px;
+      width: calc(100% - 24px);
+    }
+    .form-container h1 {
+      margin: 0 0 8px 0;
+      font-size: 1.6rem;
+      color: #1a3a5c;
+      word-break: break-word;
+    }
+    .form-container .desc {
+      color: #6b7c93;
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
     .form-group { margin-bottom: 18px; }
-    .form-group label { display: block; font-weight: 600; margin-bottom: 6px; color: #2c3e50; }
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #2c3e50;
+      font-size: .95rem;
+    }
     .form-group label .req { color: #c00; margin-left: 4px; }
     .form-group input[type="text"],
     .form-group input[type="email"],
@@ -21,26 +51,125 @@
     .form-group input[type="number"],
     .form-group input[type="date"],
     .form-group textarea,
-    .form-group select { width: 100%; padding: 10px 14px; border: 1px solid #d0d7e0; border-radius: 8px; font-size: 1rem; font-family: inherit; box-sizing: border-box; transition: border-color .2s; }
+    .form-group select {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid #d0d7e0;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-family: inherit;
+      transition: border-color .2s;
+      -webkit-appearance: none;
+      appearance: none;
+    }
     .form-group input:focus,
     .form-group textarea:focus,
-    .form-group select:focus { outline: none; border-color: #1a3a5c; box-shadow: 0 0 0 3px rgba(26,58,92,.1); }
-    .form-group textarea { resize: vertical; min-height: 90px; }
+    .form-group select:focus {
+      outline: none;
+      border-color: #1a3a5c;
+      box-shadow: 0 0 0 3px rgba(26,58,92,.1);
+    }
+    .form-group textarea {
+      resize: vertical;
+      min-height: 90px;
+    }
     .form-group .radio-group,
-    .form-group .checkbox-group { display: flex; flex-direction: column; gap: 8px; }
+    .form-group .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
     .form-group .radio-group label,
-    .form-group .checkbox-group label { display: flex; align-items: center; gap: 8px; font-weight: 400; cursor: pointer; padding: 8px 12px; border: 1px solid #e0e6ed; border-radius: 6px; transition: background .15s; }
+    .form-group .checkbox-group label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 400;
+      cursor: pointer;
+      padding: 10px 14px;
+      border: 1px solid #e0e6ed;
+      border-radius: 8px;
+      transition: background .15s, border-color .15s;
+      margin: 0;
+    }
     .form-group .radio-group label:hover,
-    .form-group .checkbox-group label:hover { background: #f5f7fa; }
+    .form-group .checkbox-group label:hover {
+      background: #f5f7fa;
+      border-color: #c3cfe2;
+    }
     .form-group .radio-group input,
-    .form-group .checkbox-group input { margin: 0; }
-    .submit-btn { background: #1a3a5c; color: #fff; border: none; padding: 12px 28px; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background .2s; }
+    .form-group .checkbox-group input {
+      margin: 0;
+      flex-shrink: 0;
+      width: 18px;
+      height: 18px;
+    }
+    .submit-btn {
+      background: #1a3a5c;
+      color: #fff;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s;
+      width: 100%;
+      font-family: inherit;
+    }
     .submit-btn:hover { background: #0f2640; }
-    .errors { background: #fee; border: 1px solid #fcc; color: #c00; padding: 12px 16px; border-radius: 8px; margin-bottom: 18px; }
+    .submit-btn:active { transform: scale(.98); }
+    .errors {
+      background: #fee;
+      border: 1px solid #fcc;
+      color: #c00;
+      padding: 14px 16px;
+      border-radius: 8px;
+      margin-bottom: 18px;
+    }
     .errors ul { margin: 6px 0 0 0; padding-left: 20px; }
-    .back-link { display: inline-block; margin-bottom: 16px; color: #1a3a5c; text-decoration: none; font-size: .9rem; }
+    .errors li { margin: 4px 0; }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 16px;
+      color: #1a3a5c;
+      text-decoration: none;
+      font-size: .9rem;
+      font-weight: 500;
+    }
     .back-link:hover { text-decoration: underline; }
-    @media (max-width: 600px) { .form-container { padding: 20px; margin: 0 12px; } }
+
+    @media (max-width: 600px) {
+      body { padding: 12px 0; }
+      .form-container {
+        padding: 20px;
+        margin: 0 12px;
+        width: auto;
+        border-radius: 12px;
+      }
+      .form-container h1 { font-size: 1.3rem; }
+      .form-group input,
+      .form-group textarea,
+      .form-group select {
+        font-size: 16px; /* iOS zoom önleme */
+        padding: 11px 12px;
+      }
+      .form-group .radio-group label,
+      .form-group .checkbox-group label {
+        padding: 10px 12px;
+      }
+      .submit-btn {
+        padding: 14px 20px;
+        font-size: 1rem;
+      }
+    }
+
+    @media (max-width: 380px) {
+      .form-container { padding: 16px; margin: 0 8px; }
+      .form-container h1 { font-size: 1.2rem; }
+    }
   </style>
 </head>
 <body>

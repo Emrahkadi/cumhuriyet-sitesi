@@ -1,15 +1,111 @@
 <%- include('partials/header', { sayfaBaslik: form ? 'Formu Düzenle' : 'Yeni Form' }) %>
 
+<style>
+  .form-builder-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .form-alan {
+    background: var(--arka-acik, #f5f7fa);
+    padding: 14px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    border: 1px solid var(--cizgi, #e0e6ed);
+  }
+  .form-alan-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .form-builder-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .form-builder-actions .btn { flex: 1; min-width: 140px; }
+  .form-options-row {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .form-options-row label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+  }
+  .paylasim-link-box {
+    background: var(--arka-acik, #f5f7fa);
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+  .paylasim-link-box code {
+    background: #fff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    word-break: break-all;
+    flex: 1;
+    min-width: 0;
+  }
+
+  @media (max-width: 600px) {
+    .form-builder-grid {
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+    .form-alan {
+      padding: 12px;
+    }
+    .form-alan-header {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .form-alan-header .btn-sil {
+      width: 100%;
+    }
+    .form-builder-actions {
+      flex-direction: column;
+    }
+    .form-builder-actions .btn {
+      width: 100%;
+      min-width: 0;
+    }
+    .form-options-row {
+      flex-direction: column;
+      gap: 10px;
+    }
+    .paylasim-link-box {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .paylasim-link-box .btn-duzenle {
+      width: 100%;
+      text-align: center;
+    }
+  }
+</style>
+
 <a href="/yonetim/formlar" class="back-link" style="display:inline-block;margin-bottom:14px;">← Formlara dön</a>
 
 <form action="/yonetim/formlar/kaydet" method="POST" class="admin-panel-box" id="formBuilder">
   <% if (form) { %>
     <input type="hidden" name="id" value="<%= form.id %>" />
     <% if (form.durum === 1) { %>
-      <div style="background:var(--arka-acik);padding:12px;border-radius:8px;margin-bottom:16px;">
+      <div class="paylasim-link-box">
         <strong>Paylaşım Linki:</strong>
-        <code id="formLink" style="display:inline-block;margin-left:8px;background:#fff;padding:4px 8px;border-radius:4px;"><%= form.slug %></code>
-        <button type="button" class="btn-duzenle" onclick="copyLink()" style="margin-left:8px;">📋 Kopyala</button>
+        <code id="formLink"><%= form.slug %></code>
+        <button type="button" class="btn-duzenle" onclick="copyLink()">📋 Kopyala</button>
         <a href="/form/<%= form.slug %>" target="_blank" class="btn-duzenle">🔗 Aç</a>
       </div>
     <% } %>
@@ -28,12 +124,12 @@
     <textarea id="aciklama" name="aciklama" rows="2" maxlength="500" placeholder="Form hakkında kısa bilgi"><%= form ? form.aciklama || '' : '' %></textarea>
   </div>
 
-  <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:18px;">
-    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+  <div class="form-options-row">
+    <label>
       <input type="checkbox" name="durum" value="1" <%= !form || form.durum === 1 ? 'checked' : '' %> />
       <span>Form açık (yanıt alabilir)</span>
     </label>
-    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+    <label>
       <input type="checkbox" name="tek_yanit" value="1" <%= form && form.tek_yanit ? 'checked' : '' %> />
       <span>IP başına tek yanıt</span>
     </label>
@@ -44,24 +140,23 @@
   <h3 style="margin-top:0;">📋 Form Alanları</h3>
   <div id="alanlar"></div>
 
-  <button type="button" id="alanEkle" class="btn btn-outline" style="margin-top:12px;">+ Alan Ekle</button>
+  <button type="button" id="alanEkle" class="btn btn-outline" style="margin-top:12px;width:100%;">+ Alan Ekle</button>
 
   <hr style="margin:18px 0;border:none;border-top:1px solid var(--cizgi);" />
 
-  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+  <div class="form-builder-actions">
     <button type="submit" class="btn btn-primary"><%= form ? '💾 Güncelle' : '✅ Formu Oluştur' %></button>
     <a href="/yonetim/formlar" class="btn btn-outline">İptal</a>
   </div>
 </form>
 
-<!-- Alan şablonu -->
 <template id="alanSablon">
-  <div class="form-alan" style="background:var(--arka-acik);padding:14px;border-radius:8px;margin-bottom:12px;border:1px solid var(--cizgi);">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+  <div class="form-alan">
+    <div class="form-alan-header">
       <strong>📌 Alan #<span class="alan-no"></span></strong>
       <button type="button" class="btn-sil alan-sil">🗑️ Kaldır</button>
     </div>
-    <div style="display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-bottom:10px;">
+    <div class="form-builder-grid">
       <div>
         <label>Etiket *</label>
         <input type="text" name="alan_etiket[]" required maxlength="200" placeholder="Örn: Ad Soyad" />
@@ -138,7 +233,6 @@
 
   ekleBtn.addEventListener('click', () => alanEkle());
 
-  // Mevcut alanları yükle (düzenleme modu)
   <% if (alanlar && alanlar.length > 0) { %>
     <% alanlar.forEach(function(a) { %>
       alanEkle({
@@ -149,18 +243,9 @@
       });
     <% }); %>
   <% } else { %>
-    // Yeni form: 2 varsayılan alan ekle
     alanEkle({ etiket: 'Ad Soyad', tur: 'text', zorunlu: true });
     alanEkle({ etiket: 'Telefon', tur: 'tel' });
   <% } %>
-
-  // Slug canlı önizleme (sadece yeni form için)
-  const baslikInput = document.getElementById('baslik');
-  if (baslikInput && !document.querySelector('input[name="id"]')) {
-    baslikInput.addEventListener('input', () => {
-      // sadece görsel ipucu, gerçek slug submit'te oluşur
-    });
-  }
 })();
 
 function copyLink() {

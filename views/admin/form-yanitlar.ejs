@@ -1,9 +1,112 @@
 <%- include('partials/header', { sayfaBaslik: 'Form Yanıtları' }) %>
 
+<style>
+  .yanitlar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .yanitlar-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .yanitlar-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 600px;
+  }
+  .yanitlar-table th,
+  .yanitlar-table td {
+    padding: 12px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--cizgi, #e0e6ed);
+    vertical-align: top;
+  }
+  .yanitlar-table th {
+    background: var(--arka-acik, #f5f7fa);
+    font-weight: 600;
+    font-size: .85rem;
+    color: var(--metin-koyu, #1a3a5c);
+    white-space: nowrap;
+  }
+  .yanitlar-table td {
+    font-size: .9rem;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .yanitlar-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 768px) {
+    .yanitlar-table-wrap { overflow-x: visible; }
+    .yanitlar-table,
+    .yanitlar-table thead,
+    .yanitlar-table tbody,
+    .yanitlar-table tr,
+    .yanitlar-table th,
+    .yanitlar-table td {
+      display: block;
+      width: 100%;
+      min-width: 0;
+    }
+    .yanitlar-table thead { display: none; }
+    .yanitlar-table tr {
+      background: #fff;
+      border: 1px solid var(--cizgi, #e0e6ed);
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.04);
+    }
+    .yanitlar-table td {
+      padding: 6px 0;
+      border: none;
+      max-width: 100%;
+      white-space: normal;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    .yanitlar-table td:before {
+      content: attr(data-label);
+      font-weight: 600;
+      font-size: .8rem;
+      color: var(--metin-acik, #6b7c93);
+      flex-shrink: 0;
+      min-width: 80px;
+    }
+    .yanitlar-table td[data-label="İşlem"] {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+      padding-top: 10px;
+      margin-top: 6px;
+      border-top: 1px solid var(--cizgi, #e0e6ed);
+    }
+    .yanitlar-table td[data-label="İşlem"]:before { display: none; }
+    .yanitlar-actions { width: 100%; }
+    .yanitlar-actions a,
+    .yanitlar-actions button {
+      flex: 1;
+      text-align: center;
+      padding: 8px 6px;
+      font-size: .85rem;
+    }
+  }
+</style>
+
 <a href="/yonetim/formlar" class="back-link" style="display:inline-block;margin-bottom:14px;">← Formlara dön</a>
 
 <div class="admin-panel-box">
-  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+  <div class="yanitlar-header">
     <div>
       <h2 style="margin:0;">📊 <%= form.baslik %></h2>
       <% if (form.aciklama) { %><p style="color:var(--metin-acik);margin:6px 0 0 0;"><%= form.aciklama %></p><% } %>
@@ -25,39 +128,43 @@
     <button type="button" class="btn btn-primary" onclick="copyLink()" style="margin-top:12px;">📋 Linki Kopyala</button>
   </div>
 <% } else { %>
-  <div class="admin-panel-box" style="padding:0;overflow-x:auto;">
-    <table class="admin-table">
-      <thead>
-        <tr>
-          <th>#</th>
-          <% alanlar.forEach(function(a) { %>
-            <th><%= a.etiket %></th>
-          <% }); %>
-          <th>Tarih</th>
-          <th>İşlem</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% yanitlar.forEach(function(y, idx) { %>
+  <div class="admin-panel-box" style="padding:0;">
+    <div class="yanitlar-table-wrap">
+      <table class="yanitlar-table">
+        <thead>
           <tr>
-            <td><%= yanitlar.length - idx %></td>
+            <th>#</th>
             <% alanlar.forEach(function(a) { %>
-              <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="<%= (degerler[y.id] && degerler[y.id][a.id]) || '' %>">
-                <% const v = (degerler[y.id] && degerler[y.id][a.id]) || ''; %>
-                <%= v.length > 40 ? v.slice(0, 40) + '…' : v %>
-              </td>
+              <th><%= a.etiket %></th>
             <% }); %>
-            <td style="font-size:.85em;color:var(--metin-acik);white-space:nowrap;"><%= y.olusturma_tarihi %></td>
-            <td>
-              <a href="/yonetim/formlar/yanit/<%= y.id %>" class="btn-duzenle">👁️ Detay</a>
-              <form action="/yonetim/formlar/yanit/sil/<%= y.id %>" method="POST" data-confirm="Bu yanıt silinsin mi?" style="display:inline">
-                <button type="submit" class="btn-sil">🗑️</button>
-              </form>
-            </td>
+            <th>Tarih</th>
+            <th>İşlem</th>
           </tr>
-        <% }); %>
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          <% yanitlar.forEach(function(y, idx) { %>
+            <tr>
+              <td data-label="#"><%= yanitlar.length - idx %></td>
+              <% alanlar.forEach(function(a) { %>
+                <td data-label="<%= a.etiket %>" title="<%= (degerler[y.id] && degerler[y.id][a.id]) || '' %>">
+                  <% const v = (degerler[y.id] && degerler[y.id][a.id]) || ''; %>
+                  <%= v.length > 40 ? v.slice(0, 40) + '…' : v %>
+                </td>
+              <% }); %>
+              <td data-label="Tarih" style="font-size:.85em;color:var(--metin-acik);white-space:nowrap;"><%= y.olusturma_tarihi %></td>
+              <td data-label="İşlem">
+                <div class="yanitlar-actions">
+                  <a href="/yonetim/formlar/yanit/<%= y.id %>" class="btn-duzenle">👁️ Detay</a>
+                  <form action="/yonetim/formlar/yanit/sil/<%= y.id %>" method="POST" data-confirm="Bu yanıt silinsin mi?" style="display:inline">
+                    <button type="submit" class="btn-sil">🗑️</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
   </div>
 <% } %>
 
