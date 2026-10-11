@@ -120,37 +120,40 @@
 </section>
 
 <section class="container" style="padding:40px 20px;">
-  <% if (formlar.length === 0) { %>
-    <div class="formlar-empty">
-      <div class="formlar-empty-icon">📭</div>
-      <h3 style="margin:0 0 8px 0;color:var(--metin-koyu,#1a3a5c);">Henüz açık form yok</h3>
-      <p style="color:var(--metin-acik,#6b7c93);margin:0;">Site yönetimi yeni bir form paylaştığında burada görünecek.</p>
-    </div>
-  <% else { %>
-    <div class="formlar-grid">
-      <% formlar.forEach(function(f) { %>
-        <a href="/form/<%= f.slug %>" class="formlar-card">
-          <div class="formlar-card-top">
-            <div class="formlar-card-icon">📝</div>
-            <div class="formlar-card-body">
-              <h3 class="formlar-card-title"><%= f.baslik %></h3>
-              <% if (f.aciklama) { %>
-                <p class="formlar-card-desc"><%= f.aciklama.length > 100 ? f.aciklama.slice(0, 100) + '…' : f.aciklama %></p>
-              <% } %>
-              <div class="formlar-card-tags">
-                <span class="formlar-tag formlar-tag-success">✅ Açık</span>
-                <span class="formlar-tag formlar-tag-neutral"><%= f.alan_sayisi %> alan</span>
-                <span class="formlar-tag formlar-tag-neutral"><%= f.olusturma_tarihi %></span>
-              </div>
-            </div>
+
+<% if (formlar.length === 0) { %>
+  <div class="formlar-empty">
+    <div class="formlar-empty-icon">📭</div>
+    <h3 style="margin:0 0 8px 0;color:var(--metin-koyu,#1a3a5c);">Henüz açık form yok</h3>
+    <p style="color:var(--metin-acik,#6b7c93);margin:0;">Site yönetimi yeni bir form paylaştığında burada görünecek.</p>
+  </div>
+<% } %>
+
+<% if (formlar.length > 0) { %>
+  <div class="formlar-grid">
+<% formlar.forEach(function(f) { %>
+    <a href="/form/<%= f.slug %>" class="formlar-card">
+      <div class="formlar-card-top">
+        <div class="formlar-card-icon">📝</div>
+        <div class="formlar-card-body">
+          <h3 class="formlar-card-title"><%= f.baslik %></h3>
+<% if (f.aciklama) { %>
+          <p class="formlar-card-desc"><%= f.aciklama.length > 100 ? f.aciklama.slice(0, 100) + '…' : f.aciklama %></p>
+<% } %>
+          <div class="formlar-card-tags">
+            <span class="formlar-tag formlar-tag-success">✅ Açık</span>
+            <span class="formlar-tag formlar-tag-neutral"><%= f.alan_sayisi %> alan</span>
+            <span class="formlar-tag formlar-tag-neutral"><%= f.olusturma_tarihi %></span>
           </div>
-          <div class="formlar-card-footer">
-            <span class="formlar-card-cta">Doldurmak için tıklayın →</span>
-          </div>
-        </a>
-      <% }); %>
-    </div>
-  <% } %>
+        </div>
+      </div>
+      <div class="formlar-card-footer">
+        <span class="formlar-card-cta">Doldurmak için tıklayın →</span>
+      </div>
+    </a>
+<% }); %>
+  </div>
+<% } %>
 
   <div class="formlar-tip">
     <p>
