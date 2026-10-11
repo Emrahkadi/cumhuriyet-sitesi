@@ -1988,14 +1988,28 @@ app.post('/anket/:id/oy', uyeGerekli, ah(async (req, res) => {
 // --- Admin: Anket listesi ---
 // --- Admin: Form listesi ---
 app.get('/yonetim/formlar', adminGerekli, ah(async (req, res) => {
-  const formlar = (await q(
-    `SELECT f.*,
-            (SELECT COUNT(*)::int FROM form_yanitlari y WHERE y.form_id = f.id) AS yanit_sayisi,
-            (SELECT COUNT(*)::int FROM form_alanlari a WHERE a.form_id = f.id) AS alan_sayisi
-       FROM formlar f
-      ORDER BY f.id DESC`
-  )).rows;
-  res.render('admin/formlar', { aktifSayfa: 'formlar', formlar });
+  try {
+    // Tablo var mı kontrol et
+    const tabloKontrol = await q(
+      "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'formlar') AS var"
+    );
+    if (!tabloKontrol.rows[0].var) {
+      console.error('HATA: formlar tablosu bulunamadi! DB init calistirilmamis olabilir.');
+      return res.render('admin/formlar', { aktifSayfa: 'formlar', formlar: [] });
+    }
+    const formlar = (await q(
+      `SELECT f.*,
+              (SELECT COUNT(*)::int FROM form_yanitlari y WHERE y.form_id = f.id) AS yanit_sayisi,
+              (SELECT COUNT(*)::int FROM form_alanlari a WHERE a.form_id = f.id) AS alan_sayisi
+         FROM formlar f
+        ORDER BY f.id DESC`
+    )).rows;
+    res.render('admin/formlar', { aktifSayfa: 'formlar', formlar });
+  } catch (e) {
+    console.error('Formlar listesi hatasi:', e.message, '| SQL:', e.query);
+    req.flash('hata', 'Formlar yüklenirken hata oluştu: ' + e.message);
+    res.render('admin/formlar', { aktifSayfa: 'formlar', formlar: [] });
+  }
 }));
 
 // --- Admin: Yeni form oluştur ---
@@ -2470,9 +2484,32 @@ app.use((req, res) => {
 
 // Merkezi hata yakalayıcı
 app.use((err, req, res, next) => {
-  console.error('Sunucu hatası:', err);
-  res.status(500).send('Sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin.');
+  console.error('Sunucu hatası:', err.message, '| URL:', req.originalUrl, '| Stack:', err.stack);
+  // Admin sayfalarındaysa flash ile yönlendir
+  if (req.originalUrl.startsWith('/yonetim')) {
+    req.flash('hata', 'Sunucu hatası: ' + err.message);
+    return res.redirect('/yonetim');
+  }
+  res.status(500).send('Sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin. Detay: ' + err.message);
 });
+
+// --- DEBUG: Form tabloları kontrol ---
+app.get('/yonetim/debug/form-tablolar', adminGerekli, ah(async (req, res) => {
+  const tablolar = ['formlar', 'form_alanlari', 'form_yanitlari', 'form_yanit_degerleri'];
+  const sonuc = {};
+  for (const t of tablolar) {
+    try {
+      const r = await q(
+        "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1) AS var",
+        [t]
+      );
+      sonuc[t] = r.rows[0].var ? '✅ VAR' : '❌ YOK';
+    } catch (e) {
+      sonuc[t] = 'HATA: ' + e.message;
+    }
+  }
+  res.json(sonuc);
+}));
 
 // =====================================================================
 //  WEB PUSH BİLDİRİM API
