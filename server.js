@@ -2169,15 +2169,7 @@ app.use((err, req, res, next) => {
 //  WEB PUSH BİLDİRİM API
 // =====================================================================
 
-// Hostinger 3 saniye kuralı: Önce port'u aç ki reverse-proxy "ready" sinyali alsın,
-// sonra DB init'i arka planda başlat. DB başarısız olursa zaten process zaten
-// kapanır ama port çoktan açıldığı için 503 dönmek yerine düzgün hata sayfası gösterir.
-const server = app.listen(PORT, () => {
-  console.log(`Cumhuriyet Sitesi çalışıyor: http://localhost:${PORT}`);
-  console.log(`Yönetim paneli: http://localhost:${PORT}/giris`);
-});
-
-// Veritabanı init'i arka planda
+// Veritabanı init'i arka planda (route'lar tanımlandıktan SONRA)
 init()
   .then(() => {
     console.log('Veritabanı hazır.');
@@ -2187,6 +2179,12 @@ init()
     // 5 saniye sonra kapat ki loglar düşsün
     setTimeout(() => process.exit(1), 5000);
   });
+
+// Hostinger 3 saniye kuralı: Önce port'u aç ki reverse-proxy "ready" sinyali alsın,
+// sonra DB init'i arka planda başlat. DB başarısız olursa zaten process zaten
+// kapanır ama port çoktan açıldığı için 503 dönmek yerine düzgün hata sayfası gösterir.
+// NOT: app.listen() tüm route'lar tanımlandıktan SONRA çağrılmalı!
+// (form route'ları aşağıda tanımlı)
 
 // ============================================================
 // DİNAMİK FORM SİSTEMİ
@@ -2478,3 +2476,11 @@ app.post('/form/:slug', ah(async (req, res) => {
     mesaj: 'Yanıtınız başarıyla kaydedildi. Teşekkür ederiz!'
   });
 }));
+
+// =====================================================================
+// SUNUCUYU BAŞLAT (tüm route'lar tanımlandıktan SONRA)
+// =====================================================================
+const server = app.listen(PORT, () => {
+  console.log(`Cumhuriyet Sitesi çalışıyor: http://localhost:${PORT}`);
+  console.log(`Yönetim paneli: http://localhost:${PORT}/giris`);
+});
