@@ -1,0 +1,90 @@
+<%- include('partials/header', { sayfaBaslik: 'Form Yönetimi' }) %>
+
+<div class="admin-panel-box">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+    <div>
+      <h2 style="margin:0;">📋 Dinamik Formlar</h2>
+      <p class="admin-hint">Üye olmayan kişilerin doldurabileceği formlar oluşturun. Her forma özel paylaşılabilir link üretilir.</p>
+    </div>
+    <a href="/yonetim/formlar/yeni" class="btn btn-primary">+ Yeni Form</a>
+  </div>
+</div>
+
+<% if (formlar.length === 0) { %>
+  <div class="admin-panel-box" style="text-align:center;padding:40px 20px;">
+    <h3 style="font-size:1.1rem;margin-bottom:8px;">📭 Henüz form yok</h3>
+    <p style="color:var(--metin-acik);margin-bottom:18px;">İlk formunuzu oluşturmak için yukarıdaki "Yeni Form" butonuna tıklayın.</p>
+    <a href="/yonetim/formlar/yeni" class="btn btn-primary">+ İlk Formumu Oluştur</a>
+  </div>
+<% } else { %>
+  <div class="admin-panel-box" style="padding:0;overflow-x:auto;">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>Başlık</th>
+          <th>Alan</th>
+          <th>Yanıt</th>
+          <th>Durum</th>
+          <th>Link</th>
+          <th>Tarih</th>
+          <th>İşlem</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% formlar.forEach(function(f) { %>
+          <tr>
+            <td>
+              <strong><%= f.baslik %></strong>
+              <% if (f.aciklama) { %>
+                <div style="font-size:.85em;color:var(--metin-acik);margin-top:4px;"><%= f.aciklama.slice(0, 80) %><%= f.aciklama.length > 80 ? '…' : '' %></div>
+              <% } %>
+            </td>
+            <td><span class="badge badge-durum"><%= f.alan_sayisi %> alan</span></td>
+            <td>
+              <% if (f.yanit_sayisi > 0) { %>
+                <a href="/yonetim/formlar/yanitlar/<%= f.id %>" class="badge badge-onayli"><%= f.yanit_sayisi %> yanıt</a>
+              <% } else { %>
+                <span style="color:var(--metin-acik);">0 yanıt</span>
+              <% } %>
+            </td>
+            <td>
+              <% if (f.durum === 1) { %>
+                <span class="badge badge-onayli">Açık</span>
+              <% } else { %>
+                <span class="badge badge-bekliyor">Kapalı</span>
+              <% } %>
+              <% if (f.tek_yanit) { %>
+                <div style="font-size:.75em;color:var(--metin-acik);margin-top:4px;">Tek yanıt</div>
+              <% } %>
+            </td>
+            <td>
+              <code style="font-size:.8em;background:var(--arka-acik);padding:4px 8px;border-radius:4px;display:inline-block;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="/form/<%= f.slug %>">/form/<%= f.slug %></code>
+              <button type="button" class="btn-duzenle" onclick="copyLink('<%= f.slug %>')" style="margin-top:4px;">📋 Kopyala</button>
+            </td>
+            <td style="font-size:.85em;color:var(--metin-acik);"><%= f.olusturma_tarihi %></td>
+            <td>
+              <a href="/yonetim/formlar/duzenle/<%= f.id %>" class="btn-duzenle">✏️ Düzenle</a>
+              <a href="/yonetim/formlar/yanitlar/<%= f.id %>" class="btn-duzenle">📊 Yanıtlar</a>
+              <form action="/yonetim/formlar/sil/<%= f.id %>" method="POST" data-confirm="Bu form ve TÜM yanıtları silinsin mi?" style="display:inline">
+                <button type="submit" class="btn-sil">🗑️ Sil</button>
+              </form>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+<% } %>
+
+<script>
+function copyLink(slug) {
+  const url = window.location.origin + '/form/' + slug;
+  navigator.clipboard.writeText(url).then(() => {
+    alert('Link kopyalandı:\n' + url);
+  }).catch(() => {
+    prompt('Linki kopyalayın:', url);
+  });
+}
+</script>
+
+<%- include('partials/footer') %>

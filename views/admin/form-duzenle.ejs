@@ -1,0 +1,177 @@
+<%- include('partials/header', { sayfaBaslik: form ? 'Formu Düzenle' : 'Yeni Form' }) %>
+
+<a href="/yonetim/formlar" class="back-link" style="display:inline-block;margin-bottom:14px;">← Formlara dön</a>
+
+<form action="/yonetim/formlar/kaydet" method="POST" class="admin-panel-box" id="formBuilder">
+  <% if (form) { %>
+    <input type="hidden" name="id" value="<%= form.id %>" />
+    <% if (form.durum === 1) { %>
+      <div style="background:var(--arka-acik);padding:12px;border-radius:8px;margin-bottom:16px;">
+        <strong>Paylaşım Linki:</strong>
+        <code id="formLink" style="display:inline-block;margin-left:8px;background:#fff;padding:4px 8px;border-radius:4px;"><%= form.slug %></code>
+        <button type="button" class="btn-duzenle" onclick="copyLink()" style="margin-left:8px;">📋 Kopyala</button>
+        <a href="/form/<%= form.slug %>" target="_blank" class="btn-duzenle">🔗 Aç</a>
+      </div>
+    <% } %>
+  <% } %>
+
+  <h2 style="margin-top:0;"><%= form ? '✏️ Formu Düzenle' : '📝 Yeni Form Oluştur' %></h2>
+  <p class="admin-hint">Form başlığı ve alanlarını tanımlayın. Her alan için tür seçin. Seçenekli alanlarda (select/radio/checkbox) her satıra bir seçenek yazın.</p>
+
+  <div style="margin-bottom:14px;">
+    <label for="baslik">Form Başlığı *</label>
+    <input type="text" id="baslik" name="baslik" required maxlength="200" value="<%= form ? form.baslik : '' %>" placeholder="Örn: Asansör Arıza Bildirimi" />
+  </div>
+
+  <div style="margin-bottom:14px;">
+    <label for="aciklama">Açıklama (opsiyonel)</label>
+    <textarea id="aciklama" name="aciklama" rows="2" maxlength="500" placeholder="Form hakkında kısa bilgi"><%= form ? form.aciklama || '' : '' %></textarea>
+  </div>
+
+  <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:18px;">
+    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+      <input type="checkbox" name="durum" value="1" <%= !form || form.durum === 1 ? 'checked' : '' %> />
+      <span>Form açık (yanıt alabilir)</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+      <input type="checkbox" name="tek_yanit" value="1" <%= form && form.tek_yanit ? 'checked' : '' %> />
+      <span>IP başına tek yanıt</span>
+    </label>
+  </div>
+
+  <hr style="margin:18px 0;border:none;border-top:1px solid var(--cizgi);" />
+
+  <h3 style="margin-top:0;">📋 Form Alanları</h3>
+  <div id="alanlar"></div>
+
+  <button type="button" id="alanEkle" class="btn btn-outline" style="margin-top:12px;">+ Alan Ekle</button>
+
+  <hr style="margin:18px 0;border:none;border-top:1px solid var(--cizgi);" />
+
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <button type="submit" class="btn btn-primary"><%= form ? '💾 Güncelle' : '✅ Formu Oluştur' %></button>
+    <a href="/yonetim/formlar" class="btn btn-outline">İptal</a>
+  </div>
+</form>
+
+<!-- Alan şablonu -->
+<template id="alanSablon">
+  <div class="form-alan" style="background:var(--arka-acik);padding:14px;border-radius:8px;margin-bottom:12px;border:1px solid var(--cizgi);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <strong>📌 Alan #<span class="alan-no"></span></strong>
+      <button type="button" class="btn-sil alan-sil">🗑️ Kaldır</button>
+    </div>
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-bottom:10px;">
+      <div>
+        <label>Etiket *</label>
+        <input type="text" name="alan_etiket[]" required maxlength="200" placeholder="Örn: Ad Soyad" />
+      </div>
+      <div>
+        <label>Tür</label>
+        <select name="alan_tur[]" class="alan-tur">
+          <option value="text">Kısa Metin</option>
+          <option value="textarea">Uzun Metin</option>
+          <option value="email">E-posta</option>
+          <option value="tel">Telefon</option>
+          <option value="number">Sayı</option>
+          <option value="date">Tarih</option>
+          <option value="select">Seçim Kutusu</option>
+          <option value="radio">Tek Seçim (Radio)</option>
+          <option value="checkbox">Çoklu Seçim</option>
+        </select>
+      </div>
+    </div>
+    <div class="secenek-alani" style="display:none;margin-bottom:10px;">
+      <label>Seçenekler (her satıra bir tane)</label>
+      <textarea name="alan_secenekler[]" rows="3" placeholder="Seçenek 1&#10;Seçenek 2&#10;Seçenek 3"></textarea>
+    </div>
+    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+      <input type="checkbox" name="alan_zorunlu[]" value="1" />
+      <span>Zorunlu alan</span>
+    </label>
+  </div>
+</template>
+
+<script>
+(function() {
+  const alanlarDiv = document.getElementById('alanlar');
+  const sablon = document.getElementById('alanSablon');
+  const ekleBtn = document.getElementById('alanEkle');
+  let sayac = 0;
+
+  function numarala() {
+    document.querySelectorAll('.form-alan').forEach((el, i) => {
+      el.querySelector('.alan-no').textContent = i + 1;
+    });
+    sayac = document.querySelectorAll('.form-alan').length;
+  }
+
+  function turDegisti(select) {
+    const secenekAlani = select.closest('.form-alan').querySelector('.secenek-alani');
+    const tur = select.value;
+    secenekAlani.style.display = ['select', 'radio', 'checkbox'].includes(tur) ? 'block' : 'none';
+  }
+
+  function alanEkle(veriler) {
+    const node = sablon.content.cloneNode(true);
+    const div = node.querySelector('.form-alan');
+    if (veriler) {
+      div.querySelector('input[name="alan_etiket[]"]').value = veriler.etiket || '';
+      const turSel = div.querySelector('select[name="alan_tur[]"]');
+      turSel.value = veriler.tur || 'text';
+      if (veriler.secenekler && veriler.secenekler.length) {
+        div.querySelector('textarea[name="alan_secenekler[]"]').value = veriler.secenekler.join('\n');
+      }
+      if (veriler.zorunlu) {
+        div.querySelector('input[name="alan_zorunlu[]"]').checked = true;
+      }
+    }
+    div.querySelector('.alan-sil').addEventListener('click', () => {
+      div.remove();
+      numarala();
+    });
+    div.querySelector('.alan-tur').addEventListener('change', (e) => turDegisti(e.target));
+    alanlarDiv.appendChild(div);
+    if (veriler) turDegisti(div.querySelector('.alan-tur'));
+    numarala();
+  }
+
+  ekleBtn.addEventListener('click', () => alanEkle());
+
+  // Mevcut alanları yükle (düzenleme modu)
+  <% if (alanlar && alanlar.length > 0) { %>
+    <% alanlar.forEach(function(a) { %>
+      alanEkle({
+        etiket: <%- JSON.stringify(a.etiket) %>,
+        tur: <%- JSON.stringify(a.tur) %>,
+        secenekler: <%- a.secenekler ? a.secenekler : '[]' %>,
+        zorunlu: <%= a.zorunlu ? 'true' : 'false' %>
+      });
+    <% }); %>
+  <% } else { %>
+    // Yeni form: 2 varsayılan alan ekle
+    alanEkle({ etiket: 'Ad Soyad', tur: 'text', zorunlu: true });
+    alanEkle({ etiket: 'Telefon', tur: 'tel' });
+  <% } %>
+
+  // Slug canlı önizleme (sadece yeni form için)
+  const baslikInput = document.getElementById('baslik');
+  if (baslikInput && !document.querySelector('input[name="id"]')) {
+    baslikInput.addEventListener('input', () => {
+      // sadece görsel ipucu, gerçek slug submit'te oluşur
+    });
+  }
+})();
+
+function copyLink() {
+  const slug = document.getElementById('formLink').textContent.trim();
+  const url = window.location.origin + '/form/' + slug;
+  navigator.clipboard.writeText(url).then(() => {
+    alert('Link kopyalandı:\n' + url);
+  }).catch(() => {
+    prompt('Linki kopyalayın:', url);
+  });
+}
+</script>
+
+<%- include('partials/footer') %>

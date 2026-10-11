@@ -125,6 +125,34 @@ const PORT = process.env.PORT || 3000;
 // Async rota sarmalayıcı (hataları merkezi yakalar)
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
+// --- Slug üretici (Türkçe karakter desteği ile) ---
+function slugUret(text) {
+  const trMap = {
+    'ç': 'c', 'Ç': 'C', 'ğ': 'g', 'Ğ': 'G',
+    'ı': 'i', 'İ': 'I', 'ö': 'o', 'Ö': 'O',
+    'ş': 's', 'Ş': 'S', 'ü': 'u', 'Ü': 'U'
+  };
+  return String(text || '')
+    .replace(/[çÇğĞıİöÖşŞüÜ]/g, (c) => trMap[c] || c)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60) || 'form';
+}
+
+// --- Benzersiz slug üret (DB'de yoksa döner) ---
+async function benzersizSlug(baslik) {
+  const taban = slugUret(baslik);
+  let slug = taban;
+  let n = 1;
+  while (true) {
+    const r = await q('SELECT 1 FROM formlar WHERE slug = $1', [slug]);
+    if (r.rows.length === 0) return slug;
+    n += 1;
+    slug = `${taban}-${n}`;
+  }
+}
+
 // Basit HTML escape yardımcısı (e-posta şablonlarında kullanıcı adı için)
 function escapeHtml(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
@@ -2159,3 +2187,294 @@ init()
     // 5 saniye sonra kapat ki loglar düşsün
     setTimeout(() => process.exit(1), 5000);
   });
+
+// ============================================================
+// DİNAMİK FORM SİSTEMİ
+// Admin form tanımlar, link ile paylaşır, üye olmayan kişiler doldurur.
+// ============================================================
+
+// --- Admin: Form listesi ---
+app.get('/yonetim/formlar', adminGerekli, ah(async (req, res) => {
+  const formlar = (await q(
+    `SELECT f.*,
+            (SELECT COUNT(*)::int FROM form_yanitlari y WHERE y.form_id = f.id) AS yanit_sayisi,
+            (SELECT COUNT(*)::int FROM form_alanlari a WHERE a.form_id = f.id) AS alan_sayisi
+       FROM formlar f
+      ORDER BY f.id DESC`
+  )).rows;
+  res.render('admin/formlar', { aktifSayfa: 'formlar', formlar });
+}));
+
+// --- Admin: Yeni form oluştur ---
+app.get('/yonetim/formlar/yeni', adminGerekli, ah(async (req, res) => {
+  res.render('admin/form-duzenle', {
+    aktifSayfa: 'formlar',
+    form: null,
+    alanlar: []
+  });
+}));
+
+// --- Admin: Form düzenle ---
+app.get('/yonetim/formlar/duzenle/:id', adminGerekli, ah(async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!id) return res.redirect('/yonetim/formlar');
+  const formRow = (await q('SELECT * FROM formlar WHERE id = $1', [id])).rows[0];
+  if (!formRow) {
+    req.flash('hata', 'Form bulunamadı.');
+    return res.redirect('/yonetim/formlar');
+  }
+  const alanlar = (await q(
+    'SELECT * FROM form_alanlari WHERE form_id = $1 ORDER BY sira, id',
+    [id]
+  )).rows;
+  res.render('admin/form-duzenle', {
+    aktifSayfa: 'formlar',
+    form: formRow,
+    alanlar
+  });
+}));
+
+// --- Admin: Form kaydet (yeni veya güncelle) ---
+app.post('/yonetim/formlar/kaydet', adminGerekli, ah(async (req, res) => {
+  const id = parseInt(req.body.id || '0', 10) || null;
+  const baslik = String(req.body.baslik || '').trim();
+  const aciklama = String(req.body.aciklama || '').trim();
+  const durum = req.body.durum === '0' ? 0 : 1;
+  const tekYanit = req.body.tek_yanit === '1' ? 1 : 0;
+
+  if (!baslik) {
+    req.flash('hata', 'Form başlığı zorunludur.');
+    return res.redirect(id ? `/yonetim/formlar/duzenle/${id}` : '/yonetim/formlar/yeni');
+  }
+
+  let formId = id;
+  if (formId) {
+    await q(
+      'UPDATE formlar SET baslik = $1, aciklama = $2, durum = $3, tek_yanit = $4 WHERE id = $5',
+      [baslik, aciklama, durum, tekYanit, formId]
+    );
+    // Alanları sil ve yeniden ekle (basit ama güvenilir)
+    await q('DELETE FROM form_alanlari WHERE form_id = $1', [formId]);
+  } else {
+    const slug = await benzersizSlug(baslik);
+    const r = await q(
+      'INSERT INTO formlar (baslik, aciklama, slug, durum, tek_yanit) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+      [baslik, aciklama, slug, durum, tekYanit]
+    );
+    formId = r.rows[0].id;
+  }
+
+  // Alanları ekle
+  const etiketler = [].concat(req.body.alan_etiket || []);
+  const turler = [].concat(req.body.alan_tur || []);
+  const seceneklerRaw = [].concat(req.body.alan_secenekler || []);
+  const zorunlular = [].concat(req.body.alan_zorunlu || []);
+
+  for (let i = 0; i < etiketler.length; i++) {
+    const etiket = String(etiketler[i] || '').trim();
+    if (!etiket) continue;
+    const tur = ['text', 'textarea', 'email', 'tel', 'number', 'select', 'radio', 'checkbox', 'date'].includes(turler[i])
+      ? turler[i]
+      : 'text';
+    const secenekler = String(seceneklerRaw[i] || '')
+      .split('\n').map(s => s.trim()).filter(Boolean);
+    const zorunlu = zorunlular[i] ? 1 : 0;
+    await q(
+      'INSERT INTO form_alanlari (form_id, etiket, tur, secenekler, zorunlu, sira) VALUES ($1, $2, $3, $4, $5, $6)',
+      [formId, etiket, tur, JSON.stringify(secenekler), zorunlu, i]
+    );
+  }
+
+  req.flash('basari', id ? 'Form güncellendi.' : 'Form oluşturuldu.');
+  res.redirect(`/yonetim/formlar/duzenle/${formId}`);
+}));
+
+// --- Admin: Form sil ---
+app.post('/yonetim/formlar/sil/:id', adminGerekli, ah(async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!id) return res.redirect('/yonetim/formlar');
+  await q('DELETE FROM formlar WHERE id = $1', [id]);
+  req.flash('basari', 'Form silindi.');
+  res.redirect('/yonetim/formlar');
+}));
+
+// --- Admin: Form yanıtlarını gör ---
+app.get('/yonetim/formlar/yanitlar/:id', adminGerekli, ah(async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!id) return res.redirect('/yonetim/formlar');
+  const formRow = (await q('SELECT * FROM formlar WHERE id = $1', [id])).rows[0];
+  if (!formRow) {
+    req.flash('hata', 'Form bulunamadı.');
+    return res.redirect('/yonetim/formlar');
+  }
+  const alanlar = (await q(
+    'SELECT * FROM form_alanlari WHERE form_id = $1 ORDER BY sira, id',
+    [id]
+  )).rows;
+  const yanitlar = (await q(
+    'SELECT * FROM form_yanitlari WHERE form_id = $1 ORDER BY id DESC',
+    [id]
+  )).rows;
+  // Her yanıt için değerleri çek
+  const degerler = {};
+  if (yanitlar.length > 0) {
+    const yanitIds = yanitlar.map(y => y.id);
+    const dv = (await q(
+      'SELECT yanit_id, alan_id, deger FROM form_yanit_degerleri WHERE yanit_id = ANY($1::int[])',
+      [yanitIds]
+    )).rows;
+    for (const row of dv) {
+      if (!degerler[row.yanit_id]) degerler[row.yanit_id] = {};
+      degerler[row.yanit_id][row.alan_id] = row.deger;
+    }
+  }
+  res.render('admin/form-yanitlar', {
+    aktifSayfa: 'formlar',
+    form: formRow,
+    alanlar,
+    yanitlar,
+    degerler
+  });
+}));
+
+// --- Admin: Tek yanıt detay ---
+app.get('/yonetim/formlar/yanit/:yanitId', adminGerekli, ah(async (req, res) => {
+  const yanitId = parseInt(req.params.yanitId, 10);
+  if (!yanitId) return res.redirect('/yonetim/formlar');
+  const yanitRow = (await q(
+    `SELECT y.*, f.baslik AS form_baslik, f.slug AS form_slug
+       FROM form_yanitlari y
+       JOIN formlar f ON f.id = y.form_id
+      WHERE y.id = $1`,
+    [yanitId]
+  )).rows[0];
+  if (!yanitRow) {
+    req.flash('hata', 'Yanıt bulunamadı.');
+    return res.redirect('/yonetim/formlar');
+  }
+  const alanlar = (await q(
+    'SELECT * FROM form_alanlari WHERE form_id = $1 ORDER BY sira, id',
+    [yanitRow.form_id]
+  )).rows;
+  const degerler = (await q(
+    'SELECT alan_id, deger FROM form_yanit_degerleri WHERE yanit_id = $1',
+    [yanitId]
+  )).rows;
+  const degerMap = {};
+  for (const d of degerler) degerMap[d.alan_id] = d.deger;
+  res.render('admin/form-yanit-detay', {
+    aktifSayfa: 'formlar',
+    yanit: yanitRow,
+    alanlar,
+    degerler: degerMap
+  });
+}));
+
+// --- Admin: Yanıt sil ---
+app.post('/yonetim/formlar/yanit/sil/:yanitId', adminGerekli, ah(async (req, res) => {
+  const yanitId = parseInt(req.params.yanitId, 10);
+  if (!yanitId) return res.redirect('/yonetim/formlar');
+  const yanitRow = (await q('SELECT form_id FROM form_yanitlari WHERE id = $1', [yanitId])).rows[0];
+  await q('DELETE FROM form_yanitlari WHERE id = $1', [yanitId]);
+  req.flash('basari', 'Yanıt silindi.');
+  if (yanitRow) return res.redirect(`/yonetim/formlar/yanitlar/${yanitRow.form_id}`);
+  res.redirect('/yonetim/formlar');
+}));
+
+// --- Public: Form doldurma sayfası ---
+app.get('/form/:slug', ah(async (req, res) => {
+  const slug = String(req.params.slug || '').trim();
+  if (!slug) return res.status(404).render('404', { url: req.originalUrl });
+  const formRow = (await q('SELECT * FROM formlar WHERE slug = $1', [slug])).rows[0];
+  if (!formRow) return res.status(404).render('404', { url: req.originalUrl });
+  if (!formRow.durum) {
+    return res.render('public/form-kapali', { form: formRow });
+  }
+  const alanlar = (await q(
+    'SELECT * FROM form_alanlari WHERE form_id = $1 ORDER BY sira, id',
+    [formRow.id]
+  )).rows;
+  // secenekler JSON parse
+  for (const a of alanlar) {
+    try { a.secenekler = a.secenekler ? JSON.parse(a.secenekler) : []; }
+    catch (e) { a.secenekler = []; }
+  }
+  res.render('public/form-doldur', { form: formRow, alanlar });
+}));
+
+// --- Public: Form yanıt gönder ---
+app.post('/form/:slug', ah(async (req, res) => {
+  const slug = String(req.params.slug || '').trim();
+  const formRow = (await q('SELECT * FROM formlar WHERE slug = $1', [slug])).rows[0];
+  if (!formRow || !formRow.durum) {
+    return res.status(404).render('404', { url: req.originalUrl });
+  }
+  const alanlar = (await q(
+    'SELECT * FROM form_alanlari WHERE form_id = $1 ORDER BY sira, id',
+    [formRow.id]
+  )).rows;
+
+  // IP başına tek yanıt kontrolü
+  if (formRow.tek_yanit) {
+    const ip = req.headers['x-forwarded-for']?.toString().split(',')[0].trim() || req.ip || req.connection.remoteAddress || '';
+    const mevcut = (await q(
+      'SELECT 1 FROM form_yanitlari WHERE form_id = $1 AND ip_adresi = $2 LIMIT 1',
+      [formRow.id, ip]
+    )).rows;
+    if (mevcut.length > 0) {
+      return res.render('public/form-tesekkurler', {
+        form: formRow,
+        mesaj: 'Bu formu daha önce doldurmuşsunuz. Tekrar gönderim kabul edilmiyor.'
+      });
+    }
+  }
+
+  // Zorunlu alan kontrolü
+  const hatalar = [];
+  for (const a of alanlar) {
+    if (!a.zorunlu) continue;
+    const v = req.body[`alan_${a.id}`];
+    const bos = v === undefined || v === null || (typeof v === 'string' && v.trim() === '');
+    if (bos) hatalar.push(`"${a.etiket}" alanı zorunludur.`);
+  }
+  if (hatalar.length > 0) {
+    // Hata ile birlikte tekrar göster
+    for (const a of alanlar) {
+      try { a.secenekler = a.secenekler ? JSON.parse(a.secenekler) : []; }
+      catch (e) { a.secenekler = []; }
+    }
+    return res.status(400).render('public/form-doldur', {
+      form: formRow,
+      alanlar,
+      hatalar,
+      eskiDegerler: req.body
+    });
+  }
+
+  // Yanıtı kaydet
+  const ip = req.headers['x-forwarded-for']?.toString().split(',')[0].trim() || req.ip || req.connection.remoteAddress || '';
+  const ua = String(req.headers['user-agent'] || '').slice(0, 500);
+  const yanitRow = await q(
+    'INSERT INTO form_yanitlari (form_id, ip_adresi, user_agent) VALUES ($1, $2, $3) RETURNING id',
+    [formRow.id, ip, ua]
+  );
+  const yanitId = yanitRow.rows[0].id;
+
+  // Alan değerlerini kaydet
+  for (const a of alanlar) {
+    let v = req.body[`alan_${a.id}`];
+    if (v === undefined || v === null) continue;
+    if (Array.isArray(v)) v = v.join(', ');
+    v = sanitizeHtml(String(v), { allowedTags: [], allowedAttributes: {} }).slice(0, 4000);
+    if (!v.trim()) continue;
+    await q(
+      'INSERT INTO form_yanit_degerleri (yanit_id, alan_id, deger) VALUES ($1, $2, $3)',
+      [yanitId, a.id, v]
+    );
+  }
+
+  res.render('public/form-tesekkurler', {
+    form: formRow,
+    mesaj: 'Yanıtınız başarıyla kaydedildi. Teşekkür ederiz!'
+  });
+}));

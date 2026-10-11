@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Teşekkürler - Cumhuriyet Sitesi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css?v=16" />
+  <style>
+    body { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .thanks-container { max-width: 480px; width: 100%; background: #fff; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,.1); padding: 40px 32px; text-align: center; }
+    .thanks-icon { font-size: 4rem; margin-bottom: 16px; }
+    .thanks-container h1 { margin: 0 0 12px 0; font-size: 1.5rem; color: #1a3a5c; }
+    .thanks-container p { color: #6b7c93; margin-bottom: 24px; line-height: 1.6; }
+    .thanks-container .btn { display: inline-block; background: #1a3a5c; color: #fff; padding: 10px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; transition: background .2s; }
+    .thanks-container .btn:hover { background: #0f2640; }
+  </style>
+</head>
+<body>
+  <div class="thanks-container">
+    <div class="thanks-icon">✅</div>
+    <h1><%= form.baslik %></h1>
+    <p><%= mesaj %></p>
+    <a href="/" class="btn">Ana Sayfa</a>
+  </div>
+</body>
+</html>

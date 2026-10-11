@@ -1,0 +1,45 @@
+<%- include('partials/header', { sayfaBaslik: 'Yanıt Detayı' }) %>
+
+<a href="/yonetim/formlar/yanitlar/<%= yanit.form_id %>" class="back-link" style="display:inline-block;margin-bottom:14px;">← Tüm yanıtlara dön</a>
+
+<div class="admin-panel-box">
+  <h2 style="margin-top:0;">📋 <%= yanit.form_baslik %></h2>
+  <p style="color:var(--metin-acik);margin:6px 0;">
+    Yanıt #<%= yanit.id %> · <%= yanit.olusturma_tarihi %>
+    <% if (yanit.ip_adresi) { %> · IP: <%= yanit.ip_adresi %><% } %>
+  </p>
+</div>
+
+<div class="admin-panel-box">
+  <h3 style="margin-top:0;">📝 Verilen Yanıtlar</h3>
+  <% if (alanlar.length === 0) { %>
+    <p style="color:var(--metin-acik);">Bu formda alan yok.</p>
+  <% } else { %>
+    <table class="admin-table">
+      <tbody>
+        <% alanlar.forEach(function(a) { %>
+          <tr>
+            <th style="width:30%;"><%= a.etiket %><% if (a.zorunlu) { %> <span style="color:#c00;">*</span><% } %></th>
+            <td>
+              <% const v = degerler[a.id] || ''; %>
+              <% if (!v) { %>
+                <span style="color:var(--metin-acik);font-style:italic;">(boş)</span>
+              <% } else { %>
+                <%= v %>
+              <% } %>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<div style="display:flex;gap:8px;flex-wrap:wrap;">
+  <form action="/yonetim/formlar/yanit/sil/<%= yanit.id %>" method="POST" data-confirm="Bu yanıt silinsin mi?" style="display:inline">
+    <button type="submit" class="btn btn-outline" style="color:#c00;border-color:#c00;">🗑️ Yanıtı Sil</button>
+  </form>
+  <a href="/yonetim/formlar/yanitlar/<%= yanit.form_id %>" class="btn btn-outline">← Geri</a>
+</div>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= form.baslik %> - Cumhuriyet Sitesi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css?v=16" />
+  <style>
+    body { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); min-height: 100vh; padding: 20px 0; }
+    .form-container { max-width: 640px; margin: 0 auto; background: #fff; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,.1); padding: 32px; }
+    .form-container h1 { margin: 0 0 8px 0; font-size: 1.6rem; color: #1a3a5c; }
+    .form-container .desc { color: #6b7c93; margin-bottom: 24px; }
+    .form-group { margin-bottom: 18px; }
+    .form-group label { display: block; font-weight: 600; margin-bottom: 6px; color: #2c3e50; }
+    .form-group label .req { color: #c00; margin-left: 4px; }
+    .form-group input[type="text"],
+    .form-group input[type="email"],
+    .form-group input[type="tel"],
+    .form-group input[type="number"],
+    .form-group input[type="date"],
+    .form-group textarea,
+    .form-group select { width: 100%; padding: 10px 14px; border: 1px solid #d0d7e0; border-radius: 8px; font-size: 1rem; font-family: inherit; box-sizing: border-box; transition: border-color .2s; }
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus { outline: none; border-color: #1a3a5c; box-shadow: 0 0 0 3px rgba(26,58,92,.1); }
+    .form-group textarea { resize: vertical; min-height: 90px; }
+    .form-group .radio-group,
+    .form-group .checkbox-group { display: flex; flex-direction: column; gap: 8px; }
+    .form-group .radio-group label,
+    .form-group .checkbox-group label { display: flex; align-items: center; gap: 8px; font-weight: 400; cursor: pointer; padding: 8px 12px; border: 1px solid #e0e6ed; border-radius: 6px; transition: background .15s; }
+    .form-group .radio-group label:hover,
+    .form-group .checkbox-group label:hover { background: #f5f7fa; }
+    .form-group .radio-group input,
+    .form-group .checkbox-group input { margin: 0; }
+    .submit-btn { background: #1a3a5c; color: #fff; border: none; padding: 12px 28px; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background .2s; }
+    .submit-btn:hover { background: #0f2640; }
+    .errors { background: #fee; border: 1px solid #fcc; color: #c00; padding: 12px 16px; border-radius: 8px; margin-bottom: 18px; }
+    .errors ul { margin: 6px 0 0 0; padding-left: 20px; }
+    .back-link { display: inline-block; margin-bottom: 16px; color: #1a3a5c; text-decoration: none; font-size: .9rem; }
+    .back-link:hover { text-decoration: underline; }
+    @media (max-width: 600px) { .form-container { padding: 20px; margin: 0 12px; } }
+  </style>
+</head>
+<body>
+  <div class="form-container">
+    <a href="/" class="back-link">← Ana sayfa</a>
+    <h1>📋 <%= form.baslik %></h1>
+    <% if (form.aciklama) { %><p class="desc"><%= form.aciklama %></p><% } %>
+
+    <% if (typeof hatalar !== 'undefined' && hatalar && hatalar.length > 0) { %>
+      <div class="errors">
+        <strong>⚠️ Lütfen aşağıdaki hataları düzeltin:</strong>
+        <ul>
+          <% hatalar.forEach(function(h) { %><li><%= h %></li><% }); %>
+        </ul>
+      </div>
+    <% } %>
+
+    <form action="/form/<%= form.slug %>" method="POST" novalidate>
+      <% alanlar.forEach(function(a) { %>
+        <div class="form-group">
+          <label for="alan_<%= a.id %>">
+            <%= a.etiket %>
+            <% if (a.zorunlu) { %><span class="req">*</span><% } %>
+          </label>
+
+          <% const eskiDeger = (typeof eskiDegerler !== 'undefined' && eskiDegerler && eskiDegerler['alan_' + a.id]) || ''; %>
+
+          <% if (a.tur === 'textarea') { %>
+            <textarea id="alan_<%= a.id %>" name="alan_<%= a.id %>" rows="4" <%= a.zorunlu ? 'required' : '' %> placeholder="Yanıtınızı yazın..."><%= eskiDeger %></textarea>
+
+          <% } else if (a.tur === 'select') { %>
+            <select id="alan_<%= a.id %>" name="alan_<%= a.id %>" <%= a.zorunlu ? 'required' : '' %>>
+              <option value="">Seçiniz...</option>
+              <% (a.secenekler || []).forEach(function(s) { %>
+                <option value="<%= s %>" <%= eskiDeger === s ? 'selected' : '' %>><%= s %></option>
+              <% }); %>
+            </select>
+
+          <% } else if (a.tur === 'radio') { %>
+            <div class="radio-group">
+              <% (a.secenekler || []).forEach(function(s, i) { %>
+                <label>
+                  <input type="radio" name="alan_<%= a.id %>" value="<%= s %>" <%= eskiDeger === s ? 'checked' : '' %> <%= a.zorunlu && i === 0 ? 'required' : '' %> />
+                  <span><%= s %></span>
+                </label>
+              <% }); %>
+            </div>
+
+          <% } else if (a.tur === 'checkbox') { %>
+            <div class="checkbox-group">
+              <% (a.secenekler || []).forEach(function(s) { %>
+                <% const eskiArr = Array.isArray(eskiDeger) ? eskiDeger : (eskiDeger ? eskiDeger.split(', ') : []); %>
+                <label>
+                  <input type="checkbox" name="alan_<%= a.id %>" value="<%= s %>" <%= eskiArr.includes(s) ? 'checked' : '' %> />
+                  <span><%= s %></span>
+                </label>
+              <% }); %>
+            </div>
+
+          <% } else { %>
+            <input
+              type="<%= a.tur === 'email' ? 'email' : a.tur === 'tel' ? 'tel' : a.tur === 'number' ? 'number' : a.tur === 'date' ? 'date' : 'text' %>"
+              id="alan_<%= a.id %>"
+              name="alan_<%= a.id %>"
+              value="<%= eskiDeger %>"
+              <%= a.zorunlu ? 'required' : '' %>
+              maxlength="500"
+              placeholder="<%= a.etiket %>" />
+          <% } %>
+        </div>
+      <% }); %>
+
+      <button type="submit" class="submit-btn">✅ Gönder</button>
+    </form>
+  </div>
+</body>
+</html>

@@ -254,6 +254,57 @@ CREATE TABLE IF NOT EXISTS duyuru_ekleri (
     -- Sakinler tablosuna durum kolonu (Kat Maliki / Kiracı / Diğer)
     ALTER TABLE sakinler ADD COLUMN IF NOT EXISTS durum TEXT NOT NULL DEFAULT 'Kat Maliki';
     CREATE INDEX IF NOT EXISTS idx_sakinler_durum ON sakinler (durum);
+
+    -- ============================================================
+    -- DİNAMİK FORM SİSTEMİ
+    -- Admin form tanımlar (alanlar), paylaşılabilir link üretir,
+    -- üye olmayan kişiler link ile doldurur, admin yanıtları görür.
+    -- ============================================================
+    CREATE TABLE IF NOT EXISTS formlar (
+      id SERIAL PRIMARY KEY,
+      baslik TEXT NOT NULL,
+      aciklama TEXT,
+      slug TEXT NOT NULL UNIQUE,
+      durum INTEGER NOT NULL DEFAULT 1, -- 1: açık, 0: kapalı
+      tek_yanit INTEGER NOT NULL DEFAULT 0, -- 0: çoklu yanıt, 1: IP başına tek
+      olusturma_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
+    );
+    CREATE INDEX IF NOT EXISTS idx_formlar_slug ON formlar (slug);
+    CREATE INDEX IF NOT EXISTS idx_formlar_durum ON formlar (durum);
+
+    -- Form alanları (admin tarafından tanımlanır)
+    -- tur: text, textarea, email, tel, number, select, radio, checkbox, date
+    CREATE TABLE IF NOT EXISTS form_alanlari (
+      id SERIAL PRIMARY KEY,
+      form_id INTEGER NOT NULL REFERENCES formlar(id) ON DELETE CASCADE,
+      etiket TEXT NOT NULL,
+      tur TEXT NOT NULL DEFAULT 'text',
+      secenekler TEXT, -- JSON dizisi (select/radio/checkbox için)
+      zorunlu INTEGER NOT NULL DEFAULT 0,
+      sira INTEGER NOT NULL DEFAULT 0,
+      olusturma_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
+    );
+    CREATE INDEX IF NOT EXISTS idx_form_alanlari_form ON form_alanlari (form_id, sira);
+
+    -- Form yanıtları (her doldurma için bir kayıt)
+    CREATE TABLE IF NOT EXISTS form_yanitlari (
+      id SERIAL PRIMARY KEY,
+      form_id INTEGER NOT NULL REFERENCES formlar(id) ON DELETE CASCADE,
+      ip_adresi TEXT,
+      user_agent TEXT,
+      olusturma_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
+    );
+    CREATE INDEX IF NOT EXISTS idx_form_yanitlari_form ON form_yanitlari (form_id, id DESC);
+
+    -- Her yanıtın alan bazlı değerleri
+    CREATE TABLE IF NOT EXISTS form_yanit_degerleri (
+      id SERIAL PRIMARY KEY,
+      yanit_id INTEGER NOT NULL REFERENCES form_yanitlari(id) ON DELETE CASCADE,
+      alan_id INTEGER NOT NULL REFERENCES form_alanlari(id) ON DELETE CASCADE,
+      deger TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_form_yanit_degerleri_yanit ON form_yanit_degerleri (yanit_id);
+    CREATE INDEX IF NOT EXISTS idx_form_yanit_degerleri_alan ON form_yanit_degerleri (alan_id);
     -- Bu index'ler ALTER'den SONRA oluşturulmalı (kolon mevcut olmalı)
     CREATE INDEX IF NOT EXISTS idx_anket_oylar_daire ON anket_oylar (anket_id, daire_no);
     CREATE INDEX IF NOT EXISTS idx_anket_katilimlar_daire ON anket_katilimlar (anket_id, daire_no);

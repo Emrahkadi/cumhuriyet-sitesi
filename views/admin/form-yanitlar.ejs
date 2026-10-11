@@ -1,0 +1,75 @@
+<%- include('partials/header', { sayfaBaslik: 'Form Yanıtları' }) %>
+
+<a href="/yonetim/formlar" class="back-link" style="display:inline-block;margin-bottom:14px;">← Formlara dön</a>
+
+<div class="admin-panel-box">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+    <div>
+      <h2 style="margin:0;">📊 <%= form.baslik %></h2>
+      <% if (form.aciklama) { %><p style="color:var(--metin-acik);margin:6px 0 0 0;"><%= form.aciklama %></p><% } %>
+      <p style="margin:8px 0 0 0;font-size:.85em;color:var(--metin-acik);">
+        Toplam <strong><%= yanitlar.length %></strong> yanıt ·
+        <a href="/form/<%= form.slug %>" target="_blank">/form/<%= form.slug %></a>
+      </p>
+    </div>
+    <div>
+      <a href="/yonetim/formlar/duzenle/<%= form.id %>" class="btn btn-outline">✏️ Formu Düzenle</a>
+    </div>
+  </div>
+</div>
+
+<% if (yanitlar.length === 0) { %>
+  <div class="admin-panel-box" style="text-align:center;padding:40px 20px;">
+    <h3 style="font-size:1.1rem;margin-bottom:8px;">📭 Henüz yanıt yok</h3>
+    <p style="color:var(--metin-acik);">Form linkini paylaştığınızda yanıtlar burada görünecek.</p>
+    <button type="button" class="btn btn-primary" onclick="copyLink()" style="margin-top:12px;">📋 Linki Kopyala</button>
+  </div>
+<% } else { %>
+  <div class="admin-panel-box" style="padding:0;overflow-x:auto;">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <% alanlar.forEach(function(a) { %>
+            <th><%= a.etiket %></th>
+          <% }); %>
+          <th>Tarih</th>
+          <th>İşlem</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% yanitlar.forEach(function(y, idx) { %>
+          <tr>
+            <td><%= yanitlar.length - idx %></td>
+            <% alanlar.forEach(function(a) { %>
+              <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="<%= (degerler[y.id] && degerler[y.id][a.id]) || '' %>">
+                <% const v = (degerler[y.id] && degerler[y.id][a.id]) || ''; %>
+                <%= v.length > 40 ? v.slice(0, 40) + '…' : v %>
+              </td>
+            <% }); %>
+            <td style="font-size:.85em;color:var(--metin-acik);white-space:nowrap;"><%= y.olusturma_tarihi %></td>
+            <td>
+              <a href="/yonetim/formlar/yanit/<%= y.id %>" class="btn-duzenle">👁️ Detay</a>
+              <form action="/yonetim/formlar/yanit/sil/<%= y.id %>" method="POST" data-confirm="Bu yanıt silinsin mi?" style="display:inline">
+                <button type="submit" class="btn-sil">🗑️</button>
+              </form>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+<% } %>
+
+<script>
+function copyLink() {
+  const url = window.location.origin + '/form/<%= form.slug %>';
+  navigator.clipboard.writeText(url).then(() => {
+    alert('Link kopyalandı:\n' + url);
+  }).catch(() => {
+    prompt('Linki kopyalayın:', url);
+  });
+}
+</script>
+
+<%- include('partials/footer') %>
