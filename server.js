@@ -2208,12 +2208,10 @@ init()
 // (form route'ları aşağıda tanımlı)
 
 // ============================================================
-// DİNAMİK FORM SİSTEMİ
-// Admin form tanımlar, link ile paylaşır, üye olmayan kişiler doldurur.
 // ============================================================
 
 // --- Admin: Form listesi ---
-app.get('/yonetim/formlar', ah(async (req, res) => {
+app.get('/yonetim/formlar', adminGerekli, ah(async (req, res) => {
   const formlar = (await q(
     `SELECT f.*,
             (SELECT COUNT(*)::int FROM form_yanitlari y WHERE y.form_id = f.id) AS yanit_sayisi,
@@ -2225,7 +2223,7 @@ app.get('/yonetim/formlar', ah(async (req, res) => {
 }));
 
 // --- Admin: Yeni form oluştur ---
-app.get('/yonetim/formlar/yeni', ah(async (req, res) => {
+app.get('/yonetim/formlar/yeni', adminGerekli, ah(async (req, res) => {
   res.render('admin/form-duzenle', {
     aktifSayfa: 'formlar',
     form: null,
@@ -2234,7 +2232,7 @@ app.get('/yonetim/formlar/yeni', ah(async (req, res) => {
 }));
 
 // --- Admin: Form düzenle ---
-app.get('/yonetim/formlar/duzenle/:id', ah(async (req, res) => {
+app.get('/yonetim/formlar/duzenle/:id', adminGerekli, ah(async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!id) return res.redirect('/yonetim/formlar');
   const formRow = (await q('SELECT * FROM formlar WHERE id = $1', [id])).rows[0];
@@ -2254,7 +2252,7 @@ app.get('/yonetim/formlar/duzenle/:id', ah(async (req, res) => {
 }));
 
 // --- Admin: Form kaydet (yeni veya güncelle) ---
-app.post('/yonetim/formlar/kaydet', ah(async (req, res) => {
+app.post('/yonetim/formlar/kaydet', adminGerekli, ah(async (req, res) => {
   const id = parseInt(req.body.id || '0', 10) || null;
   const baslik = String(req.body.baslik || '').trim();
   const aciklama = String(req.body.aciklama || '').trim();
@@ -2309,7 +2307,7 @@ app.post('/yonetim/formlar/kaydet', ah(async (req, res) => {
 }));
 
 // --- Admin: Form sil ---
-app.post('/yonetim/formlar/sil/:id', ah(async (req, res) => {
+app.post('/yonetim/formlar/sil/:id', adminGerekli, ah(async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!id) return res.redirect('/yonetim/formlar');
   await q('DELETE FROM formlar WHERE id = $1', [id]);
@@ -2318,7 +2316,7 @@ app.post('/yonetim/formlar/sil/:id', ah(async (req, res) => {
 }));
 
 // --- Admin: Form yanıtlarını gör ---
-app.get('/yonetim/formlar/yanitlar/:id', ah(async (req, res) => {
+app.get('/yonetim/formlar/yanitlar/:id', adminGerekli, ah(async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!id) return res.redirect('/yonetim/formlar');
   const formRow = (await q('SELECT * FROM formlar WHERE id = $1', [id])).rows[0];
@@ -2357,7 +2355,7 @@ app.get('/yonetim/formlar/yanitlar/:id', ah(async (req, res) => {
 }));
 
 // --- Admin: Tek yanıt detay ---
-app.get('/yonetim/formlar/yanit/:yanitId', ah(async (req, res) => {
+app.get('/yonetim/formlar/yanit/:yanitId', adminGerekli, ah(async (req, res) => {
   const yanitId = parseInt(req.params.yanitId, 10);
   if (!yanitId) return res.redirect('/yonetim/formlar');
   const yanitRow = (await q(
@@ -2390,7 +2388,7 @@ app.get('/yonetim/formlar/yanit/:yanitId', ah(async (req, res) => {
 }));
 
 // --- Admin: Yanıt sil ---
-app.post('/yonetim/formlar/yanit/sil/:yanitId', ah(async (req, res) => {
+app.post('/yonetim/formlar/yanit/sil/:yanitId', adminGerekli, ah(async (req, res) => {
   const yanitId = parseInt(req.params.yanitId, 10);
   if (!yanitId) return res.redirect('/yonetim/formlar');
   const yanitRow = (await q('SELECT form_id FROM form_yanitlari WHERE id = $1', [yanitId])).rows[0];
@@ -2497,6 +2495,7 @@ app.post('/form/:slug', ah(async (req, res) => {
     mesaj: 'Yanıtınız başarıyla kaydedildi. Teşekkür ederiz!'
   });
 }));
+
 
 // =====================================================================
 // SUNUCUYU BAŞLAT (tüm route'lar tanımlandıktan SONRA)
