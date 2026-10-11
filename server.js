@@ -1986,230 +1986,6 @@ app.post('/anket/:id/oy', uyeGerekli, ah(async (req, res) => {
 }));
 
 // --- Admin: Anket listesi ---
-app.get('/yonetim/anketler', adminGerekli, ah(async (req, res) => {
-  const anketler = (await q(
-    `SELECT a.*,
-      (SELECT COUNT(*)::int FROM anket_sorulari WHERE anket_id = a.id) AS soru_sayisi,
-      (SELECT COUNT(DISTINCT uye_id)::int FROM anket_oylar WHERE anket_id = a.id) AS oy_veren_sayisi,
-      (SELECT COUNT(*)::int FROM uyeler WHERE email_dogrulandi = 1) AS toplam_uye
-     FROM anketler a
-     ORDER BY a.id DESC`
-  )).rows;
-  res.render('admin/anketler', { aktifSayfa: 'anketler', anketler });
-}));
-
-// --- Admin: Yeni anket formu ---
-app.get('/yonetim/anketler/yeni', adminGerekli, (req, res) => {
-  res.render('admin/anket-yeni', { aktifSayfa: 'anketler', anket: null, sorular: [] });
-});
-
-// --- Admin: Anket oluştur ---
-app.post('/yonetim/anketler/yeni', adminGerekli, ah(async (req, res) => {
-  const { baslik, aciklama, coklu_secim, gizli, bitis_tarihi, bitis_saat } = req.body;
-  if (!baslik || !baslik.trim()) {
-    req.flash('hata', 'Anket başlığı zorunludur.');
-    return res.redirect('/yonetim/anketler/yeni');
-  }
-  // bitis_tarihi + bitis_saat birleştir
-  let bitis = null;
-  if (bitis_tarihi) {
-    bitis = (bitis_tarihi + ' ' + (bitis_saat || '23:59')).trim();
-  }
-  const sonuc = await q(
-    'INSERT INTO anketler (baslik, aciklama, coklu_secim, gizli, bitis_tarihi) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-    [baslik.trim(), (aciklama || '').trim(), coklu_secim ? 1 : 0, gizli === '0' ? 0 : 1, bitis]
-  );
-  const anketId = sonuc.rows[0].id;
-  // Soruları kaydet
-  const soruMetinleri = [].concat(req.body.soru_metni || []);
-  const soruSecenekleri = [].concat(req.body.soru_secenekleri || []);
-  for (let i = 0; i < soruMetinleri.length; i++) {
-    const sm = (soruMetinleri[i] || '').trim();
-    if (!sm) continue;
-    const seceneklerRaw = (soruSecenekleri[i] || '').split('\n').map(s => s.trim()).filter(Boolean);
-    if (seceneklerRaw.length < 2) continue;
-    await q(
-      'INSERT INTO anket_sorulari (anket_id, soru, secenekler, sira) VALUES ($1, $2, $3, $4)',
-      [anketId, sm, JSON.stringify(seceneklerRaw), i]
-    );
-  }
-  req.flash('basari', 'Anket oluşturuldu. Üyeler artık oy verebilir.');
-  res.redirect('/yonetim/anketler');
-}));
-
-// --- Admin: Anket raporu (sonuçlar) ---
-app.get('/yonetim/anketler/rapor/:id', adminGerekli, ah(async (req, res) => {
-  const anket = (await q('SELECT * FROM anketler WHERE id = $1', [req.params.id])).rows[0];
-  if (!anket) {
-    req.flash('hata', 'Anket bulunamadı.');
-    return res.redirect('/yonetim/anketler');
-  }
-  const sorular = (await q(
-    'SELECT * FROM anket_sorulari WHERE anket_id = $1 ORDER BY sira, id',
-    [req.params.id]
-  )).rows;
-
-  // Her soru için oy dağılımı + üye bazında liste
-  const soruRaporlari = [];
-  for (const s of sorular) {
-    const secenekler = JSON.parse(s.secenekler);
-    const oyDagilim = (await q(
-      'SELECT secim, COUNT(*)::int AS adet FROM anket_oylar WHERE soru_id = $1 GROUP BY secim ORDER BY secim',
-      [s.id]
-    )).rows;
-    const toplamOy = oyDagilim.reduce((t, r) => t + r.adet, 0);
-    const dagilim = secenekler.map((sec, i) => {
-      const bulunan = oyDagilim.find(r => r.secim === i);
-      const adet = bulunan ? bulunan.adet : 0;
-      return {
-        secenek: sec,
-        adet,
-        yuzde: toplamOy > 0 ? Math.round((adet / toplamOy) * 100) : 0
-      };
-    });
-    soruRaporlari.push({ ...s, secenekler, dagilim, toplamOy });
-  }
-  // Katılımcı listesi (kim oy verdi) + her katılımcının verdiği oylar
-  const katilimcilar = (await q(
-    `SELECT u.id, u.ad_soyad, u.daire_no, k.katilim_tarihi,
-      (SELECT COUNT(*)::int FROM anket_oylar WHERE anket_id = $1 AND uye_id = u.id) AS cevaplanan_soru
-     FROM anket_katilimlar k
-     JOIN uyeler u ON u.id = k.uye_id
-     WHERE k.anket_id = $1
-     ORDER BY k.katilim_tarihi DESC`,
-    [req.params.id]
-  )).rows;
-  // Her katılımcının tüm oylarını çek (soru_id -> secim)
-  for (const k of katilimcilar) {
-    const oylar = (await q(
-      'SELECT soru_id, secim FROM anket_oylar WHERE anket_id = $1 AND uye_id = $2',
-      [req.params.id, k.id]
-    )).rows;
-    const oyMap = {};
-    oylar.forEach(o => { oyMap[o.soru_id] = o.secim; });
-    k.oyler = oyMap;
-  }
-
-  res.render('admin/anket-rapor', {
-    aktifSayfa: 'anketler',
-    anket,
-    sorular: soruRaporlari,
-    soruSayisi: sorular.length,
-    katilimcilar
-  });
-}));
-
-// --- Admin: Anket durum değiştir (aç/kapat) ---
-app.post('/yonetim/anketler/durum/:id', adminGerekli, ah(async (req, res) => {
-  await q('UPDATE anketler SET durum = CASE WHEN durum = 1 THEN 0 ELSE 1 END WHERE id = $1', [req.params.id]);
-  req.flash('basari', 'Anket durumu güncellendi.');
-  res.redirect('/yonetim/anketler');
-}));
-
-// --- Admin: Anket sil ---
-app.post('/yonetim/anketler/sil/:id', adminGerekli, ah(async (req, res) => {
-  await q('DELETE FROM anketler WHERE id = $1', [req.params.id]);
-  req.flash('basari', 'Anket ve tüm oylar silindi.');
-  res.redirect('/yonetim/anketler');
-}));
-
-// =====================================================================
-//  WEB PUSH BİLDİRİM API (404 catch-all'dan ÖNCE olmalı!)
-// =====================================================================
-
-app.get('/api/vapid-public-key', (req, res) => {
-  res.json({ publicKey: VAPID_PUBLIC_KEY });
-});
-
-app.post('/api/push/subscribe', ah(async (req, res) => {
-  const sub = req.body && req.body.subscription;
-  if (!sub || !sub.endpoint || !sub.keys || !sub.keys.p256dh || !sub.keys.auth) {
-    return res.status(400).json({ hata: 'Geçersiz abonelik bilgisi.' });
-  }
-  const uyeId = (req.session && req.session.uye && req.session.uye.id) || null;
-  try {
-    await q(
-      `INSERT INTO push_subscriptions (uye_id, endpoint, p256dh, auth, user_agent)
-       VALUES ($1, $2, $3, $4, $5)
-       ON CONFLICT (endpoint) DO UPDATE
-         SET p256dh = EXCLUDED.p256dh,
-             auth = EXCLUDED.auth,
-             user_agent = EXCLUDED.user_agent,
-             uye_id = COALESCE(EXCLUDED.uye_id, push_subscriptions.uye_id)`,
-      [uyeId, sub.endpoint, sub.keys.p256dh, sub.keys.auth, (req.get('user-agent') || '').slice(0, 250)]
-    );
-    res.json({ basarili: true });
-  } catch (e) {
-    console.error('Push abonelik kaydı başarısız:', e.message);
-    res.status(500).json({ hata: 'Abonelik kaydedilemedi.' });
-  }
-}));
-
-app.post('/api/push/unsubscribe', ah(async (req, res) => {
-  const endpoint = req.body && req.body.endpoint;
-  if (!endpoint) return res.json({ basarili: true });
-  try {
-    await q('DELETE FROM push_subscriptions WHERE endpoint = $1', [endpoint]);
-    res.json({ basarili: true });
-  } catch (e) {
-    res.status(500).json({ hata: 'Abonelik silinemedi.' });
-  }
-}));
-
-app.post('/api/push/test', uyeGerekli, ah(async (req, res) => {
-  const sonuc = await pushAboneliklereGonder({
-    baslik: 'Test bildirimi',
-    icerik: 'Bu bir test bildirimidir. Cumhuriyet Sitesi push bildirimleri çalışıyor!',
-    url: '/',
-    kategori: 'Test',
-    onemli: 0,
-    ikon: '/icons/icon-192.png'
-  }, req.session.uye.id);
-  if (sonuc.gonderildi === 0) {
-    req.flash('hata', 'Bu cihaz için aktif abonelik bulunamadı. Tarayıcı izinlerini kontrol edin.');
-  } else {
-    req.flash('basari', `Test bildirimi ${sonuc.gonderildi} cihaza gönderildi.`);
-  }
-  res.redirect(req.body.returnTo || '/panel');
-}));
-
-// =====================================================================
-//  404 ve HATA YÖNETİMİ
-// =====================================================================
-app.use((req, res) => {
-  res.status(404).render('404', { aktifSayfa: '' });
-});
-
-// Merkezi hata yakalayıcı
-app.use((err, req, res, next) => {
-  console.error('Sunucu hatası:', err);
-  res.status(500).send('Sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin.');
-});
-
-// =====================================================================
-//  WEB PUSH BİLDİRİM API
-// =====================================================================
-
-// Veritabanı init'i arka planda (route'lar tanımlandıktan SONRA)
-init()
-  .then(() => {
-    console.log('Veritabanı hazır.');
-  })
-  .catch((err) => {
-    console.error('Veritabanı başlatılamadı:', err.message);
-    // 5 saniye sonra kapat ki loglar düşsün
-    setTimeout(() => process.exit(1), 5000);
-  });
-
-// Hostinger 3 saniye kuralı: Önce port'u aç ki reverse-proxy "ready" sinyali alsın,
-// sonra DB init'i arka planda başlat. DB başarısız olursa zaten process zaten
-// kapanır ama port çoktan açıldığı için 503 dönmek yerine düzgün hata sayfası gösterir.
-// NOT: app.listen() tüm route'lar tanımlandıktan SONRA çağrılmalı!
-// (form route'ları aşağıda tanımlı)
-
-// ============================================================
-// ============================================================
-
 // --- Admin: Form listesi ---
 app.get('/yonetim/formlar', adminGerekli, ah(async (req, res) => {
   const formlar = (await q(
@@ -2497,6 +2273,232 @@ app.post('/form/:slug', ah(async (req, res) => {
 }));
 
 
+// =====================================================================
+app.get('/yonetim/anketler', adminGerekli, ah(async (req, res) => {
+  const anketler = (await q(
+    `SELECT a.*,
+      (SELECT COUNT(*)::int FROM anket_sorulari WHERE anket_id = a.id) AS soru_sayisi,
+      (SELECT COUNT(DISTINCT uye_id)::int FROM anket_oylar WHERE anket_id = a.id) AS oy_veren_sayisi,
+      (SELECT COUNT(*)::int FROM uyeler WHERE email_dogrulandi = 1) AS toplam_uye
+     FROM anketler a
+     ORDER BY a.id DESC`
+  )).rows;
+  res.render('admin/anketler', { aktifSayfa: 'anketler', anketler });
+}));
+
+// --- Admin: Yeni anket formu ---
+app.get('/yonetim/anketler/yeni', adminGerekli, (req, res) => {
+  res.render('admin/anket-yeni', { aktifSayfa: 'anketler', anket: null, sorular: [] });
+});
+
+// --- Admin: Anket oluştur ---
+app.post('/yonetim/anketler/yeni', adminGerekli, ah(async (req, res) => {
+  const { baslik, aciklama, coklu_secim, gizli, bitis_tarihi, bitis_saat } = req.body;
+  if (!baslik || !baslik.trim()) {
+    req.flash('hata', 'Anket başlığı zorunludur.');
+    return res.redirect('/yonetim/anketler/yeni');
+  }
+  // bitis_tarihi + bitis_saat birleştir
+  let bitis = null;
+  if (bitis_tarihi) {
+    bitis = (bitis_tarihi + ' ' + (bitis_saat || '23:59')).trim();
+  }
+  const sonuc = await q(
+    'INSERT INTO anketler (baslik, aciklama, coklu_secim, gizli, bitis_tarihi) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+    [baslik.trim(), (aciklama || '').trim(), coklu_secim ? 1 : 0, gizli === '0' ? 0 : 1, bitis]
+  );
+  const anketId = sonuc.rows[0].id;
+  // Soruları kaydet
+  const soruMetinleri = [].concat(req.body.soru_metni || []);
+  const soruSecenekleri = [].concat(req.body.soru_secenekleri || []);
+  for (let i = 0; i < soruMetinleri.length; i++) {
+    const sm = (soruMetinleri[i] || '').trim();
+    if (!sm) continue;
+    const seceneklerRaw = (soruSecenekleri[i] || '').split('\n').map(s => s.trim()).filter(Boolean);
+    if (seceneklerRaw.length < 2) continue;
+    await q(
+      'INSERT INTO anket_sorulari (anket_id, soru, secenekler, sira) VALUES ($1, $2, $3, $4)',
+      [anketId, sm, JSON.stringify(seceneklerRaw), i]
+    );
+  }
+  req.flash('basari', 'Anket oluşturuldu. Üyeler artık oy verebilir.');
+  res.redirect('/yonetim/anketler');
+}));
+
+// --- Admin: Anket raporu (sonuçlar) ---
+app.get('/yonetim/anketler/rapor/:id', adminGerekli, ah(async (req, res) => {
+  const anket = (await q('SELECT * FROM anketler WHERE id = $1', [req.params.id])).rows[0];
+  if (!anket) {
+    req.flash('hata', 'Anket bulunamadı.');
+    return res.redirect('/yonetim/anketler');
+  }
+  const sorular = (await q(
+    'SELECT * FROM anket_sorulari WHERE anket_id = $1 ORDER BY sira, id',
+    [req.params.id]
+  )).rows;
+
+  // Her soru için oy dağılımı + üye bazında liste
+  const soruRaporlari = [];
+  for (const s of sorular) {
+    const secenekler = JSON.parse(s.secenekler);
+    const oyDagilim = (await q(
+      'SELECT secim, COUNT(*)::int AS adet FROM anket_oylar WHERE soru_id = $1 GROUP BY secim ORDER BY secim',
+      [s.id]
+    )).rows;
+    const toplamOy = oyDagilim.reduce((t, r) => t + r.adet, 0);
+    const dagilim = secenekler.map((sec, i) => {
+      const bulunan = oyDagilim.find(r => r.secim === i);
+      const adet = bulunan ? bulunan.adet : 0;
+      return {
+        secenek: sec,
+        adet,
+        yuzde: toplamOy > 0 ? Math.round((adet / toplamOy) * 100) : 0
+      };
+    });
+    soruRaporlari.push({ ...s, secenekler, dagilim, toplamOy });
+  }
+  // Katılımcı listesi (kim oy verdi) + her katılımcının verdiği oylar
+  const katilimcilar = (await q(
+    `SELECT u.id, u.ad_soyad, u.daire_no, k.katilim_tarihi,
+      (SELECT COUNT(*)::int FROM anket_oylar WHERE anket_id = $1 AND uye_id = u.id) AS cevaplanan_soru
+     FROM anket_katilimlar k
+     JOIN uyeler u ON u.id = k.uye_id
+     WHERE k.anket_id = $1
+     ORDER BY k.katilim_tarihi DESC`,
+    [req.params.id]
+  )).rows;
+  // Her katılımcının tüm oylarını çek (soru_id -> secim)
+  for (const k of katilimcilar) {
+    const oylar = (await q(
+      'SELECT soru_id, secim FROM anket_oylar WHERE anket_id = $1 AND uye_id = $2',
+      [req.params.id, k.id]
+    )).rows;
+    const oyMap = {};
+    oylar.forEach(o => { oyMap[o.soru_id] = o.secim; });
+    k.oyler = oyMap;
+  }
+
+  res.render('admin/anket-rapor', {
+    aktifSayfa: 'anketler',
+    anket,
+    sorular: soruRaporlari,
+    soruSayisi: sorular.length,
+    katilimcilar
+  });
+}));
+
+// --- Admin: Anket durum değiştir (aç/kapat) ---
+app.post('/yonetim/anketler/durum/:id', adminGerekli, ah(async (req, res) => {
+  await q('UPDATE anketler SET durum = CASE WHEN durum = 1 THEN 0 ELSE 1 END WHERE id = $1', [req.params.id]);
+  req.flash('basari', 'Anket durumu güncellendi.');
+  res.redirect('/yonetim/anketler');
+}));
+
+// --- Admin: Anket sil ---
+app.post('/yonetim/anketler/sil/:id', adminGerekli, ah(async (req, res) => {
+  await q('DELETE FROM anketler WHERE id = $1', [req.params.id]);
+  req.flash('basari', 'Anket ve tüm oylar silindi.');
+  res.redirect('/yonetim/anketler');
+}));
+
+// =====================================================================
+//  WEB PUSH BİLDİRİM API (404 catch-all'dan ÖNCE olmalı!)
+// =====================================================================
+
+app.get('/api/vapid-public-key', (req, res) => {
+  res.json({ publicKey: VAPID_PUBLIC_KEY });
+});
+
+app.post('/api/push/subscribe', ah(async (req, res) => {
+  const sub = req.body && req.body.subscription;
+  if (!sub || !sub.endpoint || !sub.keys || !sub.keys.p256dh || !sub.keys.auth) {
+    return res.status(400).json({ hata: 'Geçersiz abonelik bilgisi.' });
+  }
+  const uyeId = (req.session && req.session.uye && req.session.uye.id) || null;
+  try {
+    await q(
+      `INSERT INTO push_subscriptions (uye_id, endpoint, p256dh, auth, user_agent)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (endpoint) DO UPDATE
+         SET p256dh = EXCLUDED.p256dh,
+             auth = EXCLUDED.auth,
+             user_agent = EXCLUDED.user_agent,
+             uye_id = COALESCE(EXCLUDED.uye_id, push_subscriptions.uye_id)`,
+      [uyeId, sub.endpoint, sub.keys.p256dh, sub.keys.auth, (req.get('user-agent') || '').slice(0, 250)]
+    );
+    res.json({ basarili: true });
+  } catch (e) {
+    console.error('Push abonelik kaydı başarısız:', e.message);
+    res.status(500).json({ hata: 'Abonelik kaydedilemedi.' });
+  }
+}));
+
+app.post('/api/push/unsubscribe', ah(async (req, res) => {
+  const endpoint = req.body && req.body.endpoint;
+  if (!endpoint) return res.json({ basarili: true });
+  try {
+    await q('DELETE FROM push_subscriptions WHERE endpoint = $1', [endpoint]);
+    res.json({ basarili: true });
+  } catch (e) {
+    res.status(500).json({ hata: 'Abonelik silinemedi.' });
+  }
+}));
+
+app.post('/api/push/test', uyeGerekli, ah(async (req, res) => {
+  const sonuc = await pushAboneliklereGonder({
+    baslik: 'Test bildirimi',
+    icerik: 'Bu bir test bildirimidir. Cumhuriyet Sitesi push bildirimleri çalışıyor!',
+    url: '/',
+    kategori: 'Test',
+    onemli: 0,
+    ikon: '/icons/icon-192.png'
+  }, req.session.uye.id);
+  if (sonuc.gonderildi === 0) {
+    req.flash('hata', 'Bu cihaz için aktif abonelik bulunamadı. Tarayıcı izinlerini kontrol edin.');
+  } else {
+    req.flash('basari', `Test bildirimi ${sonuc.gonderildi} cihaza gönderildi.`);
+  }
+  res.redirect(req.body.returnTo || '/panel');
+}));
+
+// =====================================================================
+//  404 ve HATA YÖNETİMİ
+// =====================================================================
+app.use((req, res) => {
+  res.status(404).render('404', { aktifSayfa: '' });
+});
+
+// Merkezi hata yakalayıcı
+app.use((err, req, res, next) => {
+  console.error('Sunucu hatası:', err);
+  res.status(500).send('Sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin.');
+});
+
+// =====================================================================
+//  WEB PUSH BİLDİRİM API
+// =====================================================================
+
+// Veritabanı init'i arka planda (route'lar tanımlandıktan SONRA)
+init()
+  .then(() => {
+    console.log('Veritabanı hazır.');
+  })
+  .catch((err) => {
+    console.error('Veritabanı başlatılamadı:', err.message);
+    // 5 saniye sonra kapat ki loglar düşsün
+    setTimeout(() => process.exit(1), 5000);
+  });
+
+// Hostinger 3 saniye kuralı: Önce port'u aç ki reverse-proxy "ready" sinyali alsın,
+// sonra DB init'i arka planda başlat. DB başarısız olursa zaten process zaten
+// kapanır ama port çoktan açıldığı için 503 dönmek yerine düzgün hata sayfası gösterir.
+// NOT: app.listen() tüm route'lar tanımlandıktan SONRA çağrılmalı!
+// (form route'ları aşağıda tanımlı)
+
+// ============================================================
+// ============================================================
+
+// =====================================================================
 // =====================================================================
 // SUNUCUYU BAŞLAT (tüm route'lar tanımlandıktan SONRA)
 // =====================================================================
