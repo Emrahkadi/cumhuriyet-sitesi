@@ -56,6 +56,35 @@
 
 <section class="section section-alt">
   <div class="container">
+    <div class="section-head">
+      <h2>📋 Açık Formlar</h2>
+      <a href="/formlar" class="section-link">Tümünü Gör →</a>
+    </div>
+
+    <% if (typeof acikFormlar !== 'undefined' && acikFormlar && acikFormlar.length > 0) { %>
+      <div class="card-grid">
+        <% acikFormlar.forEach(function(f) { %>
+          <a href="/form/<%= f.slug %>" class="duyuru-card" style="text-decoration:none;color:inherit;display:block;">
+            <div class="duyuru-card-top">
+              <span class="badge badge-onemli">✅ Açık</span>
+              <time><%= f.olusturma_tarihi.split(' ')[0] %></time>
+            </div>
+            <h3 style="color:var(--metin-koyu,#1a3a5c);"><%= f.baslik %></h3>
+            <% if (f.aciklama) { %>
+              <p><%= f.aciklama.length > 100 ? f.aciklama.slice(0, 100) + '…' : f.aciklama %></p>
+            <% } %>
+            <span class="card-link">Doldurmak için tıklayın →</span>
+          </a>
+        <% }); %>
+      </div>
+    <% } else { %>
+      <p class="empty-state">Şu anda açık form bulunmuyor.</p>
+    <% } %>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
     <div class="feature-grid">
       <div class="feature-item">
         <span class="feature-icon">📢</span>

@@ -1,0 +1,51 @@
+<%- include('partials/header', { sayfaBaslik: 'Formlar', aktifSayfa: 'formlar' }) %>
+
+<section class="page-hero">
+  <div class="container">
+    <h1>📋 Formlar</h1>
+    <p>Site yönetiminin paylaştığı formları buradan doldurabilirsiniz. Üye olmanız gerekmez.</p>
+  </div>
+</section>
+
+<section class="container" style="padding:40px 20px;">
+  <% if (formlar.length === 0) { %>
+    <div class="empty-state" style="text-align:center;padding:60px 20px;background:var(--arka-acik,#f5f7fa);border-radius:12px;">
+      <div style="font-size:3rem;margin-bottom:12px;">📭</div>
+      <h3 style="margin:0 0 8px 0;color:var(--metin-koyu,#1a3a5c);">Henüz açık form yok</h3>
+      <p style="color:var(--metin-acik,#6b7c93);margin:0;">Site yönetimi yeni bir form paylaştığında burada görünecek.</p>
+    </div>
+  <% } else { %>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;">
+      <% formlar.forEach(function(f) { %>
+        <a href="/form/<%= f.slug %>" style="text-decoration:none;color:inherit;display:block;background:#fff;border:1px solid var(--cizgi,#e0e6ed);border-radius:12px;padding:20px;transition:all .2s;box-shadow:0 2px 8px rgba(0,0,0,.04);" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(0,0,0,.08)';" onmouseout="this.style.transform='';this.style.boxShadow='0 2px 8px rgba(0,0,0,.04)';">
+          <div style="display:flex;align-items:start;gap:12px;">
+            <div style="font-size:2rem;flex-shrink:0;">📝</div>
+            <div style="flex:1;min-width:0;">
+              <h3 style="margin:0 0 6px 0;font-size:1.1rem;color:var(--metin-koyu,#1a3a5c);"><%= f.baslik %></h3>
+              <% if (f.aciklama) { %>
+                <p style="margin:0 0 10px 0;font-size:.9rem;color:var(--metin-acik,#6b7c93);line-height:1.4;"><%= f.aciklama.length > 100 ? f.aciklama.slice(0, 100) + '…' : f.aciklama %></p>
+              <% } %>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;font-size:.8rem;">
+                <span style="background:#e8f5e9;color:#2e7d32;padding:3px 10px;border-radius:12px;font-weight:600;">✅ Açık</span>
+                <span style="background:var(--arka-acik,#f5f7fa);color:var(--metin-acik,#6b7c93);padding:3px 10px;border-radius:12px;"><%= f.alan_sayisi %> alan</span>
+                <span style="background:var(--arka-acik,#f5f7fa);color:var(--metin-acik,#6b7c93);padding:3px 10px;border-radius:12px;"><%= f.olusturma_tarihi %></span>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--cizgi,#e0e6ed);text-align:right;">
+            <span style="color:var(--birincil,#1a3a5c);font-weight:600;font-size:.9rem;">Doldurmak için tıklayın →</span>
+          </div>
+        </a>
+      <% }); %>
+    </div>
+  <% } %>
+
+  <div style="margin-top:40px;padding:20px;background:var(--arka-acik,#f5f7fa);border-radius:12px;text-align:center;">
+    <p style="margin:0;color:var(--metin-acik,#6b7c93);font-size:.9rem;">
+      💡 <strong>İpucu:</strong> Form linklerini WhatsApp grubunda veya e-postada paylaşabilirsiniz.
+      Herkes üye olmadan doldurabilir.
+    </p>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

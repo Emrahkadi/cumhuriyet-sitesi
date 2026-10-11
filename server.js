@@ -405,7 +405,15 @@ function adminGerekli(req, res, next) {
 // Ana sayfa - güncel duyurular
 app.get('/', ah(async (req, res) => {
   const duyurular = (await q('SELECT * FROM duyurular ORDER BY onemli DESC, id DESC LIMIT 6')).rows;
-  res.render('index', { aktifSayfa: 'anasayfa', duyurular });
+  const acikFormlar = (await q(
+    `SELECT f.*,
+            (SELECT COUNT(*)::int FROM form_alanlari a WHERE a.form_id = f.id) AS alan_sayisi
+       FROM formlar f
+      WHERE f.durum = 1
+      ORDER BY f.id DESC
+      LIMIT 3`
+  )).rows;
+  res.render('index', { aktifSayfa: 'anasayfa', duyurular, acikFormlar });
 }));
 
 // Tüm duyurular
@@ -422,6 +430,19 @@ app.get('/duyuru/:id', ah(async (req, res) => {
     return res.status(404).render('404', { aktifSayfa: '' });
   }
   res.render('duyuru-detay', { aktifSayfa: 'duyurular', duyuru });
+}));
+
+// Public: Açık formlar listesi (herkes görebilir)
+app.get('/formlar', ah(async (req, res) => {
+  res.set('Cache-Control', 'public, max-age=60');
+  const formlar = (await q(
+    `SELECT f.*,
+            (SELECT COUNT(*)::int FROM form_alanlari a WHERE a.form_id = f.id) AS alan_sayisi
+       FROM formlar f
+      WHERE f.durum = 1
+      ORDER BY f.id DESC`
+  )).rows;
+  res.render('formlar', { aktifSayfa: 'formlar', formlar });
 }));
 
 // Hakkımızda
