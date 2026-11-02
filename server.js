@@ -908,6 +908,62 @@ app.get('/yonetim/cikis', (req, res) => {
   res.redirect('/yonetim/giris');
 });
 
+// --- Yönetici şifre değiştirme ---
+app.get('/yonetim/hesap/sifre', adminGerekli, (req, res) => {
+  res.render('admin/sifre-degistir', { aktifSayfa: 'hesap' });
+});
+
+app.post('/yonetim/hesap/sifre', adminGerekli, ah(async (req, res) => {
+  const { mevcut_sifre, yeni_sifre, yeni_sifre_tekrar } = req.body;
+  const yoneticiId = req.session.yonetici.id;
+
+  if (!mevcut_sifre || !yeni_sifre || !yeni_sifre_tekrar) {
+    req.flash('hata', 'Tüm alanları doldurunuz.');
+    return res.redirect('/yonetim/hesap/sifre');
+  }
+  if (yeni_sifre !== yeni_sifre_tekrar) {
+    req.flash('hata', 'Yeni şifreler birbiriyle eşleşmiyor.');
+    return res.redirect('/yonetim/hesap/sifre');
+  }
+  if (yeni_sifre.length < 6) {
+    req.flash('hata', 'Yeni şifre en az 6 karakter olmalıdır.');
+    return res.redirect('/yonetim/hesap/sifre');
+  }
+
+  const admin = (await q('SELECT sifre_hash FROM yoneticiler WHERE id = $1', [yoneticiId])).rows[0];
+  if (!admin || !bcrypt.compareSync(mevcut_sifre, admin.sifre_hash)) {
+    req.flash('hata', 'Mevcut şifre hatalı.');
+    return res.redirect('/yonetim/hesap/sifre');
+  }
+
+  const hash = bcrypt.hashSync(yeni_sifre, 10);
+  await q('UPDATE yoneticiler SET sifre_hash = $1 WHERE id = $2', [hash, yoneticiId]);
+  req.flash('basari', 'Şifreniz başarıyla güncellendi.');
+  res.redirect('/yonetim/hesap/sifre');
+}));
+
+// --- Yönetici kullanıcı adı değiştirme ---
+app.post('/yonetim/hesap/kullanici-adi', adminGerekli, ah(async (req, res) => {
+  const { yeni_kullanici_adi } = req.body;
+  const yoneticiId = req.session.yonetici.id;
+  const ad = (yeni_kullanici_adi || '').trim();
+
+  if (ad.length < 3) {
+    req.flash('hata', 'Kullanıcı adı en az 3 karakter olmalıdır.');
+    return res.redirect('/yonetim/hesap/sifre');
+  }
+  const varOlan = (await q('SELECT id FROM yoneticiler WHERE kullanici_adi = $1 AND id <> $2', [ad, yoneticiId])).rows[0];
+  if (varOlan) {
+    req.flash('hata', 'Bu kullanıcı adı zaten kullanılıyor.');
+    return res.redirect('/yonetim/hesap/sifre');
+  }
+
+  await q('UPDATE yoneticiler SET kullanici_adi = $1 WHERE id = $2', [ad, yoneticiId]);
+  req.session.yonetici.kullanici_adi = ad;
+  req.flash('basari', 'Kullanıcı adınız güncellendi.');
+  res.redirect('/yonetim/hesap/sifre');
+}));
+
 // Yönetim ana paneli (özet)
 app.get('/yonetim', adminGerekli, ah(async (req, res) => {
   const istatistik = {

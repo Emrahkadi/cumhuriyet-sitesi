@@ -32,6 +32,7 @@
       <a href="/yonetim/formlar" class="<%= aktifSayfa === 'formlar' ? 'active' : '' %>">📋 Formlar</a>
       <a href="/yonetim/kentsel-donusum" class="<%= aktifSayfa === 'kentsel-donusum' ? 'active' : '' %>">🏗️ Kentsel Dönüşüm</a>
       <a href="/yonetim/mesajlar" class="<%= aktifSayfa === 'mesajlar' ? 'active' : '' %>">✉️ İletişim Mesajları</a>
+      <a href="/yonetim/hesap/sifre" class="<%= aktifSayfa === 'hesap' ? 'active' : '' %>">🔐 Hesap Ayarları</a>
     </nav>
     <div class="admin-sidebar-bottom">
       <a href="/" target="_blank" class="admin-site-link">🌐 Siteyi Gör</a>
@@ -45,7 +46,7 @@
         <span></span><span></span><span></span>
       </button>
       <h1><%= sayfaBaslik %></h1>
-      <span class="admin-user">👤 <%= yonetici.kullanici_adi %></span>
+      <a href="/yonetim/hesap/sifre" class="admin-user" title="Hesap ayarları">👤 <%= yonetici.kullanici_adi %></a>
     </header>
 
     <div class="admin-content">

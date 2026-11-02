@@ -1,0 +1,58 @@
+<%- include('partials/header', { sayfaBaslik: 'Hesap Ayarları' }) %>
+
+<div class="admin-panel-box">
+  <h2>🔐 Yönetici Şifresi Değiştir</h2>
+  <p style="margin-bottom:16px;color:#5a6472;font-size:.92em;">
+    Mevcut şifrenizi doğrulayarak yeni bir şifre belirleyebilirsiniz.
+    Şifreler <strong>bcrypt</strong> ile şifrelenerek saklanır, açık metin olarak tutulmaz.
+  </p>
+
+  <form action="/yonetim/hesap/sifre" method="POST" class="form">
+    <div class="form-group">
+      <label for="mevcut_sifre">Mevcut Şifre</label>
+      <input type="password" id="mevcut_sifre" name="mevcut_sifre" required autocomplete="current-password" />
+    </div>
+
+    <div class="form-group">
+      <label for="yeni_sifre">Yeni Şifre</label>
+      <input type="password" id="yeni_sifre" name="yeni_sifre" required minlength="6" autocomplete="new-password" />
+      <small style="color:#7a8494;">En az 6 karakter. Büyük/küçük harf ve rakam karışımı önerilir.</small>
+    </div>
+
+    <div class="form-group">
+      <label for="yeni_sifre_tekrar">Yeni Şifre (Tekrar)</label>
+      <input type="password" id="yeni_sifre_tekrar" name="yeni_sifre_tekrar" required minlength="6" autocomplete="new-password" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Şifreyi Güncelle</button>
+  </form>
+</div>
+
+<div class="admin-panel-box">
+  <h2>👤 Kullanıcı Adı Değiştir</h2>
+  <p style="margin-bottom:16px;color:#5a6472;font-size:.92em;">
+    Yönetim paneline giriş için kullandığınız kullanıcı adını değiştirebilirsiniz.
+    Mevcut kullanıcı adınız: <strong><%= yonetici.kullanici_adi %></strong>
+  </p>
+
+  <form action="/yonetim/hesap/kullanici-adi" method="POST" class="form">
+    <div class="form-group">
+      <label for="yeni_kullanici_adi">Yeni Kullanıcı Adı</label>
+      <input type="text" id="yeni_kullanici_adi" name="yeni_kullanici_adi" required minlength="3" value="<%= yonetici.kullanici_adi %>" autocomplete="username" />
+    </div>
+
+    <button type="submit" class="btn btn-secondary">Kullanıcı Adını Güncelle</button>
+  </form>
+</div>
+
+<div class="admin-panel-box">
+  <h2>ℹ️ Şifre Unutuldu mu?</h2>
+  <p style="color:#5a6472;font-size:.92em;margin:0;">
+    Yönetici şifresi unutulursa <strong>server.js</strong> içindeki <code>seedAdmin()</code> fonksiyonu
+    varsayılan hesabı oluşturur. Yeni bir yönetici hesabı açmak için
+    <code>.env</code> dosyasına <code>ADMIN_USERNAME</code> ve <code>ADMIN_PASSWORD</code>
+    tanımlayıp veritabanını <code>seed</code> ile güncelleyebilirsiniz.
+  </p>
+</div>
+
+<%- include('partials/footer') %>
