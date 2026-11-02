@@ -54,57 +54,80 @@
   <!-- ============================================================= -->
 
   <!-- Quill.js zengin metin editörü (sadece formlarda kullanılıyor) -->
-  <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet" media="print" onload="this.media='all'">
-  <script src="https://cdn.quilljs.com/1.3.7/quill.min.js" defer></script>
+  <!-- Yerel kopya kullanılır: CDN erişimi CSP/offline ortamda engellenebiliyor -->
+  <link rel="stylesheet" href="/css/quill.snow.css?v=1.3.7" />
+  <script src="/js/quill.min.js?v=1.3.7" defer></script>
   <script src="/js/main.js" defer></script>
   <script>
     // Quill editörü: data-quill attribute'lu tüm textarea'ları başlat
-    document.querySelectorAll('textarea[data-quill]').forEach(function(ta) {
-      var hidden = document.createElement('input');
-      hidden.type = 'hidden';
-      hidden.name = ta.name;
-      hidden.id = ta.id + '_hidden';
-      ta.removeAttribute('name');
-      ta.removeAttribute('required'); // HTML5 required'i kaldır, server-side kontrolü var
-      ta.style.display = 'none';
-      ta.parentNode.insertBefore(hidden, ta);
-
-      var editorDiv = document.createElement('div');
-      editorDiv.style.minHeight = '180px';
-      editorDiv.style.background = '#fff';
-      ta.parentNode.insertBefore(editorDiv, ta);
-
-      var quill = new Quill(editorDiv, {
-        theme: 'snow',
-        placeholder: ta.getAttribute('placeholder') || 'İçerik yazın...',
-        modules: {
-          toolbar: [
-            [{ 'header': [1, 2, 3, false] }],
-            ['bold', 'italic', 'underline', 'strike'],
-            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-            [{ 'align': [] }],
-            ['link', 'blockquote', 'code-block'],
-            ['clean']
-          ]
-        }
-      });
-
-      if (ta.value && ta.value.trim()) {
-        quill.root.innerHTML = ta.value;
-        hidden.value = ta.value;
+    // Quill CDN'den defer ile yüklendiği için DOMContentLoaded sonrası çalışıyoruz.
+    function quillBaslat() {
+      if (typeof Quill === 'undefined') {
+        console.warn('Quill yüklenemedi, editör devre dışı.');
+        return;
       }
+      document.querySelectorAll('textarea[data-quill]').forEach(function(ta) {
+        if (ta.dataset.quillReady === '1') return;
+        ta.dataset.quillReady = '1';
 
-      // Her içerik değişikliğinde gizli input'u güncelle
-      quill.on('text-change', function() {
-        hidden.value = quill.root.innerHTML;
-      });
+        var hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = ta.name;
+        hidden.id = ta.id + '_hidden';
+        ta.removeAttribute('name');
+        ta.removeAttribute('required'); // HTML5 required'i kaldır, server-side kontrolü var
+        ta.style.display = 'none';
 
-      var form = ta.closest('form');
-      if (form) {
-        form.addEventListener('submit', function() {
+        var editorDiv = document.createElement('div');
+        editorDiv.id = ta.id + '_editor';
+        editorDiv.style.minHeight = '180px';
+        editorDiv.style.background = '#fff';
+        editorDiv.style.marginBottom = '8px';
+
+        // Editörü textarea'nın SONRASINA ekle (görünür olsun)
+        ta.parentNode.insertBefore(hidden, ta);
+        ta.parentNode.insertBefore(editorDiv, ta.nextSibling);
+
+        var quill = new Quill(editorDiv, {
+          theme: 'snow',
+          placeholder: ta.getAttribute('placeholder') || 'İçerik yazın...',
+          modules: {
+            toolbar: [
+              [{ 'header': [1, 2, 3, false] }],
+              ['bold', 'italic', 'underline', 'strike'],
+              [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+              [{ 'align': [] }],
+              ['link', 'blockquote', 'code-block'],
+              ['clean']
+            ]
+          }
+        });
+
+        if (ta.value && ta.value.trim()) {
+          quill.root.innerHTML = ta.value;
+          hidden.value = ta.value;
+        }
+
+        // Her içerik değişikliğinde gizli input'u güncelle
+        quill.on('text-change', function() {
           hidden.value = quill.root.innerHTML;
         });
-      }
+
+        var form = ta.closest('form');
+        if (form) {
+          form.addEventListener('submit', function() {
+            hidden.value = quill.root.innerHTML;
+          });
+        }
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', quillBaslat);
+    } else {
+      quillBaslat();
+    }
+    window.addEventListener('load', function() {
+      if (typeof Quill !== 'undefined') quillBaslat();
     });
   </script>
 </body>

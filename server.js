@@ -100,7 +100,9 @@ const uploadKlasor = (altKlasor) => {
 const dosyaYukle = multer({
   storage: multer.diskStorage({
     destination: function (req, file, cb) {
-      const altKlasor = req.baseUrl.includes('kentsel') ? 'kentsel' : 'duyurular';
+      // NOT: req.baseUrl uygulama seviyesindeki rotalarda boş string'dir.
+      // Bu yüzden klasör seçimi rota yolundan yapılır.
+      const altKlasor = (req.path || '').includes('kentsel') ? 'kentsel' : 'duyurular';
       cb(null, uploadKlasor(altKlasor));
     },
     filename: function (req, file, cb) {
@@ -116,8 +118,65 @@ const dosyaYukle = multer({
     else cb(new Error('Bu dosya türüne izin verilmiyor. (İzinli: ' + izinli.join(', ') + ')'));
   }
 });
-const dosyaTek = uploadKlasor => uploadKlasor === 'kentsel' ? dosyaYukle.single('ek') : dosyaYukle.single('ek');
-const dosyaCok = uploadKlasor => uploadKlasor === 'kentsel' ? dosyaYukle.array('ekler', 10) : dosyaYukle.array('ekler', 10);
+
+// Formlardaki dosya alanı adı "ek" (tekil). Yükleyici, hem tek dosya
+// (single) hem çoklu dosya (array) gönderimlerini kabul edecek şekilde
+// "ek" ve "ekler" alanlarının ikisini birden tanımlar.
+// Bu sayede "Unexpected file field" hatası giderilir.
+
+// Multer hatalarını (Unexpected file field, LIMIT_FILE_SIZE vb.) kullanıcıya
+// anlaşılır bir mesajla gösterir.
+const yuklemeHataMesaji = (err) => {
+  if (!err) return null;
+  if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+    return 'Beklenmeyen dosya alanı alındı. Lütfen yalnızca "Ek Dosya" alanını kullanın.';
+  }
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return 'Dosya boyutu 10 MB sınırını aşıyor.';
+  }
+  if (err.code === 'LIMIT_FILE_COUNT') {
+    return 'Tek seferde en fazla 10 ek dosya yükleyebilirsiniz.';
+  }
+  return err.message || 'Dosya yüklenemedi.';
+};
+
+// multer.fields() req.files'i { ek: [...], ekler: [...] } şeklinde döndürür.
+// Handler'lar düz dizi beklediği için tek bir diziye normalize ediyoruz.
+const dosyalariNormalizeEt = (req, res, next) => {
+  if (req.files && !Array.isArray(req.files)) {
+    const duz = [];
+    for (const anahtar of Object.keys(req.files)) {
+      const grup = req.files[anahtar];
+      if (Array.isArray(grup)) duz.push(...grup);
+    }
+    req.files = duz;
+  }
+  if (!req.files) req.files = [];
+  // Geriye uyum: tek dosya bekleyen handler'lar için req.file
+  if (!req.file && req.files.length) req.file = req.files[0];
+  next();
+};
+
+// Yukleme middleware'i: multer + normalize + hata yakalama
+const yukleme = (req, res, next) => {
+  const middleware = dosyaYukle.fields([
+    { name: 'ek', maxCount: 1 },
+    { name: 'ekler', maxCount: 10 }
+  ]);
+  middleware(req, res, (err) => {
+    if (err) {
+      req.flash('hata', yuklemeHataMesaji(err));
+      const geri = (req.path || '').includes('kentsel')
+        ? '/yonetim/kentsel-donusum'
+        : '/yonetim/duyurular';
+      return res.redirect(geri);
+    }
+    dosyalariNormalizeEt(req, res, next);
+  });
+};
+
+const dosyaTek = () => [yukleme];
+const dosyaCok = () => [yukleme];
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -236,11 +295,13 @@ app.use(
       useDefaults: true,
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'blob:', 'https://tawk.to', 'https://*.tawk.to', 'https://embed.tawk.to', 'https://cdn.quilljs.com'],
-        scriptSrcElem: ["'self'", "'unsafe-inline'", 'https://tawk.to', 'https://*.tawk.to', 'https://embed.tawk.to', 'https://cdn.quilljs.com'],
+        // Quill artık yerel (/js/quill.min.js, /css/quill.snow.css) olarak sunuluyor.
+        // Bu nedenle CDN'e izin vermek gerekmiyor; CSP sıkı tutuldu.
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'blob:', 'https://tawk.to', 'https://*.tawk.to', 'https://embed.tawk.to'],
+        scriptSrcElem: ["'self'", "'unsafe-inline'", 'https://tawk.to', 'https://*.tawk.to', 'https://embed.tawk.to'],
         scriptSrcAttr: ["'unsafe-inline'"],
-        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://tawk.to', 'https://*.tawk.to', 'https://cdn.quilljs.com'],
-        styleSrcElem: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://tawk.to', 'https://*.tawk.to', 'https://cdn.quilljs.com'],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://tawk.to', 'https://*.tawk.to'],
+        styleSrcElem: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://tawk.to', 'https://*.tawk.to'],
         styleSrcAttr: ["'unsafe-inline'"],
         fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com', 'https://tawk.to', 'https://*.tawk.to'],
         imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
@@ -985,7 +1046,7 @@ app.get('/yonetim/duyurular', adminGerekli, ah(async (req, res) => {
   res.render('admin/duyurular', { aktifSayfa: 'duyurular', duyurular });
 }));
 
-app.post('/yonetim/duyurular/ekle', adminGerekli, dosyaCok('duyurular'), ah(async (req, res) => {
+app.post('/yonetim/duyurular/ekle', adminGerekli, dosyaCok(), ah(async (req, res) => {
   const { baslik, icerik, kategori, onemli } = req.body;
   if (!baslik || !icerik) {
     req.flash('hata', 'Başlık ve içerik zorunludur.');
@@ -1049,7 +1110,7 @@ app.get('/yonetim/duyurular/duzenle/:id', adminGerekli, ah(async (req, res) => {
 }));
 
 // Duyuru düzenleme işlemi
-app.post('/yonetim/duyurular/duzenle/:id', adminGerekli, dosyaCok('duyurular'), ah(async (req, res) => {
+app.post('/yonetim/duyurular/duzenle/:id', adminGerekli, dosyaCok(), ah(async (req, res) => {
   const mevcut = (await q('SELECT * FROM duyurular WHERE id = $1', [req.params.id])).rows[0];
   if (!mevcut) {
     req.flash('hata', 'Duyuru bulunamadı.');
@@ -1134,7 +1195,7 @@ app.get('/yonetim/kentsel-donusum', adminGerekli, ah(async (req, res) => {
   res.render('admin/kentsel-donusum', { aktifSayfa: 'kentsel-donusum', maddeler });
 }));
 
-app.post('/yonetim/kentsel-donusum/ekle', adminGerekli, dosyaCok('kentsel'), ah(async (req, res) => {
+app.post('/yonetim/kentsel-donusum/ekle', adminGerekli, dosyaCok(), ah(async (req, res) => {
   const { baslik, icerik, durum } = req.body;
   if (!baslik || !icerik) {
     req.flash('hata', 'Başlık ve içerik zorunludur.');
@@ -1193,7 +1254,7 @@ app.get('/yonetim/kentsel-donusum/duzenle/:id', adminGerekli, ah(async (req, res
 }));
 
 // Kentsel düzenleme işlemi
-app.post('/yonetim/kentsel-donusum/duzenle/:id', adminGerekli, dosyaCok('kentsel'), ah(async (req, res) => {
+app.post('/yonetim/kentsel-donusum/duzenle/:id', adminGerekli, dosyaCok(), ah(async (req, res) => {
   const mevcut = (await q('SELECT * FROM kentsel_donusum WHERE id = $1', [req.params.id])).rows[0];
   if (!mevcut) {
     req.flash('hata', 'Kayıt bulunamadı.');
@@ -1206,11 +1267,12 @@ app.post('/yonetim/kentsel-donusum/duzenle/:id', adminGerekli, dosyaCok('kentsel
   }
   const temizIcerik = zenginMetin(icerik);
   let ekDosya = mevcut.ek_dosya;
-  if (req.file) {
+  const yeniDosyalar = Array.isArray(req.files) ? req.files : [];
+  if (yeniDosyalar.length) {
     if (mevcut.ek_dosya) {
       fs.unlink(path.join(__dirname, 'public', mevcut.ek_dosya), () => {});
     }
-    ekDosya = '/uploads/kentsel/' + req.file.filename;
+    ekDosya = '/uploads/kentsel/' + yeniDosyalar[0].filename;
   } else if (ek_dosya_sil === '1') {
     if (mevcut.ek_dosya) {
       fs.unlink(path.join(__dirname, 'public', mevcut.ek_dosya), () => {});
@@ -1221,6 +1283,13 @@ app.post('/yonetim/kentsel-donusum/duzenle/:id', adminGerekli, dosyaCok('kentsel
     'UPDATE kentsel_donusum SET baslik = $1, icerik = $2, durum = $3, ek_dosya = $4 WHERE id = $5',
     [baslik.trim(), temizIcerik, (durum || 'Planlama').trim(), ekDosya, req.params.id]
   );
+  // Ek dosyaları ayrı tabloya ekle (ekleme rotası ile aynı davranış)
+  for (const f of yeniDosyalar) {
+    await q(
+      'INSERT INTO kentsel_ekleri (kentsel_id, dosya_yolu, orijinal_ad, boyut) VALUES ($1, $2, $3, $4)',
+      [req.params.id, '/uploads/kentsel/' + f.filename, f.originalname, f.size]
+    );
+  }
   req.flash('basari', 'Kayıt güncellendi.');
   res.redirect('/yonetim/kentsel-donusum');
 }));
@@ -1804,7 +1873,17 @@ app.post('/yonetim/sakinler/sil/:id', adminGerekli, ah(async (req, res) => {
 }));
 
 // Excel (.xlsx) içe aktarma — "Adresler" benzeri 11 kolonlu sayfa
-app.post('/yonetim/sakinler/import', adminGerekli, upload.single('dosya'), ah(async (req, res) => {
+app.post('/yonetim/sakinler/import', adminGerekli, (req, res, next) => {
+  upload.single('dosya')(req, res, (err) => {
+    if (err) {
+      req.flash('hata', err.code === 'LIMIT_FILE_SIZE'
+        ? 'Dosya boyutu 10 MB sınırını aşıyor.'
+        : 'Dosya yüklenemedi. Lütfen .xlsx formatında bir dosya seçin.');
+      return res.redirect('/yonetim/sakinler');
+    }
+    next();
+  });
+}, ah(async (req, res) => {
   if (!req.file) {
     req.flash('hata', 'Lütfen bir .xlsx dosyası seçin.');
     return res.redirect('/yonetim/sakinler');
