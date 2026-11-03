@@ -16,6 +16,7 @@ const helmet = require('helmet');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const sanitizeHtml = require('sanitize-html');
+const pgSession = require('connect-pg-simple');
 
 const { q, pool, init } = require('./database');
 const { gonder: mailGonder, kodUret } = require('./services/mailer');
@@ -384,10 +385,29 @@ app.get('/sitemap.xml', (req, res) => {
   res.type('application/xml').send(xml);
 });
 
+// --- Oturum (session) deposu ---
+// Production'da varsayılan MemoryStore kullanılmaz: bellek sızdırır ve tek
+// process ölçeklenmez. Bunun yerine oturumlar PostgreSQL'de saklanır.
+// Geliştirme ortamında (DB yoksa) MemoryStore'a düşülür.
+const PgSessionStore = pgSession(session);
+let sessionStore;
+if (process.env.DATABASE_URL) {
+  sessionStore = new PgSessionStore({
+    pool: pool,                 // mevcut pg havuzunu paylaş
+    tableName: 'user_sessions', // oturum tablosu
+    createTableIfMissing: true,
+    pruneSessionInterval: 60 * 15, // 15 dakikada bir süresi dolmuşları temizle
+    errorLog: (err) => console.error('Oturum deposu hatası:', err.message)
+  });
+} else {
+  sessionStore = undefined; // MemoryStore (yalnızca geliştirme)
+}
+
 app.use(
   session({
     name: 'cs.sid',
     secret: process.env.SESSION_SECRET || 'gizli-anahtar',
+    store: sessionStore,
     resave: false,
     saveUninitialized: false,
     rolling: true, // Her istekle birlikte oturum süresi uzatılır (yenilemede logout olmaz)
@@ -404,6 +424,24 @@ app.use(
 );
 
 app.use(flash());
+
+// --- Sağlık kontrolü (health check) ---
+// Render/Docker orchestrator bu endpoint'e istek atarak servisin hazır olup
+// olmadığını kontrol eder. DB hazır olmadan 200 dönülmez; böylece
+// başlatma sırasındaki geçici hatalar yeniden başlatma döngüsüne yol açmaz.
+// "ready" bayrağı init() tamamlanınca true olur.
+let dbReady = false;
+app.get('/healthz', async (req, res) => {
+  if (!dbReady) {
+    return res.status(503).json({ ok: false, db: 'hazir degil' });
+  }
+  try {
+    await q('SELECT 1');
+    res.json({ ok: true, db: 'bagli', uptime: Math.round(process.uptime()) });
+  } catch (e) {
+    res.status(503).json({ ok: false, db: 'hata: ' + e.message });
+  }
+});
 
 // Şablonlarda her yerde kullanılabilecek değişkenler
 app.use((req, res, next) => {
@@ -2653,6 +2691,7 @@ app.get('/yonetim/debug/form-tablolar', adminGerekli, ah(async (req, res) => {
 // Veritabanı init'i arka planda (route'lar tanımlandıktan SONRA)
 init()
   .then(() => {
+    dbReady = true;
     console.log('Veritabanı hazır.');
   })
   .catch((err) => {

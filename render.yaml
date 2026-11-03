@@ -13,6 +13,10 @@ services:
     rootDir: cumhuriyet-sitesi
     dockerfilePath: ./Dockerfile
     plan: free
+    # Sağlık kontrolü: /healthz yalnızca veritabanı hazır olduğunda 200 döner.
+    # Bu sayede başlatma sırasındaki geçici hatalar yeniden başlatma döngüsüne
+    # yol açmaz.
+    healthCheckPath: /healthz
     envVars:
       - key: SESSION_SECRET
         generateValue: true

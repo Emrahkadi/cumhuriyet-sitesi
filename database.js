@@ -15,13 +15,22 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-// Yerel bağlantıda SSL kapalı, uzak (Neon/Supabase) bağlantıda açık
-const yerel = /localhost|127\.0\.0\.1/.test(process.env.DATABASE_URL || '');
+// Yerel bağlantıda SSL kapalı, uzak (Neon/Supabase) bağlantıda açık.
+// pg 9+ "prefer/require" modlarını uyarıyla karşılayıp strict 'verify-full'
+// davranışına geçiriyor; bu da uyarıyı ve olası MITM riskini ortadan kaldırır.
+// Neon gibi sunucular geçerli sertifika sunduğu için verify-full güvenlidir.
+const dbUrl = process.env.DATABASE_URL || '';
+const yerel = /localhost|127\.0\.0\.1/.test(dbUrl);
+const sslUrl = yerel
+  ? dbUrl
+  : dbUrl.replace(/sslmode=[^&]*/g, '') +
+    (dbUrl.includes('?') ? '&' : '?') + 'sslmode=verify-full';
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: yerel ? false : { rejectUnauthorized: false },
+  connectionString: sslUrl,
+  ssl: yerel ? false : { rejectUnauthorized: true },
   max: 20,                      // performans: daha fazla eszamanli baglanti
-  min: 2,                       // minimum hazir baglanti (soğuk başlangıç azaltma)
+  min: 2,                       // minimum hazir baglanti (soguk baslangic azaltma)
   idleTimeoutMillis: 60000,     // 60 sn idle sonrasi kapat
   connectionTimeoutMillis: 10000,
   keepAlive: true,              // TCP keepalive
