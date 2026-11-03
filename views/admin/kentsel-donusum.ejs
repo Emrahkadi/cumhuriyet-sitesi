@@ -46,8 +46,8 @@
               <td data-label="Durum"><span class="badge badge-durum"><%= m.durum %></span></td>
               <td data-label="Tarih"><%= m.olusturma_tarihi.split(' ')[0] %></td>
               <td data-label="Ek">
-                <% if (m.ek_dosya) { %>
-                  <a href="<%= m.ek_dosya %>" target="_blank" rel="noopener" class="ek-link">📎</a>
+                <% if (m.ek_dosya_id) { %>
+                  <a href="/dosya/<%= m.ek_dosya_id %>" target="_blank" rel="noopener" class="ek-link">📎</a>
                 <% } else { %>—<% } %>
               </td>
               <td data-label="İşlem" class="td-islem">

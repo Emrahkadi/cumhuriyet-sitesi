@@ -52,8 +52,8 @@
               <td data-label="Tarih"><%= d.olusturma_tarihi.split(' ')[0] %></td>
               <td data-label="Önemli"><%= d.onemli ? '⭐' : '-' %></td>
               <td data-label="Ek">
-                <% if (d.ek_dosya) { %>
-                  <a href="<%= d.ek_dosya %>" target="_blank" rel="noopener" class="ek-link">📎</a>
+                <% if (d.ek_dosya_id) { %>
+                  <a href="/dosya/<%= d.ek_dosya_id %>" target="_blank" rel="noopener" class="ek-link">📎</a>
                 <% } else { %>—<% } %>
               </td>
               <td data-label="İşlem" class="td-islem">

@@ -257,6 +257,29 @@ CREATE TABLE IF NOT EXISTS duyuru_ekleri (
     CREATE UNIQUE INDEX IF NOT EXISTS idx_uyeler_email ON uyeler (email) WHERE email IS NOT NULL;
     ALTER TABLE duyurular ADD COLUMN IF NOT EXISTS ek_dosya TEXT;
     ALTER TABLE kentsel_donusum ADD COLUMN IF NOT EXISTS ek_dosya TEXT;
+    -- Bytea dosya depolama (Render free plan'da disk kalıcı olmadığı için)
+    CREATE TABLE IF NOT EXISTS dosyalar (
+      id SERIAL PRIMARY KEY,
+      icerik BYTEA NOT NULL,
+      mime TEXT NOT NULL,
+      orijinal_ad TEXT NOT NULL,
+      boyut INTEGER NOT NULL,
+      olusturma_tarihi TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    ALTER TABLE duyurular ADD COLUMN IF NOT EXISTS ek_dosya_id INTEGER REFERENCES dosyalar(id) ON DELETE SET NULL;
+    ALTER TABLE duyurular ADD COLUMN IF NOT EXISTS ek_dosya_adi TEXT;
+    ALTER TABLE duyuru_ekleri ADD COLUMN IF NOT EXISTS dosya_id INTEGER REFERENCES dosyalar(id) ON DELETE SET NULL;
+    ALTER TABLE kentsel_donusum ADD COLUMN IF NOT EXISTS ek_dosya_id INTEGER REFERENCES dosyalar(id) ON DELETE SET NULL;
+    ALTER TABLE kentsel_donusum ADD COLUMN IF NOT EXISTS ek_dosya_adi TEXT;
+    ALTER TABLE kentsel_ekleri ADD COLUMN IF NOT EXISTS dosya_id INTEGER REFERENCES dosyalar(id) ON DELETE SET NULL;
+    ALTER TABLE duyuru_ekleri ALTER COLUMN dosya_yolu DROP NOT NULL;
+    ALTER TABLE kentsel_ekleri ALTER COLUMN dosya_yolu DROP NOT NULL;
+    ALTER TABLE duyurular ALTER COLUMN ek_dosya DROP NOT NULL;
+    ALTER TABLE kentsel_donusum ALTER COLUMN ek_dosya DROP NOT NULL;
+    CREATE INDEX IF NOT EXISTS idx_duyurular_ek_dosya_id ON duyurular(ek_dosya_id);
+    CREATE INDEX IF NOT EXISTS idx_duyuru_ekleri_dosya_id ON duyuru_ekleri(dosya_id);
+    CREATE INDEX IF NOT EXISTS idx_kentsel_ek_dosya_id ON kentsel_donusum(ek_dosya_id);
+    CREATE INDEX IF NOT EXISTS idx_kentsel_ekleri_dosya_id ON kentsel_ekleri(dosya_id);
     -- Anket tablolarına hane (daire) bazında kontrol için daire_no eklendi
     ALTER TABLE anket_oylar ADD COLUMN IF NOT EXISTS daire_no TEXT;
     ALTER TABLE anket_katilimlar ADD COLUMN IF NOT EXISTS daire_no TEXT;

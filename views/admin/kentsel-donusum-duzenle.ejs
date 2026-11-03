@@ -21,8 +21,8 @@
     </div>
     <div class="form-group">
       <label>Mevcut Ek Dosya</label>
-      <% if (madde.ek_dosya) { %>
-        <p>📎 <a href="<%= madde.ek_dosya %>" target="_blank" rel="noopener"><%= madde.ek_dosya.split('/').pop() %></a>
+      <% if (madde.ek_dosya_id) { %>
+        <p>📎 <a href="/dosya/<%= madde.ek_dosya_id %>" target="_blank" rel="noopener"><%= madde.ek_dosya_adi || 'ek-dosya' %></a>
           <label style="margin-left:12px"><input type="checkbox" name="ek_dosya_sil" value="1" /> Mevcut eki sil</label>
         </p>
       <% } else { %>

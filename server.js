@@ -90,27 +90,11 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }
 });
 
-// Duyuru / kentsel dönüşüm ekleri için disk storage (PDF, Excel, görsel)
-// public/uploads/duyurular ve public/uploads/kentsel klasörleri kullanılır
-const UPLOAD_KOK = path.join(__dirname, 'public', 'uploads');
-const uploadKlasor = (altKlasor) => {
-  const hedef = path.join(UPLOAD_KOK, altKlasor);
-  if (!fs.existsSync(hedef)) fs.mkdirSync(hedef, { recursive: true });
-  return hedef;
-};
+// Duyuru / kentsel dönüşüm ekleri: dosyalar PostgreSQL bytea kolonunda saklanır.
+// Bu sayede Render free plan'da disk kalıcı olmasa bile dosyalar kaybolmaz.
+// (Eski disk-tabanlı sistem: public/uploads/... — restart'ta siliniyordu.)
 const dosyaYukle = multer({
-  storage: multer.diskStorage({
-    destination: function (req, file, cb) {
-      // NOT: req.baseUrl uygulama seviyesindeki rotalarda boş string'dir.
-      // Bu yüzden klasör seçimi rota yolundan yapılır.
-      const altKlasor = (req.path || '').includes('kentsel') ? 'kentsel' : 'duyurular';
-      cb(null, uploadKlasor(altKlasor));
-    },
-    filename: function (req, file, cb) {
-      const guvenliAd = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80);
-      cb(null, Date.now() + '-' + Math.round(Math.random() * 1e6) + '-' + guvenliAd);
-    }
-  }),
+  storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
   fileFilter: function (req, file, cb) {
     const izinli = ['pdf', 'xlsx', 'xls', 'csv', 'png', 'jpg', 'jpeg', 'webp', 'gif'];
@@ -119,6 +103,16 @@ const dosyaYukle = multer({
     else cb(new Error('Bu dosya türüne izin verilmiyor. (İzinli: ' + izinli.join(', ') + ')'));
   }
 });
+
+// Yüklenen dosyayı 'dosyalar' tablosuna bytea olarak kaydeder ve id döndürür.
+const dosyaKaydet = async (file) => {
+  const mime = file.mimetype || 'application/octet-stream';
+  const r = await q(
+    'INSERT INTO dosyalar (icerik, mime, orijinal_ad, boyut) VALUES ($1, $2, $3, $4) RETURNING id',
+    [file.buffer, mime, file.originalname, file.size]
+  );
+  return r.rows[0].id;
+};
 
 // Formlardaki dosya alanı adı "ek" (tekil). Yükleyici, hem tek dosya
 // (single) hem çoklu dosya (array) gönderimlerini kabul edecek şekilde
@@ -360,6 +354,24 @@ app.use(
     }
   })
 );
+
+// DB'de bytea olarak saklanan ek dosyaları indirir.
+// /dosya/:id  -> dosyayı indir (Content-Disposition: attachment)
+// /dosya/:id?gor=1 -> tarayıcıda görüntüle (inline)
+app.get('/dosya/:id', ah(async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id) || id <= 0) return res.status(404).send('Dosya bulunamadı.');
+  const r = await q('SELECT icerik, mime, orijinal_ad FROM dosyalar WHERE id = $1', [id]);
+  if (!r.rows.length) return res.status(404).send('Dosya bulunamadı.');
+  const dosya = r.rows[0];
+  const inline = req.query.gor === '1';
+  res.setHeader('Content-Type', dosya.mime);
+  res.setHeader('Content-Length', dosya.icerik.length);
+  res.setHeader('Content-Disposition',
+    `${inline ? 'inline' : 'attachment'}; filename*=UTF-8''${encodeURIComponent(dosya.orijinal_ad)}`);
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.end(dosya.icerik);
+}));
 
 // SEO: robots.txt ve sitemap.xml
 app.get('/robots.txt', (req, res) => {
@@ -1148,18 +1160,28 @@ app.post('/yonetim/duyurular/ekle', adminGerekli, dosyaCok(), ah(async (req, res
   }
   const temizIcerik = zenginMetin(icerik);
   const ekSayisi = (req.files && req.files.length) || 0;
-  const ilkEk = ekSayisi > 0 ? '/uploads/duyurular/' + req.files[0].filename : null;
+  // Dosyaları DB'ye bytea olarak kaydet
+  let ilkDosyaId = null;
+  const ekDosyaIdleri = [];
+  if (req.files && req.files.length) {
+    for (const f of req.files) {
+      const id = await dosyaKaydet(f);
+      ekDosyaIdleri.push(id);
+    }
+    ilkDosyaId = ekDosyaIdleri[0];
+  }
   const sonuc = await q(
-    'INSERT INTO duyurular (baslik, icerik, kategori, onemli, ek_dosya) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-    [baslik.trim(), temizIcerik, (kategori || 'Genel').trim(), onemli ? 1 : 0, ilkEk]
+    'INSERT INTO duyurular (baslik, icerik, kategori, onemli, ek_dosya, ek_dosya_id, ek_dosya_adi) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
+    [baslik.trim(), temizIcerik, (kategori || 'Genel').trim(), onemli ? 1 : 0, null, ilkDosyaId, ilkDosyaId ? req.files[0].originalname : null]
   );
   const yeniId = sonuc.rows[0].id;
   // Çoklu ekleri ayrı tabloya ekle
-  if (req.files && req.files.length) {
-    for (const f of req.files) {
+  if (ekDosyaIdleri.length) {
+    for (let i = 0; i < ekDosyaIdleri.length; i++) {
+      const f = req.files[i];
       await q(
-        'INSERT INTO duyuru_ekleri (duyuru_id, dosya_yolu, orijinal_ad, boyut) VALUES ($1, $2, $3, $4)',
-        [yeniId, '/uploads/duyurular/' + f.filename, f.originalname, f.size]
+        'INSERT INTO duyuru_ekleri (duyuru_id, dosya_yolu, dosya_id, orijinal_ad, boyut) VALUES ($1, $2, $3, $4, $5)',
+        [yeniId, null, ekDosyaIdleri[i], f.originalname, f.size]
       );
     }
   }
@@ -1177,16 +1199,8 @@ app.post('/yonetim/duyurular/ekle', adminGerekli, dosyaCok(), ah(async (req, res
 }));
 
 app.post('/yonetim/duyurular/sil/:id', adminGerekli, ah(async (req, res) => {
-  // Ana ek dosyayı disk'ten temizle
-  const duyuru = (await q('SELECT ek_dosya FROM duyurular WHERE id = $1', [req.params.id])).rows[0];
-  if (duyuru && duyuru.ek_dosya) {
-    fs.unlink(path.join(__dirname, 'public', duyuru.ek_dosya), () => {});
-  }
-  // Çoklu ekleri de disk'ten temizle (ON DELETE CASCADE DB kayıtlarını siler)
-  const ekler = (await q('SELECT dosya_yolu FROM duyuru_ekleri WHERE duyuru_id = $1', [req.params.id])).rows;
-  for (const ek of ekler) {
-    fs.unlink(path.join(__dirname, 'public', ek.dosya_yolu), () => {});
-  }
+  // Ek dosyaları DB'den temizle (ON DELETE CASCADE dosyalar tablosunu da siler)
+  await q('DELETE FROM duyuru_ekleri WHERE duyuru_id = $1', [req.params.id]);
   await q('DELETE FROM duyurular WHERE id = $1', [req.params.id]);
   req.flash('basari', 'Duyuru silindi.');
   res.redirect('/yonetim/duyurular');
@@ -1217,16 +1231,16 @@ app.post('/yonetim/duyurular/duzenle/:id', adminGerekli, dosyaCok(), ah(async (r
   }
   const temizIcerik = zenginMetin(icerik);
 
-  // Tek dosya alanı (geriye uyum) silinmiş mi?
-  if (ek_dosya_sil === '1' && mevcut.ek_dosya) {
-    fs.unlink(path.join(__dirname, 'public', mevcut.ek_dosya), () => {});
+  // Ana ek_dosya silinmiş mi?
+  if (ek_dosya_sil === '1' && mevcut.ek_dosya_id) {
+    await q('DELETE FROM dosyalar WHERE id = $1', [mevcut.ek_dosya_id]);
   }
   // Çoklu eklerden silinenler
   if (Array.isArray(silinecek_ekler)) {
     for (const ekId of silinecek_ekler) {
-      const ek = (await q('SELECT dosya_yolu FROM duyuru_ekleri WHERE id = $1 AND duyuru_id = $2', [ekId, req.params.id])).rows[0];
+      const ek = (await q('SELECT dosya_id FROM duyuru_ekleri WHERE id = $1 AND duyuru_id = $2', [ekId, req.params.id])).rows[0];
       if (ek) {
-        fs.unlink(path.join(__dirname, 'public', ek.dosya_yolu), () => {});
+        if (ek.dosya_id) await q('DELETE FROM dosyalar WHERE id = $1', [ek.dosya_id]);
         await q('DELETE FROM duyuru_ekleri WHERE id = $1', [ekId]);
       }
     }
@@ -1234,18 +1248,19 @@ app.post('/yonetim/duyurular/duzenle/:id', adminGerekli, dosyaCok(), ah(async (r
   // Yeni dosyalar yüklendiyse ekle
   if (req.files && req.files.length) {
     for (const f of req.files) {
+      const dosyaId = await dosyaKaydet(f);
       await q(
-        'INSERT INTO duyuru_ekleri (duyuru_id, dosya_yolu, orijinal_ad, boyut) VALUES ($1, $2, $3, $4)',
-        [req.params.id, '/uploads/duyurular/' + f.filename, f.originalname, f.size]
+        'INSERT INTO duyuru_ekleri (duyuru_id, dosya_yolu, dosya_id, orijinal_ad, boyut) VALUES ($1, $2, $3, $4, $5)',
+        [req.params.id, null, dosyaId, f.originalname, f.size]
       );
     }
   }
-  // İlk ek'i ana ek_dosya kolonuna yaz (geriye uyum)
-  const ilkEk = (await q('SELECT dosya_yolu FROM duyuru_ekleri WHERE duyuru_id = $1 ORDER BY id LIMIT 1', [req.params.id])).rows[0];
-  const ekDosya = (ek_dosya_sil === '1') ? null : (ilkEk ? ilkEk.dosya_yolu : mevcut.ek_dosya);
+  // İlk ek'i ana ek_dosya_id kolonuna yaz (geriye uyum)
+  const ilkEk = (await q('SELECT dosya_id FROM duyuru_ekleri WHERE duyuru_id = $1 ORDER BY id LIMIT 1', [req.params.id])).rows[0];
+  const yeniEkDosyaId = (ek_dosya_sil === '1') ? null : (ilkEk ? ilkEk.dosya_id : mevcut.ek_dosya_id);
   await q(
-    'UPDATE duyurular SET baslik = $1, icerik = $2, kategori = $3, onemli = $4, ek_dosya = $5 WHERE id = $6',
-    [baslik.trim(), temizIcerik, (kategori || 'Genel').trim(), onemli ? 1 : 0, ekDosya, req.params.id]
+    'UPDATE duyurular SET baslik = $1, icerik = $2, kategori = $3, onemli = $4, ek_dosya = $5, ek_dosya_id = $6, ek_dosya_adi = $7 WHERE id = $8',
+    [baslik.trim(), temizIcerik, (kategori || 'Genel').trim(), onemli ? 1 : 0, null, yeniEkDosyaId, yeniEkDosyaId ? (req.files && req.files[0] ? req.files[0].originalname : mevcut.ek_dosya_adi) : null, req.params.id]
   );
   req.flash('basari', 'Duyuru güncellendi.');
   res.redirect('/yonetim/duyurular');
@@ -1297,16 +1312,25 @@ app.post('/yonetim/kentsel-donusum/ekle', adminGerekli, dosyaCok(), ah(async (re
   }
   const temizIcerik = zenginMetin(icerik);
   const ekSayisi = (req.files && req.files.length) || 0;
-  const ilkEk = ekSayisi > 0 ? '/uploads/kentsel/' + req.files[0].filename : null;
-  const sonuc = await q(
-    'INSERT INTO kentsel_donusum (baslik, icerik, durum, ek_dosya) VALUES ($1, $2, $3, $4) RETURNING id',
-    [baslik.trim(), temizIcerik, (durum || 'Planlama').trim(), ilkEk]
-  );
-  const yeniId = sonuc.rows[0].id;
+  let ilkDosyaId = null;
+  const ekDosyaIdleri = [];
   if (req.files && req.files.length) {
     for (const f of req.files) {
-      await q('INSERT INTO kentsel_ekleri (kentsel_id, dosya_yolu, orijinal_ad, boyut) VALUES ($1, $2, $3, $4)',
-        [yeniId, '/uploads/kentsel/' + f.filename, f.originalname, f.size]);
+      const id = await dosyaKaydet(f);
+      ekDosyaIdleri.push(id);
+    }
+    ilkDosyaId = ekDosyaIdleri[0];
+  }
+  const sonuc = await q(
+    'INSERT INTO kentsel_donusum (baslik, icerik, durum, ek_dosya, ek_dosya_id, ek_dosya_adi) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+    [baslik.trim(), temizIcerik, (durum || 'Planlama').trim(), null, ilkDosyaId, ilkDosyaId ? req.files[0].originalname : null]
+  );
+  const yeniId = sonuc.rows[0].id;
+  if (ekDosyaIdleri.length) {
+    for (let i = 0; i < ekDosyaIdleri.length; i++) {
+      const f = req.files[i];
+      await q('INSERT INTO kentsel_ekleri (kentsel_id, dosya_yolu, dosya_id, orijinal_ad, boyut) VALUES ($1, $2, $3, $4, $5)',
+        [yeniId, null, ekDosyaIdleri[i], f.originalname, f.size]);
     }
   }
   req.flash('basari', 'Kayıt eklendi.' + (ekSayisi ? ' ' + ekSayisi + ' ek dosya yüklendi.' : ''));
@@ -1323,14 +1347,7 @@ app.post('/yonetim/kentsel-donusum/ekle', adminGerekli, dosyaCok(), ah(async (re
 }));
 
 app.post('/yonetim/kentsel-donusum/sil/:id', adminGerekli, ah(async (req, res) => {
-  const madde = (await q('SELECT ek_dosya FROM kentsel_donusum WHERE id = $1', [req.params.id])).rows[0];
-  if (madde && madde.ek_dosya) {
-    fs.unlink(path.join(__dirname, 'public', madde.ek_dosya), () => {});
-  }
-  const ekler = (await q('SELECT dosya_yolu FROM kentsel_ekleri WHERE kentsel_id = $1', [req.params.id])).rows;
-  for (const ek of ekler) {
-    fs.unlink(path.join(__dirname, 'public', ek.dosya_yolu), () => {});
-  }
+  await q('DELETE FROM kentsel_ekleri WHERE kentsel_id = $1', [req.params.id]);
   await q('DELETE FROM kentsel_donusum WHERE id = $1', [req.params.id]);
   req.flash('basari', 'Kayıt silindi.');
   res.redirect('/yonetim/kentsel-donusum');
@@ -1360,28 +1377,29 @@ app.post('/yonetim/kentsel-donusum/duzenle/:id', adminGerekli, dosyaCok(), ah(as
     return res.redirect('/yonetim/kentsel-donusum/duzenle/' + req.params.id);
   }
   const temizIcerik = zenginMetin(icerik);
-  let ekDosya = mevcut.ek_dosya;
+  let ekDosyaId = mevcut.ek_dosya_id;
   const yeniDosyalar = Array.isArray(req.files) ? req.files : [];
   if (yeniDosyalar.length) {
-    if (mevcut.ek_dosya) {
-      fs.unlink(path.join(__dirname, 'public', mevcut.ek_dosya), () => {});
+    if (mevcut.ek_dosya_id) {
+      await q('DELETE FROM dosyalar WHERE id = $1', [mevcut.ek_dosya_id]);
     }
-    ekDosya = '/uploads/kentsel/' + yeniDosyalar[0].filename;
+    ekDosyaId = await dosyaKaydet(yeniDosyalar[0]);
   } else if (ek_dosya_sil === '1') {
-    if (mevcut.ek_dosya) {
-      fs.unlink(path.join(__dirname, 'public', mevcut.ek_dosya), () => {});
+    if (mevcut.ek_dosya_id) {
+      await q('DELETE FROM dosyalar WHERE id = $1', [mevcut.ek_dosya_id]);
     }
-    ekDosya = null;
+    ekDosyaId = null;
   }
   await q(
-    'UPDATE kentsel_donusum SET baslik = $1, icerik = $2, durum = $3, ek_dosya = $4 WHERE id = $5',
-    [baslik.trim(), temizIcerik, (durum || 'Planlama').trim(), ekDosya, req.params.id]
+    'UPDATE kentsel_donusum SET baslik = $1, icerik = $2, durum = $3, ek_dosya = $4, ek_dosya_id = $5, ek_dosya_adi = $6 WHERE id = $7',
+    [baslik.trim(), temizIcerik, (durum || 'Planlama').trim(), null, ekDosyaId, ekDosyaId ? (yeniDosyalar[0] ? yeniDosyalar[0].originalname : mevcut.ek_dosya_adi) : null, req.params.id]
   );
   // Ek dosyaları ayrı tabloya ekle (ekleme rotası ile aynı davranış)
   for (const f of yeniDosyalar) {
+    const dosyaId = await dosyaKaydet(f);
     await q(
-      'INSERT INTO kentsel_ekleri (kentsel_id, dosya_yolu, orijinal_ad, boyut) VALUES ($1, $2, $3, $4)',
-      [req.params.id, '/uploads/kentsel/' + f.filename, f.originalname, f.size]
+      'INSERT INTO kentsel_ekleri (kentsel_id, dosya_yolu, dosya_id, orijinal_ad, boyut) VALUES ($1, $2, $3, $4, $5)',
+      [req.params.id, null, dosyaId, f.originalname, f.size]
     );
   }
   req.flash('basari', 'Kayıt güncellendi.');

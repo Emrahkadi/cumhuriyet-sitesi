@@ -26,8 +26,8 @@
     </div>
     <div class="form-group">
       <label>Mevcut Ek Dosya</label>
-      <% if (duyuru.ek_dosya) { %>
-        <p>📎 <a href="<%= duyuru.ek_dosya %>" target="_blank" rel="noopener"><%= duyuru.ek_dosya.split('/').pop() %></a>
+      <% if (duyuru.ek_dosya_id) { %>
+        <p>📎 <a href="/dosya/<%= duyuru.ek_dosya_id %>" target="_blank" rel="noopener"><%= duyuru.ek_dosya_adi || 'ek-dosya' %></a>
           <label style="margin-left:12px"><input type="checkbox" name="ek_dosya_sil" value="1" /> Mevcut eki sil</label>
         </p>
       <% } else { %>
