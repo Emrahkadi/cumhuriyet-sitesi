@@ -1,0 +1,202 @@
+<%- include('partials/header', { sayfaBaslik: 'Ek Ödenek Tahsilat Raporu' }) %>
+
+<section class="page-hero">
+  <div class="container">
+    <h1>Ek Ödenek Tahsilat Raporu</h1>
+    <p>Şeffaflık: tüm kat maliklerinin ek ödenek ödeme durumu.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+
+    <% if (!plan) { %>
+      <div class="admin-panel-box">
+        <p class="empty-state">Henüz ek ödenek planı oluşturulmamış.</p>
+      </div>
+    <% } else { %>
+
+      <!-- ============ ÖZET KARTLARI ============ -->
+      <div class="rapor-ozet-grid">
+        <div class="rapor-ozet">
+          <span class="rapor-ozet-ikon">💰</span>
+          <span class="rapor-ozet-label">Toplam Tahsilat</span>
+          <span class="rapor-ozet-deger rapor-yesil"><%= ozet.toplam_tahsilat.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) %> ₺</span>
+          <span class="rapor-ozet-alt"><%= ozet.taksit_adet %> taksit ödendi</span>
+        </div>
+        <div class="rapor-ozet">
+          <span class="rapor-ozet-ikon">📋</span>
+          <span class="rapor-ozet-label">Toplam Tahakkuk</span>
+          <span class="rapor-ozet-deger"><%= ozet.toplam_tahakkuk.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) %> ₺</span>
+          <span class="rapor-ozet-alt"><%= ozet.malik_sayisi %> kat malikine tahakkuk</span>
+        </div>
+        <div class="rapor-ozet">
+          <span class="rapor-ozet-ikon">⏳</span>
+          <span class="rapor-ozet-label">Kalan</span>
+          <span class="rapor-ozet-deger rapor-kirmizi"><%= ozet.kalan.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) %> ₺</span>
+          <span class="rapor-ozet-alt"><%= ozet.bekleyen_adet %> taksit bekliyor</span>
+        </div>
+        <div class="rapor-ozet">
+          <span class="rapor-ozet-ikon">👥</span>
+          <span class="rapor-ozet-label">Ödeme Yapan</span>
+          <span class="rapor-ozet-deger"><%= ozet.odeme_yapan %> / <%= ozet.malik_sayisi %></span>
+          <span class="rapor-ozet-alt">Tahsilat oranı <%= ozet.oran.toFixed(1) %>%</span>
+        </div>
+      </div>
+
+      <!-- ============ İLERLEME ÇUBUĞU ============ -->
+      <div class="admin-panel-box">
+        <h2>Genel Tahsilat İlerlemesi</h2>
+        <div class="rapor-progress">
+          <div class="rapor-progress-bar" style="width: <%= Math.min(ozet.oran, 100).toFixed(1) %>%"></div>
+        </div>
+        <p class="rapor-progress-yazi">
+          <strong><%= ozet.oran.toFixed(1) %>%</strong> tahsil edildi
+          (<%= ozet.toplam_tahsilat.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) %> ₺ /
+          <%= ozet.toplam_tahakkuk.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) %> ₺)
+        </p>
+      </div>
+
+      <!-- ============ TAKSİT BAZLI ÖZET ============ -->
+      <% if (taksitOzet.length) { %>
+        <div class="admin-panel-box">
+          <h2>Taksit Bazlı Tahsilat</h2>
+          <div class="rapor-taksit-grid">
+            <% taksitOzet.forEach(function(t) { %>
+              <div class="rapor-taksit">
+                <span class="rapor-taksit-no"><%= t.sira %>. Taksit</span>
+                <span class="rapor-taksit-tutar"><%= t.tutar.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) %> ₺</span>
+                <span class="rapor-taksit-sayi"><%= t.odenen %> kişi ödedi</span>
+                <% if (t.bekleyen > 0) { %>
+                  <span class="rapor-taksit-bekleyen"><%= t.bekleyen %> kişi bekliyor</span>
+                <% } else { %>
+                  <span class="rapor-taksit-tamam">Tamamlandı</span>
+                <% } %>
+              </div>
+            <% }); %>
+          </div>
+        </div>
+      <% } %>
+
+      <!-- ============ ANA TABLO: AD SOYAD | BLOK | DAIRE | 4 TAKSIT ============ -->
+      <div class="admin-panel-box">
+        <h2>
+          Kat Maliki Ödeme Durumu
+          <small class="rapor-plan-etiket">📋 <%= plan.ad %></small>
+        </h2>
+        <% if (!satirlar.length) { %>
+          <p class="empty-state">Kayıt bulunmuyor.</p>
+        <% } else { %>
+          <div class="table-wrap ek-tablo-wrap">
+            <table class="admin-table responsive-table ek-tablo">
+              <thead>
+                <tr>
+                  <th rowspan="2" class="rapor-sol-baslik">AD SOYAD</th>
+                  <th rowspan="2" class="rapor-sol-baslik">BLOK</th>
+                  <th rowspan="2" class="rapor-sol-baslik">DAİRE</th>
+                  <% taksitOzet.forEach(function(t) { %>
+                    <th colspan="2" class="rapor-taksit-baslik">
+                      <%= t.sira %>. TAKSİT
+                      <span><%= t.tutar.toLocaleString('tr-TR', { minimumFractionDigits: 0 }) %> ₺</span>
+                    </th>
+                  <% }); %>
+                  <th rowspan="2" class="rapor-toplam-baslik">ÖDEDİĞİ</th>
+                  <th rowspan="2" class="rapor-toplam-baslik">KALAN</th>
+                  <th rowspan="2" class="rapor-toplam-baslik">DURUM</th>
+                </tr>
+                <tr>
+                  <% taksitOzet.forEach(function(t) { %>
+                    <th class="rapor-alt-baslik">Durum</th>
+                    <th class="rapor-alt-baslik">Tarih</th>
+                  <% }); %>
+                </tr>
+              </thead>
+              <tbody>
+                <% satirlar.forEach(function(s) { %>
+                  <tr>
+                    <td data-label="Ad Soyad" class="rapor-ad"><%= s.ad_soyad || '—' %></td>
+                    <td data-label="Blok" class="rapor-daire"><%= s.blok || '—' %></td>
+                    <td data-label="Daire" class="rapor-daire"><%= s.daire || '—' %></td>
+                    <% s.taksitler.forEach(function(tk, i) { %>
+                      <td data-label="<%= i + 1 %>. Taksit" class="rapor-hucre">
+                        <% if (tk) { %>
+                          <% if (tk.odendi) { %>
+                            <span class="rapor-odendi">✔ Ödendi</span>
+                          <% } else { %>
+                            <span class="rapor-bekliyor">Bekliyor</span>
+                          <% } %>
+                        <% } else { %>
+                          <span class="rapor-yok">—</span>
+                        <% } %>
+                      </td>
+                      <td data-label="<%= i + 1 %>. Tarih" class="rapor-tarih">
+                        <%= tk && tk.odeme_tarihi ? tk.odeme_tarihi : '—' %>
+                      </td>
+                    <% }); %>
+                    <td data-label="Ödediği" class="rapor-hucre rapor-odeme-para"><%= s.odenen_tutar.toLocaleString('tr-TR', { minimumFractionDigits: 0 }) %> ₺</td>
+                    <td data-label="Kalan" class="rapor-hucre <%= s.kalan_tutar > 0 ? 'rapor-kirmizi-para' : 'rapor-yesil-para' %>">
+                      <%= s.kalan_tutar.toLocaleString('tr-TR', { minimumFractionDigits: 0 }) %> ₺
+                    </td>
+                    <td data-label="Durum" class="rapor-hucre">
+                      <% if (s.tamamlandi) { %>
+                        <span class="badge badge-onayli">Tamamlandı</span>
+                      <% } else if (s.odenen_tutar > 0) { %>
+                        <span class="badge badge-bekliyor">Kısmi</span>
+                      <% } else { %>
+                        <span class="badge badge-onemli">Ödenmedi</span>
+                      <% } %>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="3" class="rapor-toplam-baslik"><strong>TOPLAM</strong></td>
+                  <% taksitOzet.forEach(function(t) { %>
+                    <td class="rapor-hucre rapor-alt-baslik"><strong><%= t.odenen %> / <%= t.toplam %></strong></td>
+                    <td class="rapor-tarih"></td>
+                  <% }); %>
+                  <td class="rapor-hucre rapor-odeme-para"><strong><%= ozet.toplam_tahsilat.toLocaleString('tr-TR', { minimumFractionDigits: 0 }) %> ₺</strong></td>
+                  <td class="rapor-hucre rapor-kirmizi-para"><strong><%= ozet.kalan.toLocaleString('tr-TR', { minimumFractionDigits: 0 }) %> ₺</strong></td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        <% } %>
+      </div>
+
+      <!-- ============ BLOK BAZLI ÖZET ============ -->
+      <% if (blokOzet.length) { %>
+        <div class="admin-panel-box">
+          <h2>Blok Bazlı Tahsilat</h2>
+          <div class="table-wrap">
+            <table class="admin-table responsive-table">
+              <thead>
+                <tr><th>Blok</th><th>Kat Maliki</th><th>Tahakkuk</th><th>Tahsilat</th><th>Kalan</th><th>Ödeme Yapan</th></tr>
+              </thead>
+              <tbody>
+                <% blokOzet.forEach(function(b) { %>
+                  <tr>
+                    <td data-label="Blok"><strong><%= b.blok %></strong></td>
+                    <td data-label="Kat Maliki"><%= b.adet %></td>
+                    <td data-label="Tahakkuk"><%= b.tahakkuk.toLocaleString('tr-TR', { minimumFractionDigits: 0 }) %> ₺</td>
+                    <td data-label="Tahsilat"><%= b.tahsilat.toLocaleString('tr-TR', { minimumFractionDigits: 0 }) %> ₺</td>
+                    <td data-label="Kalan"><%= (b.tahakkuk - b.tahsilat).toLocaleString('tr-TR', { minimumFractionDigits: 0 }) %> ₺</td>
+                    <td data-label="Ödeme Yapan"><%= b.odenen_kisi %> / <%= b.adet %></td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      <% } %>
+
+      <p style="color:var(--metin-acik); font-size:0.85rem; margin-top:16px; text-align:center;">
+        ℹ️ Bu sayfa şeffaflık amacıyla yayımlanmaktadır. Ödeme kayıtları yalnızca site yönetimi tarafından güncellenir.
+      </p>
+    <% } %>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

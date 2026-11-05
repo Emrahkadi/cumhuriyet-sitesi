@@ -122,6 +122,34 @@ async function createTables() {
       olusturma_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
     );
 
+    -- ============================================================
+    -- EK ÖDENEK TAHSİLAT (aidat sisteminden BAĞIMSIZ)
+    -- 300+ kat malikinin taksitli ek ödenek ödemesini takip eder.
+    -- Aidat (aidatlar) tablosu ile karışmaması için ayrı tablolar.
+    -- ============================================================
+    CREATE TABLE IF NOT EXISTS ek_odenek_planlar (
+      id SERIAL PRIMARY KEY,
+      ad TEXT NOT NULL,
+      taksit_sayisi INTEGER NOT NULL DEFAULT 4,
+      tutarlar TEXT NOT NULL,
+      donem_basi TEXT NOT NULL,
+      aciklama TEXT,
+      olusturma_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
+    );
+
+    CREATE TABLE IF NOT EXISTS ek_odenek_taksitler (
+      id SERIAL PRIMARY KEY,
+      plan_id INTEGER NOT NULL REFERENCES ek_odenek_planlar(id) ON DELETE CASCADE,
+      malik_id INTEGER NOT NULL REFERENCES sakinler(id) ON DELETE CASCADE,
+      taksit_no INTEGER NOT NULL,
+      donem TEXT NOT NULL,
+      tutar NUMERIC(10, 2) NOT NULL,
+      odendi INTEGER NOT NULL DEFAULT 0,
+      odeme_tarihi TEXT,
+      aciklama TEXT,
+      olusturma_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
+    );
+
     CREATE TABLE IF NOT EXISTS aidatlar (
       id SERIAL PRIMARY KEY,
       uye_id INTEGER NOT NULL REFERENCES uyeler(id) ON DELETE CASCADE,
@@ -260,6 +288,10 @@ CREATE TABLE IF NOT EXISTS duyuru_ekleri (
     ALTER TABLE aidatlar ADD COLUMN IF NOT EXISTS plan_id INTEGER REFERENCES aidat_planlar(id) ON DELETE SET NULL;
     ALTER TABLE aidatlar ADD COLUMN IF NOT EXISTS taksit_no INTEGER;
     CREATE INDEX IF NOT EXISTS idx_aidatlar_plan ON aidatlar (plan_id, taksit_no);
+    -- Ek ödenek tahsilat indeksleri
+    CREATE INDEX IF NOT EXISTS idx_ek_odenek_taksit_plan ON ek_odenek_taksitler (plan_id, taksit_no);
+    CREATE INDEX IF NOT EXISTS idx_ek_odenek_taksit_malik ON ek_odenek_taksitler (malik_id);
+    CREATE INDEX IF NOT EXISTS idx_ek_odenek_taksit_odendi ON ek_odenek_taksitler (odendi);
     CREATE INDEX IF NOT EXISTS idx_sakinler_blok ON sakinler (blok);
     CREATE INDEX IF NOT EXISTS idx_duyurular_sira ON duyurular (onemli DESC, id DESC);
     CREATE INDEX IF NOT EXISTS idx_mesajlar_okundu ON mesajlar (okundu);

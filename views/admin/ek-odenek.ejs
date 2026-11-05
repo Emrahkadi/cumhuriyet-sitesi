@@ -1,0 +1,252 @@
+<%- include('partials/header', { sayfaBaslik: 'Ek Ödenek Tahsilat' }) %>
+
+<div class="admin-panel-box">
+  <h2>Ek Ödenek Planı Oluştur</h2>
+  <p style="color: var(--metin-acik); font-size: 0.9rem; margin-bottom: 16px;">
+    Tüm kat maliklerine (sakinler tablosu) taksitli ek ödenek planı uygular.
+    Aidat sistemi ile karışmaz — bu ayrı bir ek ödenek tahsilat tablosudur.
+  </p>
+  <form action="/yonetim/ek-odenek/plan/ekle" method="POST" class="form">
+    <div class="form-row">
+      <div class="form-group">
+        <label for="plan_ad">Plan Adı</label>
+        <input type="text" id="plan_ad" name="ad" placeholder="Örn: Ek Ödenek 2026" required />
+      </div>
+      <div class="form-group">
+        <label for="donem_basi">Dönem Başlangıcı</label>
+        <input type="text" id="donem_basi" name="donem_basi" placeholder="Örn: KASIM 2026" required />
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Taksit Tutarları (₺)</label>
+      <div class="form-row">
+        <div class="form-group" style="margin-bottom:0;">
+          <input type="number" name="tutar1" step="0.01" min="0" placeholder="1. Taksit (400)" />
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <input type="number" name="tutar2" step="0.01" min="0" placeholder="2. Taksit (2500)" />
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <input type="number" name="tutar3" step="0.01" min="0" placeholder="3. Taksit (2500)" />
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <input type="number" name="tutar4" step="0.01" min="0" placeholder="4. Taksit (2500)" />
+        </div>
+      </div>
+      <small style="color: var(--metin-acik); display:block; margin-top:6px;">
+        Boş bırakılan taksit atlanır. Her taksit bir sonraki aya denk gelir.
+      </small>
+    </div>
+    <div class="form-group">
+      <label for="plan_aciklama">Açıklama (opsiyonel)</label>
+      <input type="text" id="plan_aciklama" name="aciklama" placeholder="Örn: Ek ödenek taksitlendirmesi" />
+    </div>
+    <button type="submit" class="btn btn-primary">Planı Oluştur ve Tüm Kat Maliklerine Tahakkuk Et</button>
+  </form>
+</div>
+
+<% if (planlar.length) { %>
+<div class="admin-panel-box">
+  <h2>Planlar (<%= planlar.length %>)</h2>
+  <div class="table-wrap">
+    <table class="admin-table responsive-table">
+      <thead>
+        <tr><th>Plan</th><th>Taksitler</th><th>Toplam</th><th>Dönem Başı</th><th>İşlem</th></tr>
+      </thead>
+      <tbody>
+        <% planlar.forEach(function(p) { %>
+          <% const t = String(p.tutarlar).split(',').map(function(x){ return Number(x); }); %>
+          <% const toplam = t.reduce(function(a,b){ return a+b; }, 0); %>
+          <tr <%= plan && plan.id === p.id ? 'style="background:#eef4fc"' : '' %>>
+            <td data-label="Plan"><strong><%= p.ad %></strong></td>
+            <td data-label="Taksitler"><%= t.join(' + ') %> ₺</td>
+            <td data-label="Toplam"><%= toplam.toLocaleString('tr-TR') %> ₺</td>
+            <td data-label="Dönem Başı"><%= p.donem_basi %></td>
+            <td data-label="İşlem" class="td-islem">
+              <a href="/yonetim/ek-odenek?plan=<%= p.id %>" class="btn-duzenle">Aç</a>
+              <form action="/yonetim/ek-odenek/plan/ode/<%= p.id %>" method="POST" style="display:inline">
+                <button type="submit" class="btn-onayla">Tümünü Ödendi</button>
+              </form>
+              <form action="/yonetim/ek-odenek/plan/geri-al/<%= p.id %>" method="POST" style="display:inline">
+                <button type="submit" class="btn-sil">Geri Al</button>
+              </form>
+              <form action="/yonetim/ek-odenek/plan/sil/<%= p.id %>" method="POST" data-confirm="Bu plan ve tüm taksit kayıtları silinsin mi?" style="display:inline">
+                <button type="submit" class="btn-sil">Sil</button>
+              </form>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<% } %>
+
+<% if (plan) { %>
+  <!-- ============ FİLTRE ÇUBUĞU (Excel benzeri) ============ -->
+  <div class="admin-panel-box">
+    <h2>📊 <%= plan.ad %></h2>
+    <form action="/yonetim/ek-odenek" method="GET" class="ek-filtre-bar">
+      <input type="hidden" name="plan" value="<%= plan.id %>" />
+      <div class="ek-filtre">
+        <label for="f_blok">Blok</label>
+        <select id="f_blok" name="blok" onchange="this.form.submit()">
+          <option value="">Tümü</option>
+          <% bloklar.forEach(function(b) { %>
+            <option value="<%= b %>" <%= blok === b ? 'selected' : '' %>><%= b %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="ek-filtre">
+        <label for="f_durum">Ödeme Durumu</label>
+        <select id="f_durum" name="durum" onchange="this.form.submit()">
+          <option value="">Tümü</option>
+          <option value="odendi" <%= durum === 'odendi' ? 'selected' : '' %>>Ödeme yapanlar</option>
+          <option value="bekliyor" <%= durum === 'bekliyor' ? 'selected' : '' %>>Kısmi ödeme</option>
+          <option value="hic" <%= durum === 'hic' ? 'selected' : '' %>>Hiç ödemeyen</option>
+          <option value="tamamlandi" <%= durum === 'tamamlandi' ? 'selected' : '' %>>Tamamlayanlar</option>
+        </select>
+      </div>
+      <div class="ek-filtre ek-filtre-arama">
+        <label for="f_ara">Ara</label>
+        <input type="text" id="f_ara" name="ara" value="<%= ara %>" placeholder="İsim, blok veya daire ara..." />
+      </div>
+      <div class="ek-filtre-eylem">
+        <button type="submit" class="btn btn-primary">Filtrele</button>
+        <% if (blok || ara || durum) { %>
+          <a href="/yonetim/ek-odenek?plan=<%= plan.id %>" class="btn btn-secondary">Temizle</a>
+        <% } %>
+        <a href="/yonetim/ek-odenek/excel?plan=<%= plan.id %>" class="btn btn-secondary">📥 Excel İndir</a>
+        <a href="/ek-odenek-raporu" target="_blank" class="btn btn-secondary">👁️ Sakin Görünümü</a>
+      </div>
+    </form>
+
+    <% if (ozet) { %>
+      <div class="rapor-ozet-grid" style="margin-top:18px;">
+        <div class="rapor-ozet">
+          <span class="rapor-ozet-ikon">💰</span>
+          <span class="rapor-ozet-label">Toplam Tahsilat</span>
+          <span class="rapor-ozet-deger rapor-yesil"><%= ozet.toplam_tahsilat.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) %> ₺</span>
+        </div>
+        <div class="rapor-ozet">
+          <span class="rapor-ozet-ikon">📋</span>
+          <span class="rapor-ozet-label">Toplam Tahakkuk</span>
+          <span class="rapor-ozet-deger"><%= ozet.toplam_tahakkuk.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) %> ₺</span>
+          <span class="rapor-ozet-alt"><%= ozet.malik_sayisi %> kat maliki</span>
+        </div>
+        <div class="rapor-ozet">
+          <span class="rapor-ozet-ikon">⏳</span>
+          <span class="rapor-ozet-label">Kalan</span>
+          <span class="rapor-ozet-deger rapor-kirmizi"><%= ozet.kalan.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) %> ₺</span>
+        </div>
+        <div class="rapor-ozet">
+          <span class="rapor-ozet-ikon">👥</span>
+          <span class="rapor-ozet-label">Ödeme Yapan</span>
+          <span class="rapor-ozet-deger"><%= ozet.odeme_yapan %> / <%= ozet.malik_sayisi %></span>
+          <span class="rapor-ozet-alt">Tahsilat oranı <%= ozet.oran.toFixed(1) %>%</span>
+        </div>
+      </div>
+    <% } %>
+  </div>
+
+  <!-- ============ ANA TABLO ============ -->
+  <div class="admin-panel-box">
+    <h2>Kat Maliki Tahsilat Tablosu (<%= satirlar.length %> kayıt)</h2>
+    <% if (!satirlar.length) { %>
+      <p class="empty-state">Filtreye uyan kayıt bulunmuyor.</p>
+    <% } else { %>
+      <div class="table-wrap ek-tablo-wrap">
+        <table class="admin-table responsive-table ek-tablo">
+          <thead>
+            <tr>
+              <th rowspan="2" class="rapor-sol-baslik">AD SOYAD</th>
+              <th rowspan="2" class="rapor-sol-baslik">BLOK</th>
+              <th rowspan="2" class="rapor-sol-baslik">DAİRE</th>
+              <% taksitOzet.forEach(function(t) { %>
+                <th colspan="2" class="rapor-taksit-baslik">
+                  <%= t.sira %>. TAKSİT
+                  <span><%= t.tutar.toLocaleString('tr-TR', { minimumFractionDigits: 0 }) %> ₺</span>
+                </th>
+              <% }); %>
+              <th rowspan="2" class="rapor-toplam-baslik">ÖDEDİĞİ</th>
+              <th rowspan="2" class="rapor-toplam-baslik">KALAN</th>
+              <th rowspan="2" class="rapor-toplam-baslik">DURUM</th>
+            </tr>
+            <tr>
+              <% taksitOzet.forEach(function(t) { %>
+                <th class="rapor-alt-baslik">Durum</th>
+                <th class="rapor-alt-baslik">Tarih</th>
+              <% }); %>
+            </tr>
+          </thead>
+          <tbody>
+            <% satirlar.forEach(function(s) { %>
+              <tr>
+                <td data-label="Ad Soyad" class="rapor-ad"><%= s.ad_soyad || '—' %></td>
+                <td data-label="Blok" class="rapor-daire"><%= s.blok || '—' %></td>
+                <td data-label="Daire" class="rapor-daire"><%= s.daire || '—' %></td>
+                <% s.taksitler.forEach(function(tk, i) { %>
+                  <td data-label="<%= i + 1 %>. Taksit" class="rapor-hucre">
+                    <% if (tk) { %>
+                      <% if (tk.odendi) { %>
+                        <form action="/yonetim/ek-odenek/taksit/geri-al/<%= tk.id || '' %>" method="POST" style="display:inline" class="ek-taksit-form">
+                          <input type="hidden" name="taksit_id" value="" />
+                          <button type="submit" class="ek-taksit-btn ek-taksit-odendi" title="Ödendi — geri almak için tıklayın">✔ Ödendi</button>
+                        </form>
+                      <% } else { %>
+                        <form action="/yonetim/ek-odenek/taksit/ode/<%= tk.id || '' %>" method="POST" style="display:inline" class="ek-taksit-form">
+                          <button type="submit" class="ek-taksit-btn ek-taksit-bekliyor" title="Ödendi olarak işaretle">Bekliyor</button>
+                        </form>
+                      <% } %>
+                    <% } else { %>
+                      <span class="rapor-yok">—</span>
+                    <% } %>
+                  </td>
+                  <td data-label="<%= i + 1 %>. Tarih" class="rapor-tarih">
+                    <%= tk && tk.odeme_tarihi ? tk.odeme_tarihi : '—' %>
+                  </td>
+                <% }); %>
+                <td data-label="Ödediği" class="rapor-hucre rapor-odeme-para"><%= s.odenen_tutar.toLocaleString('tr-TR', { minimumFractionDigits: 0 }) %> ₺</td>
+                <td data-label="Kalan" class="rapor-hucre <%= s.kalan_tutar > 0 ? 'rapor-kirmizi-para' : 'rapor-yesil-para' %>">
+                  <%= s.kalan_tutar.toLocaleString('tr-TR', { minimumFractionDigits: 0 }) %> ₺
+                </td>
+                <td data-label="Durum" class="rapor-hucre">
+                  <% if (s.tamamlandi) { %>
+                    <span class="badge badge-onayli">Tamamlandı</span>
+                  <% } else if (s.odenen_tutar > 0) { %>
+                    <span class="badge badge-bekliyor">Kısmi</span>
+                  <% } else { %>
+                    <span class="badge badge-onemli">Ödenmedi</span>
+                  <% } %>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3" class="rapor-toplam-baslik"><strong>TOPLAM (<%= satirlar.length %> malik)</strong></td>
+              <% taksitOzet.forEach(function(t) { %>
+                <td class="rapor-hucre rapor-alt-baslik"><strong><%= t.odenen %> / <%= t.toplam %></strong></td>
+                <td class="rapor-tarih"></td>
+              <% }); %>
+              <td class="rapor-hucre rapor-odeme-para"><strong><%= ozet.toplam_tahsilat.toLocaleString('tr-TR', { minimumFractionDigits: 0 }) %> ₺</strong></td>
+              <td class="rapor-hucre rapor-kirmizi-para"><strong><%= ozet.kalan.toLocaleString('tr-TR', { minimumFractionDigits: 0 }) %> ₺</strong></td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <p style="color:var(--metin-acik); font-size:0.82rem; margin-top:10px;">
+        💡 Taksit hücrelerine tıklayarak ödeme durumunu anında değiştirebilirsiniz.
+        Excel indir butonu ile filtreli/filtresiz tüm listeyi .xlsx olarak alabilirsiniz.
+      </p>
+    <% } %>
+  </div>
+<% } else { %>
+  <div class="admin-panel-box">
+    <h2>Henüz Plan Yok</h2>
+    <p class="empty-state">Yukarıdaki formu kullanarak ilk ek ödenek planını oluşturun.</p>
+  </div>
+<% } %>
+
+<%- include('partials/footer') %>

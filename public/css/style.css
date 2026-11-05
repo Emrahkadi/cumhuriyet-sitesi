@@ -1323,3 +1323,77 @@ body.menu-open .nav-toggle { opacity: 0; pointer-events: none; }
   .rapor-tablo thead th[colspan] { font-size: 0.74rem; }
   .rapor-ozet-deger { font-size: 1.3rem; }
 }
+
+/* ============================================================
+   EK ÖDENEK TAHSİLAT MODÜLÜ
+   ============================================================ */
+.ek-filtre-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-end;
+  padding: 16px;
+  background: #f7f9fc;
+  border: 1px solid var(--kenarlik);
+  border-radius: 10px;
+  margin-bottom: 6px;
+}
+.ek-filtre { display: flex; flex-direction: column; gap: 4px; min-width: 150px; }
+.ek-filtre label {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--metin-acik);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.ek-filtre select,
+.ek-filtre input {
+  padding: 8px 10px;
+  border: 1px solid var(--kenarlik);
+  border-radius: 7px;
+  font-size: 0.9rem;
+  background: var(--beyaz);
+  color: var(--metin);
+}
+.ek-filtre select:focus,
+.ek-filtre input:focus {
+  outline: none;
+  border-color: var(--renk-ana);
+  box-shadow: 0 0 0 3px rgba(30, 90, 168, 0.12);
+}
+.ek-filtre-arama { flex: 1 1 220px; min-width: 200px; }
+.ek-filtre-eylem { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.ek-filtre-eylem .btn { white-space: nowrap; }
+
+/* Taksit hücreleri (tıklanabilir) */
+.ek-tablo-wrap { max-height: 70vh; overflow: auto; }
+.ek-tablo thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #f4f6fa;
+}
+.ek-tablo thead tr:nth-child(2) th { top: 34px; }
+.ek-tablo tbody td { padding: 7px 9px; }
+.ek-taksit-btn {
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: none;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
+}
+.ek-taksit-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12); }
+.ek-taksit-odendi { background: #e6f7f0; color: #1b7a5e; border-color: #b8e6d3; }
+.ek-taksit-bekliyor { background: #fff3e0; color: #b26a00; border-color: #f5d9a8; }
+.ek-taksit-form { display: inline; }
+
+@media (max-width: 768px) {
+  .ek-filtre-bar { flex-direction: column; align-items: stretch; }
+  .ek-filtre { min-width: 100%; }
+  .ek-tablo thead tr:nth-child(2) th { top: 30px; }
+}

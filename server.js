@@ -1016,6 +1016,417 @@ app.get('/aidat-raporu', uyeGerekli, ah(async (req, res) => {
   });
 }));
 
+// =====================================================================
+//  EK ÖDENEK TAHSİLAT (aidat sisteminden bağımsız)
+//  300+ kat malikinin taksitli ek ödenek ödemesi.
+//  Admin düzenler, site sakinleri salt-okunur görüntüler.
+// =====================================================================
+
+// Ek ödenek taksitlerini sakinler (kat malikleri) ile birleştirip
+// taksit no -> kayıt haritası oluşturur.
+// NOT: Excel import artığı olan "TOPLAM" satırları (blok veya daire = TOPLAM)
+// ve sayısal isimler haricî tutulur.
+const ekOdenekTaksitHaritasi = async (planId) => {
+  const satirlar = (await q(
+    `SELECT s.id AS malik_id, s.blok, s.daire, s.isim_soyisim,
+            t.id AS taksit_id, t.taksit_no, t.donem, t.tutar, t.odendi, t.odeme_tarihi
+     FROM sakinler s
+     LEFT JOIN ek_odenek_taksitler t ON t.malik_id = s.id AND t.plan_id = $1
+     WHERE UPPER(COALESCE(TRIM(s.blok), '')) <> 'TOPLAM'
+       AND UPPER(COALESCE(TRIM(s.daire), '')) <> 'TOPLAM'
+       AND COALESCE(TRIM(s.isim_soyisim), '') !~ '^[0-9]+$'
+     ORDER BY COALESCE(NULLIF(TRIM(s.blok), ''), 'Diğer'),
+              NULLIF(regexp_replace(s.daire, '\\D', '', 'g'), '')::int NULLS LAST,
+              s.id`,
+    [planId]
+  )).rows;
+
+  // Malik bazinda grupla
+  const harita = new Map();
+  for (const r of satirlar) {
+    if (!harita.has(r.malik_id)) {
+      harita.set(r.malik_id, {
+        malik_id: r.malik_id,
+        ad_soyad: (r.isim_soyisim || '').trim(),
+        blok: (r.blok || '').trim(),
+        daire: (r.daire || '').trim(),
+        taksitler: {}
+      });
+    }
+    if (r.taksit_no) {
+      harita.get(r.malik_id).taksitler[r.taksit_no] = {
+        id: r.taksit_id,
+        donem: r.donem,
+        tutar: parseFloat(r.tutar),
+        odendi: r.odendi,
+        odeme_tarihi: r.odeme_tarihi
+      };
+    }
+  }
+  return Array.from(harita.values());
+};
+
+// --- ÜYE: Ek Ödenek Tahsilat Raporu (salt okunur, şeffaflık) ---
+app.get('/ek-odenek-raporu', uyeGerekli, ah(async (req, res) => {
+  const plan = (await q('SELECT * FROM ek_odenek_planlar ORDER BY id DESC LIMIT 1')).rows[0];
+  if (!plan) {
+    return res.render('ek-odenek-raporu', {
+      aktifSayfa: 'ek-odenek-raporu',
+      plan: null, ozet: null, taksitOzet: [], satirlar: [], blokOzet: []
+    });
+  }
+
+  const taksitTutarlari = String(plan.tutarlar).split(',').map((t) => parseFloat(t)).filter((t) => !isNaN(t));
+  const satirlar = await ekOdenekTaksitHaritasi(plan.id);
+
+  // Her satira taksit bazli ozet ekle
+  const hesaplanan = satirlar.map((s) => {
+    const taksitler = taksitOzetDoldur(s.taksitler, taksitTutarlari.length);
+    const odenenTutar = taksitler.filter((t) => t && t.odendi).reduce((a, t) => a + t.tutar, 0);
+    const toplamTutar = taksitler.filter(Boolean).reduce((a, t) => a + t.tutar, 0);
+    return {
+      ...s,
+      taksitler,
+      odenen_tutar: odenenTutar,
+      kalan_tutar: toplamTutar - odenenTutar,
+      toplam_tutar: toplamTutar,
+      tamamlandi: taksitler.length > 0 && taksitler.every((t) => t && t.odendi)
+    };
+  });
+
+  const toplamTahsilat = hesaplanan.reduce((a, s) => a + s.odenen_tutar, 0);
+  const toplamTahakkuk = hesaplanan.reduce((a, s) => a + s.toplam_tutar, 0);
+  const odemeYapan = new Set(hesaplanan.filter((s) => s.odenen_tutar > 0).map((s) => s.malik_id)).size;
+  const malikSayisi = hesaplanan.filter((s) => s.toplam_tutar > 0).length;
+  const taksitAdet = hesaplanan.reduce((a, s) => a + s.taksitler.filter((t) => t && t.odendi).length, 0);
+  const bekleyenAdet = hesaplanan.reduce((a, s) => a + s.taksitler.filter((t) => t && !t.odendi).length, 0);
+
+  const taksitOzet = taksitTutarlari.map((tutar, i) => {
+    const odenen = hesaplanan.filter((s) => s.taksitler[i] && s.taksitler[i].odendi).length;
+    const toplam = hesaplanan.filter((s) => s.taksitler[i]).length;
+    return { sira: i + 1, tutar, odenen, bekleyen: toplam - odenen, toplam };
+  });
+
+  // Blok bazli ozet
+  const blokMap = new Map();
+  for (const s of hesaplanan) {
+    const b = s.blok || 'Diğer';
+    if (!blokMap.has(b)) blokMap.set(b, { blok: b, adet: 0, tahsilat: 0, tahakkuk: 0, odenen_kisi: 0 });
+    const g = blokMap.get(b);
+    g.adet++;
+    g.tahsilat += s.odenen_tutar;
+    g.tahakkuk += s.toplam_tutar;
+    if (s.odenen_tutar > 0) g.odenen_kisi++;
+  }
+  const blokOzet = Array.from(blokMap.values()).sort((a, b) => a.blok.localeCompare(b.blok, 'tr'));
+
+  res.render('ek-odenek-raporu', {
+    aktifSayfa: 'ek-odenek-raporu',
+    plan,
+    ozet: {
+      toplam_tahsilat: toplamTahsilat,
+      toplam_tahakkuk: toplamTahakkuk,
+      kalan: toplamTahakkuk - toplamTahsilat,
+      odeme_yapan: odemeYapan,
+      malik_sayisi: malikSayisi,
+      taksit_adet: taksitAdet,
+      bekleyen_adet: bekleyenAdet,
+      oran: toplamTahakkuk > 0 ? (toplamTahsilat / toplamTahakkuk * 100) : 0
+    },
+    taksitOzet,
+    satirlar: hesaplanan,
+    blokOzet
+  });
+}));
+
+// taksit dizisini 1..n indeksli ve null ile doldurur
+function taksitOzetDoldur(taksitMap, adet) {
+  const dizi = [];
+  for (let i = 1; i <= adet; i++) dizi.push(taksitMap[i] || null);
+  return dizi;
+}
+
+// --- ADMIN: Ek Ödenek Tahsilat tablosu (filtreli, düzenlenebilir) ---
+app.get('/yonetim/ek-odenek', adminGerekli, ah(async (req, res) => {
+  const planlar = (await q('SELECT * FROM ek_odenek_planlar ORDER BY id DESC')).rows;
+  const planId = parseInt(req.query.plan, 10);
+  const plan = planlar.find((p) => p.id === planId) || planlar[0] || null;
+
+  const blok = (req.query.blok || '').trim();
+  const ara = (req.query.ara || '').trim();
+  const durum = (req.query.durum || '').trim(); // odendi | bekliyor | tamamlandi | hic
+
+  if (!plan) {
+    return res.render('admin/ek-odenek', {
+      aktifSayfa: 'ek-odenek', planlar, plan: null, satirlar: [],
+      bloklar: [], taksitOzet: [], ozet: null, blok: '', ara: '', durum: ''
+    });
+  }
+
+  const taksitTutarlari = String(plan.tutarlar).split(',').map((t) => parseFloat(t)).filter((t) => !isNaN(t));
+  const tumSatirlar = await ekOdenekTaksitHaritasi(plan.id);
+  const hesaplanan = tumSatirlar.map((s) => {
+    const taksitler = taksitOzetDoldur(s.taksitler, taksitTutarlari.length);
+    const odenenTutar = taksitler.filter((t) => t && t.odendi).reduce((a, t) => a + t.tutar, 0);
+    const toplamTutar = taksitler.filter(Boolean).reduce((a, t) => a + t.tutar, 0);
+    return {
+      ...s, taksitler,
+      odenen_tutar: odenenTutar,
+      kalan_tutar: toplamTutar - odenenTutar,
+      toplam_tutar: toplamTutar,
+      tamamlandi: taksitler.length > 0 && taksitler.every((t) => t && t.odendi)
+    };
+  });
+
+  // Blok listesi (filtre icin)
+  const bloklar = Array.from(new Set(hesaplanan.map((s) => s.blok || 'Diğer'))).sort((a, b) => a.localeCompare(b, 'tr'));
+
+  // Filtreleme
+  let satirlar = hesaplanan;
+  if (blok) satirlar = satirlar.filter((s) => (s.blok || 'Diğer') === blok);
+  if (ara) {
+    const k = ara.toLocaleLowerCase('tr');
+    satirlar = satirlar.filter((s) =>
+      s.ad_soyad.toLocaleLowerCase('tr').includes(k) ||
+      s.daire.toLocaleLowerCase('tr').includes(k) ||
+      (s.blok || '').toLocaleLowerCase('tr').includes(k)
+    );
+  }
+  if (durum === 'odendi') satirlar = satirlar.filter((s) => s.odenen_tutar > 0);
+  else if (durum === 'bekliyor') satirlar = satirlar.filter((s) => s.odenen_tutar > 0 && s.kalan_tutar > 0);
+  else if (durum === 'hic') satirlar = satirlar.filter((s) => s.odenen_tutar === 0);
+  else if (durum === 'tamamlandi') satirlar = satirlar.filter((s) => s.tamamlandi);
+
+  const toplamTahsilat = satirlar.reduce((a, s) => a + s.odenen_tutar, 0);
+  const toplamTahakkuk = satirlar.reduce((a, s) => a + s.toplam_tutar, 0);
+  const taksitOzet = taksitTutarlari.map((tutar, i) => {
+    const odenen = satirlar.filter((s) => s.taksitler[i] && s.taksitler[i].odendi).length;
+    const toplam = satirlar.filter((s) => s.taksitler[i]).length;
+    return { sira: i + 1, tutar, odenen, bekleyen: toplam - odenen, toplam };
+  });
+
+  res.render('admin/ek-odenek', {
+    aktifSayfa: 'ek-odenek',
+    planlar, plan, satirlar, bloklar, taksitOzet,
+    ozet: {
+      toplam_tahsilat: toplamTahsilat,
+      toplam_tahakkuk: toplamTahakkuk,
+      kalan: toplamTahakkuk - toplamTahsilat,
+      odeme_yapan: satirlar.filter((s) => s.odenen_tutar > 0).length,
+      malik_sayisi: satirlar.filter((s) => s.toplam_tutar > 0).length,
+      oran: toplamTahakkuk > 0 ? (toplamTahsilat / toplamTahakkuk * 100) : 0
+    },
+    blok, ara, durum
+  });
+}));
+
+// --- ADMIN: Ek ödenek planı oluştur + tüm kat maliklerine tahakkuk ---
+app.post('/yonetim/ek-odenek/plan/ekle', adminGerekli, ah(async (req, res) => {
+  const { ad, donem_basi, tutar1, tutar2, tutar3, tutar4, aciklama } = req.body;
+  if (!ad || !donem_basi) {
+    req.flash('hata', 'Plan adı ve dönem başlangıcı zorunludur.');
+    return res.redirect('/yonetim/ek-odenek');
+  }
+  const tutarlar = [tutar1, tutar2, tutar3, tutar4]
+    .map((t) => parseFloat(String(t || '').replace(',', '.')))
+    .filter((t) => !isNaN(t) && t > 0);
+  if (!tutarlar.length) {
+    req.flash('hata', 'En az bir taksit tutarı girin.');
+    return res.redirect('/yonetim/ek-odenek');
+  }
+
+  const sonuc = await q(
+    'INSERT INTO ek_odenek_planlar (ad, taksit_sayisi, tutarlar, donem_basi, aciklama) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+    [ad.trim(), tutarlar.length, tutarlar.join(','), donem_basi.trim(), (aciklama || '').trim()]
+  );
+  const planId = sonuc.rows[0].id;
+
+  // Tüm kat maliklerine tahakkuk (Excel import artıkları hariç)
+  const malikler = (await q(
+    `SELECT id FROM sakinler
+     WHERE UPPER(COALESCE(TRIM(blok), '')) <> 'TOPLAM'
+       AND UPPER(COALESCE(TRIM(daire), '')) <> 'TOPLAM'
+       AND COALESCE(TRIM(isim_soyisim), '') !~ '^[0-9]+$'
+       AND (COALESCE(TRIM(isim_soyisim), '') <> '' OR COALESCE(TRIM(daire), '') <> '')
+     ORDER BY id`
+  )).rows;
+
+  const ayAdlari = ['OCAK', 'ŞUBAT', 'MART', 'NİSAN', 'MAYIS', 'HAZİRAN', 'TEMMUZ',
+                    'AĞUSTOS', 'EYLÜL', 'EKİM', 'KASIM', 'ARALIK'];
+  const ayBasi = donem_basi.trim().toUpperCase().match(/^([A-ZÇĞİÖŞÜ]+)\s*(\d{4})?$/);
+  let ayIdx = 0, yil = new Date().getFullYear();
+  if (ayBasi) {
+    const b = ayAdlari.findIndex((a) => a === ayBasi[1]);
+    if (b >= 0) ayIdx = b;
+    if (ayBasi[2]) yil = parseInt(ayBasi[2], 10);
+  }
+
+  // Toplu ekleme: tek INSERT ... VALUES (...) ile yüzlerce satır (hızlı)
+  const satirlar = [];
+  let eklenen = 0;
+  for (const m of malikler) {
+    for (let i = 0; i < tutarlar.length; i++) {
+      const tAy = (ayIdx + i) % 12;
+      const tYil = yil + Math.floor((ayIdx + i) / 12);
+      const donemAd = `${ayAdlari[tAy]} ${tYil} · ${i + 1}/${tutarlar.length} Taksit`;
+      satirlar.push([planId, m.id, i + 1, donemAd, tutarlar[i], (aciklama || '').trim() || ad.trim()]);
+      eklenen++;
+    }
+  }
+  if (satirlar.length) {
+    // PostgreSQL parametre limiti (65535) icin parcala.
+    // Her parçada placeholder'lar 1'den yeniden numaralandırılır.
+    const PARCA = 500;
+    for (let i = 0; i < satirlar.length; i += PARCA) {
+      const parca = satirlar.slice(i, i + PARCA);
+      const degerler = [];
+      const params = [];
+      parca.forEach((s, idx) => {
+        const b = idx * 6 + 1;
+        degerler.push(`($${b}, $${b + 1}, $${b + 2}, $${b + 3}, $${b + 4}, $${b + 5})`);
+        params.push(...s);
+      });
+      await q(
+        `INSERT INTO ek_odenek_taksitler (plan_id, malik_id, taksit_no, donem, tutar, aciklama)
+         VALUES ${degerler.join(', ')}`,
+        params
+      );
+    }
+  }
+  req.flash('basari', `"${ad.trim()}" ek ödenek planı oluşturuldu. ${malikler.length} kat malikine ${eklenen} taksit kaydı eklendi.`);
+  res.redirect('/yonetim/ek-odenek?plan=' + planId);
+}));
+
+// --- ADMIN: Taksit ödendi / geri al (satır içi düzenleme) ---
+app.post('/yonetim/ek-odenek/taksit/ode/:id', adminGerekli, ah(async (req, res) => {
+  await q(
+    `UPDATE ek_odenek_taksitler SET odendi = 1,
+       odeme_tarihi = to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD')
+     WHERE id = $1`,
+    [req.params.id]
+  );
+  const geri = req.get('Referer') || '/yonetim/ek-odenek';
+  res.redirect(geri);
+}));
+
+app.post('/yonetim/ek-odenek/taksit/geri-al/:id', adminGerekli, ah(async (req, res) => {
+  await q('UPDATE ek_odenek_taksitler SET odendi = 0, odeme_tarihi = NULL WHERE id = $1', [req.params.id]);
+  const geri = req.get('Referer') || '/yonetim/ek-odenek';
+  res.redirect(geri);
+}));
+
+// --- ADMIN: Plana göre toplu işlemler ---
+app.post('/yonetim/ek-odenek/plan/ode/:planId', adminGerekli, ah(async (req, res) => {
+  const r = await q(
+    `UPDATE ek_odenek_taksitler SET odendi = 1,
+       odeme_tarihi = to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD')
+     WHERE plan_id = $1 AND odendi = 0`,
+    [req.params.planId]
+  );
+  req.flash('basari', `${r.rowCount} taksit ödendi olarak işaretlendi.`);
+  res.redirect('/yonetim/ek-odenek?plan=' + req.params.planId);
+}));
+
+app.post('/yonetim/ek-odenek/plan/geri-al/:planId', adminGerekli, ah(async (req, res) => {
+  const r = await q('UPDATE ek_odenek_taksitler SET odendi = 0, odeme_tarihi = NULL WHERE plan_id = $1', [req.params.planId]);
+  req.flash('basari', `${r.rowCount} taksit ödenmedi durumuna alındı.`);
+  res.redirect('/yonetim/ek-odenek?plan=' + req.params.planId);
+}));
+
+app.post('/yonetim/ek-odenek/plan/sil/:planId', adminGerekli, ah(async (req, res) => {
+  await q('DELETE FROM ek_odenek_taksitler WHERE plan_id = $1', [req.params.planId]);
+  await q('DELETE FROM ek_odenek_planlar WHERE id = $1', [req.params.planId]);
+  req.flash('basari', 'Plan ve taksit kayıtları silindi.');
+  res.redirect('/yonetim/ek-odenek');
+}));
+
+// --- ADMIN: Excel (xlsx) dışa aktarım ---
+app.get('/yonetim/ek-odenek/excel', adminGerekli, ah(async (req, res) => {
+  const planId = parseInt(req.query.plan, 10);
+  const plan = (await q('SELECT * FROM ek_odenek_planlar WHERE id = $1', [planId])).rows[0];
+  if (!plan) {
+    req.flash('hata', 'Plan bulunamadı.');
+    return res.redirect('/yonetim/ek-odenek');
+  }
+  const taksitTutarlari = String(plan.tutarlar).split(',').map((t) => parseFloat(t)).filter((t) => !isNaN(t));
+  const tumSatirlar = await ekOdenekTaksitHaritasi(plan.id);
+
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Cumhuriyet Sitesi Yönetim';
+  wb.created = new Date();
+  const ws = wb.addWorksheet('Ek Ödenek Tahsilat');
+
+  // Baslik satiri
+  const basliklar = ['AD SOYAD', 'BLOK', 'DAİRE'];
+  taksitTutarlari.forEach((t, i) => basliklar.push(`${i + 1}. TAKSİT (${t.toLocaleString('tr-TR')} ₺)`, 'TARİH'));
+  basliklar.push('ÖDEDİĞİ', 'KALAN', 'DURUM');
+  const baslikSatir = ws.addRow(basliklar);
+  baslikSatir.eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E5AA8' } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+  });
+
+  // Veri satirlari
+  for (const s of tumSatirlar) {
+    const taksitler = taksitOzetDoldur(s.taksitler, taksitTutarlari.length);
+    const odenenTutar = taksitler.filter((t) => t && t.odendi).reduce((a, t) => a + t.tutar, 0);
+    const toplamTutar = taksitler.filter(Boolean).reduce((a, t) => a + t.tutar, 0);
+    const satir = [
+      s.ad_soyad || '',
+      s.blok || '',
+      s.daire || ''
+    ];
+    taksitler.forEach((t) => {
+      satir.push(t ? (t.odendi ? 'ÖDENDİ' : 'BEKLİYOR') : '-');
+      satir.push(t && t.odeme_tarihi ? t.odeme_tarihi : '-');
+    });
+    satir.push(odenenTutar, toplamTutar - odenenTutar,
+      taksitler.length && taksitler.every((t) => t && t.odendi) ? 'TAMAMLANDI' : (odenenTutar > 0 ? 'KISMİ' : 'ÖDENMEDİ'));
+    ws.addRow(satir);
+  }
+
+  // TOPLAM satiri
+  const genelOdenen = tumSatirlar.reduce((a, s) => {
+    const t = taksitOzetDoldur(s.taksitler, taksitTutarlari.length);
+    return a + t.filter((x) => x && x.odendi).reduce((b, x) => b + x.tutar, 0);
+  }, 0);
+  const genelTahakkuk = tumSatirlar.reduce((a, s) => {
+    const t = taksitOzetDoldur(s.taksitler, taksitTutarlari.length);
+    return a + t.filter(Boolean).reduce((b, x) => b + x.tutar, 0);
+  }, 0);
+  const toplamDizi = ['TOPLAM', '', ''];
+  taksitTutarlari.forEach(() => { toplamDizi.push('', ''); });
+  toplamDizi.push(genelOdenen, genelTahakkuk - genelOdenen, '');
+  const toplamSatir = ws.addRow(toplamDizi);
+  toplamSatir.eachCell((cell) => {
+    cell.font = { bold: true };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEF2F8' } };
+  });
+
+  // Sutun genislikleri
+  ws.getColumn(1).width = 30;
+  ws.getColumn(2).width = 8;
+  ws.getColumn(3).width = 10;
+  for (let i = 4; i < 4 + taksitTutarlari.length * 2; i++) ws.getColumn(i).width = 16;
+  ws.getColumn(4 + taksitTutarlari.length * 2).width = 14;
+  ws.getColumn(5 + taksitTutarlari.length * 2).width = 14;
+  ws.getColumn(6 + taksitTutarlari.length * 2).width = 14;
+
+  // Filtre (autoFilter) - Excel benzeri filtreleme
+  ws.autoFilter = {
+    from: { row: 1, column: 1 },
+    to: { row: 1, column: basliklar.length }
+  };
+  ws.views = [{ state: 'frozen', ySplit: 1 }];
+
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', 'attachment; filename="ek-odenek-tahsilat-' + plan.id + '.xlsx"');
+  const buffer = await wb.xlsx.writeBuffer();
+  res.end(Buffer.from(buffer));
+}));
+
 // Üyenin mesajları (görüntülenince okundu işaretlenir)
 app.get('/mesajlarim', uyeGerekli, ah(async (req, res) => {
   const uyeId = req.session.uye.id;
