@@ -51,26 +51,54 @@ img { max-width: 100%; display: block; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 108px;
+  min-height: 108px;
+  height: auto;
+  padding: 10px 0;
   gap: 12px;
   position: relative;
   z-index: 1001;
   min-width: 0;
 }
-.logo { display: flex; align-items: center; gap: 12px; font-size: 1.15rem; min-width: 0; flex-shrink: 0; }
-.logo-img { height: 96px; width: 96px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.logo { display: flex; align-items: center; gap: 10px; font-size: 1.1rem; min-width: 0; flex-shrink: 0; }
+.logo-img { height: 80px; width: 80px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
 .logo-text strong { color: var(--renk-ana); }
 /* Logo yazısı: hiçbir koşulda kesilmesin */
 .logo-text { white-space: nowrap; overflow: visible; flex-shrink: 0; }
 
-.main-nav { display: flex; align-items: center; gap: 4px; flex-shrink: 1; min-width: 0; flex-wrap: nowrap; overflow: hidden; }
+/* Nav: linkler ve kullanıcı işlemleri ayrı gruplar halinde.
+   Linkler sarma (wrap) yapabilir, kullanıcı öğeleri ASLA kırpılmaz. */
+.main-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  row-gap: 6px;
+}
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.nav-user {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: auto;
+  white-space: nowrap;
+}
 .main-nav a {
-  padding: 9px 12px;
+  padding: 8px 10px;
   border-radius: 8px;
   font-weight: 500;
   color: var(--metin);
   transition: all 0.2s;
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   white-space: nowrap;
 }
 .main-nav a:hover { background: var(--arkaplan); color: var(--renk-ana); }
@@ -80,11 +108,161 @@ img { max-width: 100%; display: block; }
   background: var(--renk-ana);
   color: #fff !important;
   font-weight: 600;
-  padding: 9px 16px !important;
-  font-size: 0.95rem !important;
+  padding: 8px 14px !important;
+  font-size: 0.88rem !important;
 }
 .main-nav .nav-cta:hover { background: var(--renk-ana-koyu); color: #fff; }
 .main-nav .nav-logout { color: var(--renk-vurgu); }
+
+/* ---------- Hesabım dropdown (avatar + kullanıcı adı) ---------- */
+.nav-account { position: relative; flex-shrink: 0; }
+.nav-account-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px 5px 5px;
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.2s, border-color 0.2s;
+  white-space: nowrap;
+}
+.nav-account-btn:hover { background: rgba(255, 255, 255, 0.20); border-color: rgba(255, 255, 255, 0.55); }
+.nav-account-btn.open { background: rgba(255, 255, 255, 0.24); border-color: rgba(255, 255, 255, 0.7); }
+
+.nav-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f97316, #ef4444);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+  line-height: 1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+}
+.nav-avatar-lg { width: 46px; height: 46px; font-size: 1.05rem; }
+.nav-account-name { font-size: 0.88rem; font-weight: 600; line-height: 1; }
+.nav-caret { width: 16px; height: 16px; flex-shrink: 0; transition: transform 0.2s; }
+.nav-account-btn.open .nav-caret { transform: rotate(180deg); }
+
+.nav-account-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  width: 268px;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 16px 46px rgba(0, 0, 0, 0.20);
+  z-index: 999;
+  padding: 8px;
+  overflow: hidden;
+}
+.nav-account-menu::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  right: 26px;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  transform: rotate(45deg);
+  border-radius: 2px;
+}
+.nav-account-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 10px 12px;
+  border-bottom: 1px solid var(--kenarlik);
+  margin-bottom: 6px;
+}
+.nav-account-info { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.nav-account-info strong { font-size: 0.95rem; color: var(--metin); }
+.nav-account-ad {
+  font-size: 0.82rem;
+  color: var(--metin-acik);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 175px;
+}
+.nav-account-info small { font-size: 0.74rem; color: var(--renk-ana); font-weight: 600; margin-top: 2px; }
+.nav-account-links { display: flex; flex-direction: column; }
+.nav-account-menu .nav-account-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  color: var(--metin);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.16s, color 0.16s;
+}
+.nav-account-menu .nav-account-item:hover { background: var(--arkaplan); color: var(--renk-ana); }
+.nav-account-menu .nav-account-item.active { background: rgba(30, 90, 168, 0.10); color: var(--renk-ana); font-weight: 600; }
+.nav-account-menu .nav-account-cikis {
+  margin-top: 4px;
+  border-top: 1px solid var(--kenarlik);
+  border-radius: 0 0 9px 9px;
+  color: var(--renk-vurgu);
+  font-weight: 600;
+}
+.nav-account-menu .nav-account-cikis:hover { background: rgba(220, 38, 38, 0.08); color: var(--renk-vurgu); }
+
+/* Push bildirim butonu dropdown içinde (beyaz zemin) */
+.nav-account-menu .nav-push-btn {
+  border: 1px solid var(--kenarlik);
+  background: none;
+  color: var(--metin);
+  border-radius: 9px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  justify-content: flex-start;
+}
+.nav-account-menu .nav-push-btn:hover { background: var(--arkaplan); color: var(--renk-ana); border-color: var(--kenarlik); }
+.nav-account-menu .nav-push-btn .push-off {
+  display: none;
+  background: linear-gradient(90deg, #16a34a, #22c55e);
+  color: #fff;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+}
+.nav-account-menu .nav-push-btn.abone .push-on { display: none; }
+.nav-account-menu .nav-push-btn.abone .push-off { display: inline; }
+.nav-account-menu .nav-push-btn.abone { background: rgba(22, 163, 74, 0.10); border-color: #16a34a; }
+.nav-account-menu .nav-push-btn.izin-yok { background: rgba(220, 38, 38, 0.10); border-color: #dc2626; cursor: help; }
+
+/* Dropdown içinde push butonu: tek satır, taşma yok */
+.nav-account-menu .nav-push-btn .push-on,
+.nav-account-menu .nav-push-btn .push-off {
+  display: inline-block;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nav-account-menu .nav-push-btn:not(.abone) .push-off { display: none; }
+.nav-account-menu .nav-push-btn.abone .push-on { display: none; }
+.nav-account-menu .nav-push-btn.abone .push-off { display: inline-block; }
 
 .nav-toggle {
   display: none;
@@ -854,7 +1032,7 @@ button, .btn, a {
 @media (max-width: 860px) {
   /* Header: mobil menüye geçiş */
   .site-header { position: sticky; top: 0; }
-  .header-inner { height: 96px; }
+  .header-inner { min-height: 96px; height: auto; }
   .logo-img { height: 80px; width: 80px; }
   .logo-text { font-size: 1rem; }
   .nav-toggle {
@@ -890,6 +1068,8 @@ button, .btn, a {
     opacity: 0;
     pointer-events: none;
     visibility: hidden;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
   }
   .main-nav.open {
     transform: translateX(0);
@@ -899,6 +1079,16 @@ button, .btn, a {
     overflow-y: auto;
     box-shadow: -8px 0 24px rgba(0, 0, 0, 0.15);
   }
+  /* Drawer içinde linkler tek sütunda, alt alta */
+  .nav-links, .nav-user {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    margin-left: 0;
+    white-space: normal;
+    flex-wrap: nowrap;
+  }
+  .nav-user { margin-top: 10px; }
   .main-nav a {
     padding: 14px 16px;
     font-size: 1rem;
@@ -920,6 +1110,34 @@ button, .btn, a {
     max-width: none;
     z-index: 1000;
   }
+
+  /* Hesabım dropdown mobilde drawer içinde tam genişlikte */
+  .nav-account { width: 100%; }
+  .nav-account-btn {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 12px 16px;
+    border-radius: 0;
+    background: rgba(30, 90, 168, 0.06);
+    border: none;
+    border-bottom: 1px solid var(--kenarlik);
+  }
+  .nav-account-menu {
+    position: static;
+    width: 100%;
+    box-shadow: none;
+    border-radius: 0;
+    padding: 6px 0 0;
+    background: transparent;
+  }
+  .nav-account-menu::before { display: none; }
+  .nav-account-head { padding: 10px 16px 12px; }
+  .nav-account-menu .nav-account-item {
+    padding: 13px 16px;
+    border-radius: 0;
+    border-bottom: 1px solid var(--kenarlik);
+  }
+  .nav-account-menu .nav-account-cikis { border-radius: 0; border-bottom: none; }
 
   /* Hero kompakt */
   .hero { padding: 40px 0 48px; }
@@ -981,7 +1199,7 @@ button, .btn, a {
 /* ---- Telefon: 600px ve altı ---- */
 @media (max-width: 600px) {
   .container { padding: 0 14px; }
-  .header-inner { height: 84px; }
+  .header-inner { min-height: 84px; height: auto; }
   .logo-img { height: 72px; width: 72px; }
   .logo-text { font-size: 0.9rem; }
 
@@ -1037,7 +1255,7 @@ button, .btn, a {
 
 /* ---- Çok küçük telefon: 380px ve altı ---- */
 @media (max-width: 380px) {
-  .header-inner { height: 60px; gap: 6px; }
+  .header-inner { min-height: 60px; height: auto; gap: 6px; }
   .logo { gap: 8px; }
   .logo-img { height: 48px; width: 48px; }
   .logo-text { font-size: 0.82rem; }
@@ -1115,13 +1333,13 @@ body.menu-open .nav-toggle { opacity: 0; pointer-events: none; }
 .nav-push-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
+  gap: 5px;
+  padding: 7px 11px;
   border: 1px solid rgba(255, 255, 255, 0.4);
   background: rgba(255, 255, 255, 0.08);
   color: var(--beyaz, #fff);
   border-radius: 999px;
-  font-size: 0.88rem;
+  font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.18s, border-color 0.18s, transform 0.06s;
@@ -1146,9 +1364,13 @@ body.menu-open .nav-toggle { opacity: 0; pointer-events: none; }
 }
 .nav-push-btn.izin-yok { background: rgba(220, 38, 38, 0.12); border-color: #dc2626; cursor: help; }
 
-/* Mobil drawer içinde push butonu */
+/* Mobil drawer içinde push butonu
+   Not: .nav-user .nav-push-btn kuralı artık Hesabım dropdown'ındaki butonu
+   etkilemesin (dropdown içinde sadece TEK metin görünmeli). */
 @media (max-width: 900px) {
-  .nav-push-btn { width: 100%; justify-content: center; padding: 12px 14px; }
+  .nav-user > .nav-push-btn { width: 100%; justify-content: center; padding: 12px 14px; }
+  .nav-user > .nav-push-btn .push-on,
+  .nav-user > .nav-push-btn .push-off { display: inline; }
 }
 
 /* iOS tarzı install banner */
@@ -1305,6 +1527,39 @@ body.menu-open .nav-toggle { opacity: 0; pointer-events: none; }
 .rapor-yok { color: #b9bec9; }
 .rapor-odeme-para { color: #1b7a5e; font-weight: 700; }
 .rapor-kirmizi-para { color: #c0392b; font-weight: 700; }
+
+/* Üye tarafı Ek Ödenek Raporu tablosu — hiçbir hücre kesilmesin */
+.ek-tablo.rapor-tablo { font-size: 0.82rem; table-layout: auto; }
+.ek-tablo.rapor-tablo th,
+.ek-tablo.rapor-tablo td { padding: 7px 8px; }
+.ek-tablo.rapor-tablo tbody td { white-space: normal; overflow: visible; text-overflow: clip; }
+.ek-tablo.rapor-tablo tbody td.rapor-ad {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 150px;
+  max-width: 260px;
+  line-height: 1.25;
+}
+.ek-tablo.rapor-tablo tbody td.rapor-daire { white-space: nowrap; }
+.ek-tablo.rapor-tablo tbody td.rapor-hucre { white-space: nowrap; }
+.ek-tablo.rapor-tablo tbody td.rapor-tarih {
+  white-space: nowrap;
+  font-size: 0.74rem;
+  letter-spacing: -0.01em;
+}
+/* Durum rozetleri tam görünsün */
+.ek-tablo.rapor-tablo .badge {
+  white-space: nowrap;
+  font-size: 0.72rem;
+  padding: 4px 8px;
+  display: inline-block;
+}
+.ek-tablo.rapor-tablo .rapor-odendi,
+.ek-tablo.rapor-tablo .rapor-bekliyor {
+  white-space: nowrap;
+  font-size: 0.76rem;
+}
 .rapor-tablo tfoot td {
   background: #f4f6fa;
   border-top: 2px solid var(--kenarlik);
@@ -1453,7 +1708,10 @@ body.menu-open .nav-toggle { opacity: 0; pointer-events: none; }
 .ek-th-daire, .ek-td-daire { width: 4%; text-align: center; }
 .ek-th-taksit, .ek-td-taksit { width: 12%; text-align: center; vertical-align: middle; }
 .ek-th-para, .ek-td-odeme { width: 8%; text-align: right; }
-.ek-th-durum, .ek-td-durum { width: 3%; text-align: center; }
+.ek-th-durum, .ek-td-durum { width: 4%; text-align: center; }
+/* Durum rozeti 22px -> hucre icinde sigsin (tasmasin) */
+.ek-tablo tbody td.ek-td-durum { padding-left: 0; padding-right: 0; }
+.ek-tablo tbody td.ek-td-durum .ek-badge { vertical-align: middle; }
 
 /* Ad sütunu: uzun isimler satır kaydırsın, kesilmesin */
 .ek-tablo tbody td.ek-td-ad {

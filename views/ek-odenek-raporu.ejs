@@ -88,7 +88,7 @@
           <p class="empty-state">Kayıt bulunmuyor.</p>
         <% } else { %>
           <div class="table-wrap ek-tablo-wrap">
-            <table class="admin-table responsive-table ek-tablo">
+            <table class="admin-table responsive-table ek-tablo rapor-tablo">
               <thead>
                 <tr>
                   <th rowspan="2" class="rapor-sol-baslik">AD SOYAD</th>
@@ -130,7 +130,11 @@
                         <% } %>
                       </td>
                       <td data-label="<%= i + 1 %>. Tarih" class="rapor-tarih">
-                        <%= tk && tk.odeme_tarihi ? tk.odeme_tarihi : '—' %>
+                        <% if (tk && tk.odeme_tarihi) { %>
+                          <span title="<%= tk.odeme_tarihi %>"><%= String(tk.odeme_tarihi).split('-').reverse().join('.') %></span>
+                        <% } else { %>
+                          —
+                        <% } %>
                       </td>
                     <% }); %>
                     <td data-label="Ödediği" class="rapor-hucre rapor-odeme-para"><%= s.odenen_tutar.toLocaleString('tr-TR', { minimumFractionDigits: 0 }) %> ₺</td>

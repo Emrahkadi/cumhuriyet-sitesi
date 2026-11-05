@@ -23,8 +23,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
-  <link rel="preload" as="style" href="/css/style.css?v=20" />
-  <link rel="stylesheet" href="/css/style.css?v=20" />
+  <link rel="preload" as="style" href="/css/style.css?v=27" />
+  <link rel="stylesheet" href="/css/style.css?v=27" />
   <script>
     // PWA Service Worker kaydı
     if ('serviceWorker' in navigator) {
@@ -127,52 +127,99 @@
       </button>
 
       <nav class="main-nav" id="mainNav">
-        <a href="/" class="<%= aktifSayfa === 'anasayfa' ? 'active' : '' %>">Ana Sayfa</a>
-        <a href="/duyurular" class="<%= aktifSayfa === 'duyurular' ? 'active' : '' %>">Duyurular</a>
-        <a href="/formlar" class="<%= aktifSayfa === 'formlar' ? 'active' : '' %>">📋 Formlar</a>
-        <a href="/hakkinda" class="<%= aktifSayfa === 'hakkinda' ? 'active' : '' %>">Hakkımızda</a>
-        <a href="/kentsel-donusum" class="<%= aktifSayfa === 'kentsel-donusum' ? 'active' : '' %>">Kentsel Dönüşüm</a>
-        <a href="/iletisim" class="<%= aktifSayfa === 'iletisim' ? 'active' : '' %>">İletişim</a>
-        <% if (uye) { %>
-          <a href="/anketler" class="<%= aktifSayfa === 'anketler' ? 'active' : '' %>">📊 Anketler</a>
-          <a href="/ek-odenek-raporu" class="<%= aktifSayfa === 'ek-odenek-raporu' ? 'active' : '' %>">🏦 Ek Ödenek Raporu</a>
-        <% } %>
+        <div class="nav-links">
+          <a href="/" class="<%= aktifSayfa === 'anasayfa' ? 'active' : '' %>">Ana Sayfa</a>
+          <a href="/duyurular" class="<%= aktifSayfa === 'duyurular' ? 'active' : '' %>">Duyurular</a>
+          <a href="/formlar" class="<%= aktifSayfa === 'formlar' ? 'active' : '' %>">📋 Formlar</a>
+          <a href="/hakkinda" class="<%= aktifSayfa === 'hakkinda' ? 'active' : '' %>">Hakkımızda</a>
+          <a href="/kentsel-donusum" class="<%= aktifSayfa === 'kentsel-donusum' ? 'active' : '' %>">Kentsel Dönüşüm</a>
+          <a href="/iletisim" class="<%= aktifSayfa === 'iletisim' ? 'active' : '' %>">İletişim</a>
+          <% if (uye) { %>
+            <a href="/anketler" class="<%= aktifSayfa === 'anketler' ? 'active' : '' %>">📊 Anketler</a>
+            <a href="/ek-odenek-raporu" class="<%= aktifSayfa === 'ek-odenek-raporu' ? 'active' : '' %>">🏦 Ek Ödenek Raporu</a>
+          <% } %>
+        </div>
 
         <% if (uye) { %>
-          <div class="nav-bell-wrapper">
-            <button type="button" id="navBellBtn" class="nav-bell" title="Mesajlarım" aria-haspopup="true" aria-expanded="false">
-              🔔<% if (okunmamisMesajSayisi > 0) { %><span class="nav-badge"><%= okunmamisMesajSayisi %></span><% } %>
-            </button>
-            <div class="nav-bell-dropdown" id="navBellDropdown" hidden>
-              <div class="nav-bell-header">
-                <strong>Mesajlarım</strong>
-                <a href="/mesajlarim">Tümü →</a>
+          <div class="nav-user">
+            <div class="nav-bell-wrapper">
+              <button type="button" id="navBellBtn" class="nav-bell" title="Mesajlarım" aria-haspopup="true" aria-expanded="false">
+                🔔<% if (okunmamisMesajSayisi > 0) { %><span class="nav-badge"><%= okunmamisMesajSayisi %></span><% } %>
+              </button>
+              <div class="nav-bell-dropdown" id="navBellDropdown" hidden>
+                <div class="nav-bell-header">
+                  <strong>Mesajlarım</strong>
+                  <a href="/mesajlarim">Tümü →</a>
+                </div>
+                <% if (okunmamisMesajSayisi === 0) { %>
+                  <div class="nav-bell-empty">Okunmamış mesaj yok</div>
+                <% } else { %>
+                  <ul class="nav-bell-list">
+                    <% okunmamisMesajlar.forEach(function(m) { %>
+                      <li>
+                        <a href="/mesajlarim#m<%= m.id %>">
+                          <strong><%= m.baslik %></strong>
+                          <span><%= (m.mesaj || '').replace(/<[^>]+>/g, '').slice(0, 80) %><%= (m.mesaj || '').length > 80 ? '…' : '' %></span>
+                          <small><%= m.olusturma_tarihi %></small>
+                        </a>
+                      </li>
+                    <% }); %>
+                  </ul>
+                <% } %>
               </div>
-              <% if (okunmamisMesajSayisi === 0) { %>
-                <div class="nav-bell-empty">Okunmamış mesaj yok</div>
-              <% } else { %>
-                <ul class="nav-bell-list">
-                  <% okunmamisMesajlar.forEach(function(m) { %>
-                    <li>
-                      <a href="/mesajlarim#m<%= m.id %>">
-                        <strong><%= m.baslik %></strong>
-                        <span><%= (m.mesaj || '').replace(/<[^>]+>/g, '').slice(0, 80) %><%= (m.mesaj || '').length > 80 ? '…' : '' %></span>
-                        <small><%= m.olusturma_tarihi %></small>
-                      </a>
-                    </li>
-                  <% }); %>
-                </ul>
-              <% } %>
+            </div>
+
+            <%
+              // Hesabim menusu icin avatar bas harfleri (kullanicinin kendi adindan)
+              var _ad = String(uye.ad_soyad || '').trim();
+              var _parcalar = _ad.split(/\s+/).filter(function(p) { return p.length > 0; });
+              var _basHarf = _parcalar.slice(0, 2).map(function(p) {
+                return p.charAt(0).toLocaleUpperCase('tr-TR');
+              }).join('');
+              if (!_basHarf) _basHarf = 'Ür';
+            %>
+            <div class="nav-account" id="navAccount">
+              <button type="button" id="navAccountBtn" class="nav-account-btn"
+                      aria-haspopup="true" aria-expanded="false" aria-controls="navAccountMenu"
+                      title="Hesabım: <%= _ad %>">
+                <span class="nav-avatar" aria-hidden="true"><%= _basHarf %></span>
+                <span class="nav-account-name">Hesabım</span>
+                <svg class="nav-caret" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+
+              <div class="nav-account-menu" id="navAccountMenu" hidden>
+                <div class="nav-account-head">
+                  <span class="nav-avatar nav-avatar-lg" aria-hidden="true"><%= _basHarf %></span>
+                  <span class="nav-account-info">
+                    <strong>Hesabım</strong>
+                    <span class="nav-account-ad" title="<%= _ad %>"><%= _ad %></span>
+                    <% if (uye.daire_no) { %><small>Daire <%= uye.daire_no %></small><% } %>
+                  </span>
+                </div>
+
+                <div class="nav-account-links">
+                  <a class="nav-account-item <%= aktifSayfa === 'panel' ? 'active' : '' %>" href="/panel">📊 Panelim</a>
+                  <a class="nav-account-item" href="/aidatlarim">💰 Aidatlarım</a>
+                  <a class="nav-account-item" href="/ek-odenek-raporu">🏦 Ek Ödenek Raporu</a>
+                  <a class="nav-account-item" href="/mesajlarim">✉️ Mesajlarım</a>
+                  <a class="nav-account-item" href="/anketler">🗳️ Anketler</a>
+                </div>
+
+                <button type="button" id="pushToggleBtn" class="nav-account-item nav-push-btn" hidden title="Push bildirimlerini aç/kapat">
+                  <span class="push-on">🔔 Bildirimleri Aç</span>
+                  <span class="push-off">🔕 Bildirimler Alınıyor</span>
+                </button>
+
+                <a class="nav-account-item nav-account-cikis" href="/cikis">🚪 Çıkış Yap</a>
+              </div>
             </div>
           </div>
-          <a href="/panel" class="nav-cta <%= aktifSayfa === 'panel' ? 'active' : '' %>">Panelim</a>
-          <button type="button" id="pushToggleBtn" class="nav-push-btn" hidden title="Push bildirimlerini aç/kapat">
-            <span class="push-on">🔔 Bildirim Aç</span>
-            <span class="push-off">🔕 Bildirim Alınıyor</span>
-          </button>
-          <a href="/cikis" class="nav-logout">Çıkış</a>
         <% } else { %>
-          <a href="/giris" class="nav-cta <%= aktifSayfa === 'giris' ? 'active' : '' %>">Giriş Yap</a>
+          <div class="nav-user">
+            <a href="/giris" class="nav-cta <%= aktifSayfa === 'giris' ? 'active' : '' %>">Giriş Yap</a>
+          </div>
         <% } %>
       </nav>
     </div>
@@ -249,7 +296,41 @@
       });
     })();
 
-    // Bildirim dropdown açma/kapama
+    // Hesabım dropdown açma/kapama
+(function() {
+  var btn = document.getElementById('navAccountBtn');
+  var menu = document.getElementById('navAccountMenu');
+  if (!btn || !menu) return;
+  function kapat() {
+    menu.setAttribute('hidden', '');
+    btn.setAttribute('aria-expanded', 'false');
+    btn.classList.remove('open');
+  }
+  function ac() {
+    menu.removeAttribute('hidden');
+    btn.setAttribute('aria-expanded', 'true');
+    btn.classList.add('open');
+  }
+  btn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (menu.hasAttribute('hidden')) ac(); else kapat();
+  });
+  menu.addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (e.target.closest('a')) kapat();
+  });
+  document.addEventListener('click', function(e) {
+    if (!menu.contains(e.target) && !btn.contains(e.target)) kapat();
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') kapat();
+  });
+  window.addEventListener('resize', function() {
+    if (window.innerWidth > 860) kapat();
+  });
+})();
+
+// Bildirim dropdown açma/kapama
     (function() {
       var btn = document.getElementById('navBellBtn');
       var dd = document.getElementById('navBellDropdown');
