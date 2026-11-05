@@ -1,7 +1,105 @@
 <%- include('partials/header', { sayfaBaslik: 'Aidat Yönetimi' }) %>
 
 <div class="admin-panel-box">
-  <h2>Aidat Ekle / Tahakkuk Ettir</h2>
+  <h2>Taksitli Aidat Planı Oluştur</h2>
+  <p style="color: var(--metin-acik); font-size: 0.9rem; margin-bottom: 16px;">
+    Site sakinlerine taksitli aidat planı uygular. Her taksit ayrı kayıt oluşturulur ve
+    ayrı ayrı "Ödendi" işaretlenebilir. Üyeler <a href="/aidat-raporu" target="_blank">Aidat Tahsilat Raporu</a> sayfasından durumu görebilir.
+  </p>
+  <form action="/yonetim/aidatlar/plan/ekle" method="POST" class="form">
+    <div class="form-row">
+      <div class="form-group">
+        <label for="plan_ad">Plan Adı</label>
+        <input type="text" id="plan_ad" name="ad" placeholder="Örn: Kasım 2026 Ek Ödenek" required />
+      </div>
+      <div class="form-group">
+        <label for="donem_basi">Dönem Başlangıcı</label>
+        <input type="text" id="donem_basi" name="donem_basi" placeholder="Örn: KASIM 2026" required />
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Taksit Tutarları (₺)</label>
+      <div class="form-row">
+        <div class="form-group" style="margin-bottom:0;">
+          <input type="number" name="tutar1" step="0.01" min="0" placeholder="1. Taksit (400)" />
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <input type="number" name="tutar2" step="0.01" min="0" placeholder="2. Taksit (2500)" />
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <input type="number" name="tutar3" step="0.01" min="0" placeholder="3. Taksit (2500)" />
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <input type="number" name="tutar4" step="0.01" min="0" placeholder="4. Taksit (2500)" />
+        </div>
+      </div>
+      <small style="color: var(--metin-acik); display:block; margin-top:6px;">
+        Boş bırakılan taksit atlanır. Her taksit bir sonraki aya denk gelir.
+      </small>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="plan_uye_id">Üye</label>
+        <select id="plan_uye_id" name="uye_id">
+          <option value="">— Üye seçin —</option>
+          <% uyeler.forEach(function(u) { %>
+            <option value="<%= u.id %>"><%= u.ad_soyad %> (Daire <%= u.daire_no %>)</option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="form-group form-check" style="align-self: end;">
+        <label><input type="checkbox" name="tum_uyeler" value="1" /> Tüm onaylı üyelere uygula</label>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="plan_aciklama">Açıklama (opsiyonel)</label>
+      <input type="text" id="plan_aciklama" name="aciklama" placeholder="Örn: Ek ödenek taksitlendirmesi" />
+    </div>
+    <button type="submit" class="btn btn-primary">Planı Oluştur ve Tahakkuk Et</button>
+  </form>
+</div>
+
+<% if (planlar.length) { %>
+<div class="admin-panel-box">
+  <h2>Aidat Planları (<%= planlar.length %>)</h2>
+  <div class="table-wrap">
+    <table class="admin-table responsive-table">
+      <thead>
+        <tr><th>Plan</th><th>Taksitler</th><th>Toplam</th><th>Dönem Başı</th><th>İşlem</th></tr>
+      </thead>
+      <tbody>
+        <% planlar.forEach(function(p) { %>
+          <% const t = String(p.tutarlar).split(',').map(function(x){ return Number(x); }); %>
+          <% const toplam = t.reduce(function(a,b){ return a+b; }, 0); %>
+          <tr>
+            <td data-label="Plan"><strong><%= p.ad %></strong></td>
+            <td data-label="Taksitler"><%= t.join(' + ') %> ₺</td>
+            <td data-label="Toplam"><%= toplam.toLocaleString('tr-TR') %> ₺</td>
+            <td data-label="Dönem Başı"><%= p.donem_basi %></td>
+            <td data-label="İşlem" class="td-islem">
+              <form action="/yonetim/aidatlar/plan/ode/<%= p.id %>" method="POST" style="display:inline">
+                <button type="submit" class="btn-onayla">Tümünü Ödendi</button>
+              </form>
+              <form action="/yonetim/aidatlar/plan/geri-al/<%= p.id %>" method="POST" style="display:inline">
+                <button type="submit" class="btn-sil">Geri Al</button>
+              </form>
+              <form action="/yonetim/aidatlar/plan/sil/<%= p.id %>" method="POST" data-confirm="Bu plan ve tüm taksit kayıtları silinsin mi?" style="display:inline">
+                <button type="submit" class="btn-sil">Planı Sil</button>
+              </form>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<% } %>
+
+<div class="admin-panel-box">
+  <h2>Tekil Aidat Ekle</h2>
   <form action="/yonetim/aidatlar/ekle" method="POST" class="form">
     <div class="form-row">
       <div class="form-group">

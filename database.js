@@ -112,9 +112,21 @@ async function createTables() {
       olusturma_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
     );
 
+    CREATE TABLE IF NOT EXISTS aidat_planlar (
+      id SERIAL PRIMARY KEY,
+      ad TEXT NOT NULL,
+      taksit_sayisi INTEGER NOT NULL DEFAULT 4,
+      tutarlar TEXT NOT NULL,
+      donem_basi TEXT NOT NULL,
+      aciklama TEXT,
+      olusturma_tarihi TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD HH24:MI:SS')
+    );
+
     CREATE TABLE IF NOT EXISTS aidatlar (
       id SERIAL PRIMARY KEY,
       uye_id INTEGER NOT NULL REFERENCES uyeler(id) ON DELETE CASCADE,
+      plan_id INTEGER REFERENCES aidat_planlar(id) ON DELETE SET NULL,
+      taksit_no INTEGER,
       donem TEXT NOT NULL,
       tutar NUMERIC(10, 2) NOT NULL,
       odendi INTEGER NOT NULL DEFAULT 0,
@@ -245,6 +257,9 @@ CREATE TABLE IF NOT EXISTS duyuru_ekleri (
     -- Performans indeksleri
     CREATE INDEX IF NOT EXISTS idx_uye_mesajlari_uye ON uye_mesajlari (uye_id, okundu);
     CREATE INDEX IF NOT EXISTS idx_aidatlar_uye ON aidatlar (uye_id, odendi);
+    ALTER TABLE aidatlar ADD COLUMN IF NOT EXISTS plan_id INTEGER REFERENCES aidat_planlar(id) ON DELETE SET NULL;
+    ALTER TABLE aidatlar ADD COLUMN IF NOT EXISTS taksit_no INTEGER;
+    CREATE INDEX IF NOT EXISTS idx_aidatlar_plan ON aidatlar (plan_id, taksit_no);
     CREATE INDEX IF NOT EXISTS idx_sakinler_blok ON sakinler (blok);
     CREATE INDEX IF NOT EXISTS idx_duyurular_sira ON duyurular (onemli DESC, id DESC);
     CREATE INDEX IF NOT EXISTS idx_mesajlar_okundu ON mesajlar (okundu);

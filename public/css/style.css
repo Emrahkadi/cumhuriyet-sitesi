@@ -1201,3 +1201,125 @@ body.menu-open .nav-toggle { opacity: 0; pointer-events: none; }
   from { transform: translateY(120%); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
+
+/* ============================================================
+   AİDAT TAHSİLAT RAPORU (Şeffaflık Paneli)
+   ============================================================ */
+.rapor-ozet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+  margin-bottom: 24px;
+}
+.rapor-ozet {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--beyaz);
+  border: 1px solid var(--kenarlik);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+.rapor-ozet-ikon { font-size: 1.5rem; margin-bottom: 4px; }
+.rapor-ozet-label { color: var(--metin-acik); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.03em; }
+.rapor-ozet-deger { font-size: 1.45rem; font-weight: 700; line-height: 1.2; }
+.rapor-ozet-alt { color: var(--metin-acik); font-size: 0.83rem; }
+.rapor-yesil { color: #1b7a5e; }
+.rapor-kirmizi { color: #c0392b; }
+
+/* İlerleme çubuğu */
+.rapor-progress {
+  width: 100%;
+  height: 14px;
+  background: var(--kenarlik);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.rapor-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #1b7a5e, #2fa37c);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+.rapor-progress-yazi { margin: 10px 0 0; color: var(--metin-acik); font-size: 0.92rem; }
+.rapor-progress-yazi strong { color: var(--metin); }
+
+/* Taksit kartları */
+.rapor-taksit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+.rapor-taksit {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border: 1px solid var(--kenarlik);
+  border-radius: 10px;
+  padding: 16px;
+  background: #fafbfd;
+}
+.rapor-taksit-no { font-size: 0.78rem; color: var(--metin-acik); text-transform: uppercase; letter-spacing: 0.04em; }
+.rapor-taksit-tutar { font-size: 1.25rem; font-weight: 700; }
+.rapor-taksit-sayi { font-size: 0.88rem; color: #1b7a5e; font-weight: 600; }
+.rapor-taksit-bekleyen { font-size: 0.8rem; color: #b26a00; }
+.rapor-taksit-tamam { font-size: 0.8rem; color: #1b7a5e; }
+
+/* Ana rapor tablosu */
+.rapor-tablo { font-size: 0.88rem; }
+.rapor-tablo th,
+.rapor-tablo td { padding: 9px 10px; }
+.rapor-tablo thead th {
+  background: #f4f6fa;
+  border-bottom: 2px solid var(--kenarlik);
+  text-align: center;
+  vertical-align: middle;
+}
+.rapor-tablo thead th.rapor-sol-baslik,
+.rapor-tablo thead th.rapor-toplam-baslik { text-align: left; }
+.rapor-taksit-baslik { color: var(--renk-ana); font-size: 0.8rem; }
+.rapor-taksit-baslik span {
+  display: block;
+  font-weight: 500;
+  color: var(--metin-acik);
+  font-size: 0.74rem;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.rapor-alt-baslik {
+  color: var(--metin-acik);
+  font-size: 0.68rem;
+  font-weight: 500;
+  border-bottom: 1px solid var(--kenarlik);
+}
+.rapor-tablo tbody td { text-align: center; }
+.rapor-tablo tbody td.rapor-ad,
+.rapor-tablo tbody td.rapor-daire { text-align: left; }
+.rapor-ad { font-weight: 600; white-space: nowrap; }
+.rapor-daire { color: var(--metin-acik); font-weight: 500; white-space: nowrap; }
+.rapor-hucre { white-space: nowrap; }
+.rapor-tarih { color: var(--metin-acik); font-size: 0.8rem; white-space: nowrap; }
+.rapor-odendi { color: #1b7a5e; font-weight: 600; font-size: 0.84rem; }
+.rapor-bekliyor { color: #b26a00; font-weight: 600; font-size: 0.84rem; }
+.rapor-yok { color: #b9bec9; }
+.rapor-odeme-para { color: #1b7a5e; font-weight: 700; }
+.rapor-kirmizi-para { color: #c0392b; font-weight: 700; }
+.rapor-tablo tfoot td {
+  background: #f4f6fa;
+  border-top: 2px solid var(--kenarlik);
+  font-size: 0.88rem;
+}
+.rapor-tablo tfoot td.rapor-toplam-baslik { text-align: left; }
+.rapor-plan-etiket {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--metin-acik);
+  margin-left: 8px;
+}
+
+/* Mobil uyarlama */
+@media (max-width: 768px) {
+  .rapor-tablo thead th[colspan] { font-size: 0.74rem; }
+  .rapor-ozet-deger { font-size: 1.3rem; }
+}

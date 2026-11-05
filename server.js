@@ -917,6 +917,105 @@ app.get('/panel', uyeGerekli, ah(async (req, res) => {
   });
 }));
 
+// --- Şeffaflık: Aidat Tahsilat Raporu (tüm üyeler görüntüleyebilir) ---
+app.get('/aidat-raporu', uyeGerekli, ah(async (req, res) => {
+  // Aktif plan (taksitli olan) — en son oluşturulan
+  const plan = (await q('SELECT * FROM aidat_planlar ORDER BY id DESC LIMIT 1')).rows[0];
+
+  // Genel özet (tüm aidatlar)
+  const ozet = (await q(
+    `SELECT
+       COALESCE(SUM(tutar), 0)::float AS toplam_tahakkuk,
+       COALESCE(SUM(CASE WHEN odendi = 1 THEN tutar ELSE 0 END), 0)::float AS toplam_tahsilat,
+       COUNT(*)::int AS adet,
+       COUNT(CASE WHEN odendi = 1 THEN 1 END)::int AS odenen_adet,
+       COUNT(DISTINCT CASE WHEN odendi = 1 THEN uye_id END)::int AS odeyen_kisi
+     FROM aidatlar`
+  )).rows[0];
+
+  // Üye sayısı (tahakkuk yapılan tüm üyeler)
+  const uyeSayisi = (await q('SELECT COUNT(DISTINCT uye_id)::int AS c FROM aidatlar')).rows[0].c;
+
+  // Plan bazlı taksit matrisi: her üye için 4 taksit sütunu
+  let satirlar = [];
+  let taksitTutarlari = [];
+  if (plan) {
+    taksitTutarlari = String(plan.tutarlar).split(',').map((t) => parseFloat(t)).filter((t) => !isNaN(t));
+    const hucreler = (await q(
+      `SELECT a.uye_id, u.ad_soyad, u.daire_no, a.taksit_no, a.tutar, a.odendi, a.odeme_tarihi, a.donem
+       FROM aidatlar a JOIN uyeler u ON u.id = a.uye_id
+       WHERE a.plan_id = $1
+       ORDER BY u.daire_no ASC, u.ad_soyad ASC`,
+      [plan.id]
+    )).rows;
+    // Üye bazında grupla
+    const harita = new Map();
+    for (const h of hucreler) {
+      if (!harita.has(h.uye_id)) {
+        harita.set(h.uye_id, { uye_id: h.uye_id, ad_soyad: h.ad_soyad, daire_no: h.daire_no, taksitler: [] });
+      }
+      const satir = harita.get(h.uye_id);
+      satir.taksitler[h.taksit_no - 1] = {
+        tutar: parseFloat(h.tutar),
+        odendi: h.odendi,
+        odeme_tarihi: h.odeme_tarihi,
+        donem: h.donem
+      };
+    }
+    satirlar = Array.from(harita.values()).map((s) => {
+      const taksitler = s.taksitler || [];
+      const odenenTutar = taksitler.filter((t) => t && t.odendi).reduce((a, t) => a + t.tutar, 0);
+      const toplamTutar = taksitler.filter(Boolean).reduce((a, t) => a + t.tutar, 0);
+      return {
+        ...s,
+        taksitler,
+        odenen_tutar: odenenTutar,
+        kalan_tutar: toplamTutar - odenenTutar,
+        toplam_tutar: toplamTutar,
+        tamamlandi: taksitler.length > 0 && taksitler.every((t) => t && t.odendi)
+      };
+    });
+  }
+
+  // Taksit bazlı özet: kaç kişi o taksiti ödedi
+  const taksitOzet = taksitTutarlari.map((tutar, i) => {
+    const odenen = satirlar.filter((s) => s.taksitler[i] && s.taksitler[i].odendi).length;
+    return { sira: i + 1, tutar, odenen, bekleyen: satirlar.length - odenen };
+  });
+
+  // Dönem bazlı özet
+  const donemOzet = (await q(
+    `SELECT donem,
+       COALESCE(SUM(tutar), 0)::float AS tahakkuk,
+       COALESCE(SUM(CASE WHEN odendi = 1 THEN tutar ELSE 0 END), 0)::float AS tahsilat,
+       COUNT(*)::int AS adet,
+       COUNT(CASE WHEN odendi = 1 THEN 1 END)::int AS odenen_adet
+     FROM aidatlar
+     GROUP BY donem
+     ORDER BY MIN(id)`
+  )).rows;
+
+  // Son ödemeler
+  const sonOdemeler = (await q(
+    `SELECT a.odeme_tarihi, a.tutar, a.donem, u.ad_soyad, u.daire_no
+     FROM aidatlar a JOIN uyeler u ON u.id = a.uye_id
+     WHERE a.odendi = 1
+     ORDER BY a.odeme_tarihi DESC, a.id DESC
+     LIMIT 15`
+  )).rows;
+
+  res.render('aidat-raporu', {
+    aktifSayfa: 'aidat-raporu',
+    plan,
+    ozet,
+    uyeSayisi,
+    satirlar,
+    taksitOzet,
+    donemOzet,
+    sonOdemeler
+  });
+}));
+
 // Üyenin mesajları (görüntülenince okundu işaretlenir)
 app.get('/mesajlarim', uyeGerekli, ah(async (req, res) => {
   const uyeId = req.session.uye.id;
@@ -1414,7 +1513,98 @@ app.get('/yonetim/aidatlar', adminGerekli, ah(async (req, res) => {
      FROM aidatlar a JOIN uyeler u ON u.id = a.uye_id
      ORDER BY a.odendi ASC, a.id DESC`
   )).rows;
-  res.render('admin/aidatlar', { aktifSayfa: 'aidatlar', uyeler, aidatlar });
+  const planlar = (await q('SELECT * FROM aidat_planlar ORDER BY id DESC')).rows;
+  res.render('admin/aidatlar', { aktifSayfa: 'aidatlar', uyeler, aidatlar, planlar });
+}));
+
+// --- Aidat planı oluştur (taksitli tahakkuk şablonu) ---
+app.post('/yonetim/aidatlar/plan/ekle', adminGerekli, ah(async (req, res) => {
+  const { ad, donem_basi, taksit_sayisi, tutar1, tutar2, tutar3, tutar4, aciklama, tum_uyeler, uye_id } = req.body;
+  if (!ad || !donem_basi) {
+    req.flash('hata', 'Plan adı ve dönem başlangıcı zorunludur.');
+    return res.redirect('/yonetim/aidatlar');
+  }
+  const taksitSayisi = parseInt(taksit_sayisi, 10) || 4;
+  // Taksit tutarlarını topla ve virgülle ayrılmış string olarak sakla
+  const tutarlar = [tutar1, tutar2, tutar3, tutar4]
+    .map((t) => parseFloat(String(t || '').replace(',', '.')))
+    .filter((t) => !isNaN(t) && t > 0);
+  if (!tutarlar.length) {
+    req.flash('hata', 'En az bir taksit tutarı girin.');
+    return res.redirect('/yonetim/aidatlar');
+  }
+  const sonuc = await q(
+    'INSERT INTO aidat_planlar (ad, taksit_sayisi, tutarlar, donem_basi, aciklama) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+    [ad.trim(), tutarlar.length, tutarlar.join(','), donem_basi.trim(), (aciklama || '').trim()]
+  );
+  const planId = sonuc.rows[0].id;
+
+  // Üyelere taksit tahakkuku
+  const hedef = tum_uyeler
+    ? (await q('SELECT id FROM uyeler WHERE email_dogrulandi = 1')).rows.map((u) => u.id)
+    : (uye_id ? [uye_id] : []);
+  if (!hedef.length) {
+    req.flash('hata', 'Plan oluşturuldu ancak tahakkuk yapılacak üye seçilmedi.');
+    return res.redirect('/yonetim/aidatlar');
+  }
+
+  const ayAdlari = ['OCAK', 'ŞUBAT', 'MART', 'NİSAN', 'MAYIS', 'HAZİRAN', 'TEMMUZ',
+                    'AĞUSTOS', 'EYLÜL', 'EKİM', 'KASIM', 'ARALIK'];
+  const ayBasi = donem_basi.trim().toUpperCase().match(/^([A-ZÇĞİÖŞÜ]+)\s*(\d{4})?$/);
+  let ayIdx = 0, yil = new Date().getFullYear();
+  if (ayBasi) {
+    const bulunan = ayAdlari.findIndex((a) => a === ayBasi[1]);
+    if (bulunan >= 0) ayIdx = bulunan;
+    if (ayBasi[2]) yil = parseInt(ayBasi[2], 10);
+  }
+
+  let eklenen = 0;
+  for (const uid of hedef) {
+    for (let i = 0; i < tutarlar.length; i++) {
+      // Her taksit bir sonraki aya düşer
+      const tAy = (ayIdx + i) % 12;
+      const tYil = yil + Math.floor((ayIdx + i) / 12);
+      const donemAd = `${ayAdlari[tAy]} ${tYil} · ${i + 1}/${tutarlar.length} Taksit`;
+      await q(
+        `INSERT INTO aidatlar (uye_id, plan_id, taksit_no, donem, tutar, aciklama)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [uid, planId, i + 1, donemAd, tutarlar[i], (aciklama || '').trim() || ad.trim()]
+      );
+      eklenen++;
+    }
+  }
+  req.flash('basari', `"${ad.trim()}" planı oluşturuldu. ${hedef.length} üyeye ${eklenen} taksit kaydı eklendi.`);
+  res.redirect('/yonetim/aidatlar');
+}));
+
+// --- Plana göre toplu ödendi işaretle ---
+app.post('/yonetim/aidatlar/plan/ode/:planId', adminGerekli, ah(async (req, res) => {
+  const r = await q(
+    `UPDATE aidatlar SET odendi = 1,
+       odeme_tarihi = to_char(now() AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD')
+     WHERE plan_id = $1 AND odendi = 0`,
+    [req.params.planId]
+  );
+  req.flash('basari', `${r.rowCount} taksit ödendi olarak işaretlendi.`);
+  res.redirect('/yonetim/aidatlar');
+}));
+
+// --- Plana ait taksitleri geri al ---
+app.post('/yonetim/aidatlar/plan/geri-al/:planId', adminGerekli, ah(async (req, res) => {
+  const r = await q(
+    'UPDATE aidatlar SET odendi = 0, odeme_tarihi = NULL WHERE plan_id = $1',
+    [req.params.planId]
+  );
+  req.flash('basari', `${r.rowCount} taksit ödenmedi durumuna alındı.`);
+  res.redirect('/yonetim/aidatlar');
+}));
+
+// --- Plandaki taksitleri sil ---
+app.post('/yonetim/aidatlar/plan/sil/:planId', adminGerekli, ah(async (req, res) => {
+  await q('DELETE FROM aidatlar WHERE plan_id = $1', [req.params.planId]);
+  await q('DELETE FROM aidat_planlar WHERE id = $1', [req.params.planId]);
+  req.flash('basari', 'Plan ve taksit kayıtları silindi.');
+  res.redirect('/yonetim/aidatlar');
 }));
 
 app.post('/yonetim/aidatlar/ekle', adminGerekli, ah(async (req, res) => {
