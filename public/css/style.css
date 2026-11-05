@@ -113,6 +113,48 @@ img { max-width: 100%; display: block; }
 }
 .main-nav .nav-cta:hover { background: var(--renk-ana-koyu); color: #fff; }
 .main-nav .nav-logout { color: var(--renk-vurgu); }
+/* Ek Ödenek Raporu - ana header'daki kompakt vurgu rozeti */
+.main-nav a.nav-ek-odene {
+  background: rgba(30, 90, 168, 0.10);
+  color: var(--renk-ana);
+  font-weight: 600;
+  border: 1px solid rgba(30, 90, 168, 0.22);
+}
+.main-nav a.nav-ek-odene:hover {
+  background: rgba(30, 90, 168, 0.18);
+  color: var(--renk-ana);
+}
+.main-nav a.nav-ek-odene.active {
+  background: var(--renk-ana);
+  color: #fff;
+  border-color: var(--renk-ana);
+}
+/* Ek Ödenek Raporu etiketi: geniş ekranda tam, dar ekranda kısa */
+.nav-links a.nav-ek-odene .ek-odene-kisa { display: none; }
+.nav-links a.nav-ek-odene .ek-odene-tam { display: inline; }
+
+/* ============================================================
+   ÜST BAR - TEK SATIR: Hesabım ikonu sağa iliştirilir
+   ============================================================
+   .nav-user (Hesabım) absolute ile sağ uca sabitlenir.
+   .nav-links ise Hesabım'a yer bırakacak şekilde margin-right ile
+   daraltılır. Böylece nav linkleri ASLA Hesabım'ın altına girmez. */
+@media (min-width: 861px) {
+  .header-inner { position: relative; }
+  .main-nav { flex-wrap: nowrap; }
+  .nav-links {
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+    margin-right: 168px; /* Hesabım butonu genişliği + boşluk */
+  }
+  .nav-user {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-left: 0;
+  }
+}
 
 /* ---------- Hesabım dropdown (avatar + kullanıcı adı) ---------- */
 .nav-account { position: relative; flex-shrink: 0; }
@@ -1071,7 +1113,15 @@ button, .btn, a {
     white-space: normal;
     flex-wrap: nowrap;
   }
-  .nav-user { margin-top: 10px; }
+  /* Drawer modunda Hesabım tekrar akışa döner (absolute değil) */
+  .nav-user {
+    position: static;
+    right: auto;
+    top: auto;
+    transform: none;
+    margin-top: 10px;
+  }
+  .nav-links { margin-right: 0 !important; }
   .main-nav a {
     padding: 14px 16px;
     font-size: 1rem;
@@ -1080,6 +1130,12 @@ button, .btn, a {
   }
   .main-nav a:last-child { border-bottom: none; }
   .main-nav .nav-cta { text-align: center; margin-top: 10px; border-radius: 10px; }
+  /* Ek Ödenek Raporu etiketi drawer'da tam yazilir */
+  .nav-links a.nav-ek-odene .ek-odene-tam { display: inline; }
+  .nav-links a.nav-ek-odene .ek-odene-kisa { display: none; }
+  /* Hesabım yazısı drawer'da tekrar gorunur */
+  .nav-account-name { display: inline-block; }
+  .logo-text { display: block; }
 
   /* Drawer kapatma butonu (X) kaldırıldı - artık sadece toggle ve overlay kullanılıyor */
   .nav-close { display: none !important; }
@@ -1288,8 +1344,10 @@ body.menu-open .nav-toggle { opacity: 0; pointer-events: none; }
   color: var(--renk-ana);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
 }
+/* Masaustunde sekme panelleri tamamen gizli (klasik tablolar kullanilir).
+   .aktif kurali SADECE mobil media query icinde gecerlidir. */
 .rapor-sekme-panel { display: none; }
-.rapor-sekme-panel.aktif { display: block; }
+.rapor-sekme-panel[hidden] { display: none !important; }
 
 .rapor-bina-blok {
   background: #fff;
@@ -1392,6 +1450,40 @@ body.menu-open .nav-toggle { opacity: 0; pointer-events: none; }
   color: var(--metin-acik);
 }
 .rapor-mobil-kart-alt strong { font-weight: 700; }
+
+/* ============================================================
+   ÜST BAR - KADEMELİ SIKIŞTIRMA (üst bar tek satır kalsın)
+   ============================================================
+   Genişlik daraldıkça logo metni, Hesabım yazısı ve nav linkleri
+   kademeli olarak küçültülür. Böylece 861px'e kadar hep tek satır.
+   NOT: min-width 861px - 860px ve altı drawer modunda bu kurallar
+   devre dışı kalır, drawer kendi düzenini kullanır. */
+@media (min-width: 861px) {
+  @media (max-width: 1180px) {
+    .logo-text { display: none; }
+  }
+  @media (max-width: 1080px) {
+    .nav-account-name { display: none; }
+    .nav-links { margin-right: 88px !important; }
+    /* Ek Ödenek Raporu etiketi kısalır */
+    .nav-links a.nav-ek-odene .ek-odene-tam { display: none; }
+    .nav-links a.nav-ek-odene .ek-odene-kisa { display: inline; }
+  }
+  @media (max-width: 1000px) {
+    .main-nav a { padding: 6px 6px !important; font-size: 0.8rem !important; }
+    .nav-links { gap: 1px !important; margin-right: 78px !important; }
+  }
+  @media (max-width: 960px) {
+    .main-nav a { padding: 5px 5px !important; font-size: 0.76rem !important; }
+    .nav-links { gap: 0 !important; margin-right: 72px !important; }
+    .logo-img { height: 68px !important; width: 68px !important; }
+  }
+  @media (max-width: 900px) {
+    .main-nav a { padding: 4px 4px !important; font-size: 0.72rem !important; }
+    .nav-links { margin-right: 66px !important; }
+    .logo-img { height: 60px !important; width: 60px !important; }
+  }
+}
 
 /* ============================================================
    RESPONSIVE TABLOLAR - Mobilde kart görünümü
