@@ -1447,52 +1447,50 @@ body.menu-open .nav-toggle { opacity: 0; pointer-events: none; }
   text-align: center;
 }
 
-/* Sütun genişlikleri */
-.ek-th-ad, .ek-td-ad { width: 22%; text-align: left !important; }
+/* Sütun genişlikleri — yatay scroll olmasın */
+.ek-th-ad, .ek-td-ad { width: 24%; text-align: left !important; }
 .ek-th-blok, .ek-td-blok { width: 4%; text-align: center; }
-.ek-th-daire, .ek-td-daire { width: 4%; text-align: center; }
-.ek-th-taksit, .ek-td-taksit { width: 9%; text-align: center; }
-.ek-th-para, .ek-td-odeme { width: 9%; text-align: right; }
+.ek-th-daire, .ek-td-daire { width: 5%; text-align: center; }
+.ek-th-taksit, .ek-td-taksit { width: 8%; text-align: center; }
+.ek-th-para, .ek-td-odeme { width: 10%; text-align: right; }
 .ek-th-durum, .ek-td-durum { width: 5%; text-align: center; }
 
 /* Taksit başlık (T1 / 400₺) */
 .ek-th-taksit-no { font-size: 0.85rem; font-weight: 700; }
 .ek-th-taksit-tutar { font-size: 0.65rem; opacity: 0.85; font-weight: 400; }
 
-/* Taksit butonu */
+/* Taksit butonu — sadece renkli kutu, yazı yok */
 .ek-taksit-form { display: inline; margin: 0; padding: 0; }
 .ek-taksit-btn {
   display: inline-flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1px;
-  width: 100%;
-  min-height: 32px;
-  padding: 3px 4px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
   border: 1px solid transparent;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 0.72rem;
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 700;
   transition: all 0.15s;
   background: transparent;
+  line-height: 1;
 }
-.ek-taksit-btn:hover { transform: scale(1.05); }
-.ek-taksit-ikon { font-size: 0.95rem; line-height: 1; }
-.ek-taksit-tarih { font-size: 0.6rem; opacity: 0.8; }
+.ek-taksit-btn:hover { transform: scale(1.15); }
+.ek-taksit-ikon { font-size: 1rem; line-height: 1; }
 .ek-taksit-odendi {
-  background: #d4edda;
-  color: #155724;
-  border-color: #c3e6cb;
+  background: #28a745;
+  color: #fff;
+  border-color: #1e7e34;
 }
-.ek-taksit-odendi:hover { background: #c3e6cb; }
+.ek-taksit-odendi:hover { background: #1e7e34; }
 .ek-taksit-bekliyor {
-  background: #fff3cd;
-  color: #856404;
-  border-color: #ffeeba;
+  background: #fff;
+  color: #adb5bd;
+  border-color: #dee2e6;
 }
-.ek-taksit-bekliyor:hover { background: #ffeeba; }
+.ek-taksit-bekliyor:hover { background: #f8f9fa; border-color: #adb5bd; }
 .ek-taksit-yok { color: #ccc; font-size: 0.9rem; }
 
 /* Durum badge */

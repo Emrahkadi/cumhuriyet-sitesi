@@ -212,8 +212,7 @@
                       <% if (tk.odendi) { %>
                         <form action="/yonetim/ek-odenek/taksit/geri-al/<%= tk.id || '' %>" method="POST" class="ek-taksit-form">
                           <button type="submit" class="ek-taksit-btn ek-taksit-odendi" title="Ödendi: <%= tk.odeme_tarihi || '' %> — geri almak için tıklayın">
-                            <span class="ek-taksit-ikon">✔</span>
-                            <span class="ek-taksit-tarih"><%= tk.odeme_tarihi ? tk.odeme_tarihi.substring(5) : '' %></span>
+                            <span class="ek-taksit-ikon">✓</span>
                           </button>
                         </form>
                       <% } else { %>
