@@ -135,10 +135,13 @@
                 <option value="odenmedi">❌ Ödenmedi</option>
               </select>
             </div>
-            <div class="rapor-filtre rapor-filtre-arama">
+            <form class="rapor-filtre rapor-filtre-arama" id="filtreAramaForm" onsubmit="return false;">
               <label for="filtreArama">Ad, Daire veya Blok</label>
-              <input type="search" id="filtreArama" data-filtre="arama" placeholder="🔍 Ara..." autocomplete="off">
-            </div>
+              <div class="rapor-filtre-arama-satir">
+                <input type="search" id="filtreArama" data-filtre="arama" placeholder="🔍 Ara..." autocomplete="off">
+                <button type="submit" class="btn btn-primary btn-sm" id="filtreAraBtn">Ara</button>
+              </div>
+            </form>
             <div class="rapor-filtre-eylem">
               <button type="button" class="btn btn-ghost btn-sm" id="filtreSifirla">↺ Sıfırla</button>
               <span class="rapor-filtre-sayi" id="filtreSayi"><%= satirlar.length %> / <%= satirlar.length %> kayıt</span>
@@ -309,7 +312,7 @@
   </div>
 </section>
 
-<!-- Rapor filtreleme (blok / durum / arama) -->
+<!-- Rapor filtreleme (blok / durum anında, arama Ara butonu / Enter ile) -->
 <script>
 (function () {
   var bar = document.getElementById('raporFiltreBar');
@@ -321,12 +324,16 @@
   }
   var sayac = document.getElementById('filtreSayi');
   var sifirla = document.getElementById('filtreSifirla');
-  var inputs = bar.querySelectorAll('[data-filtre]');
+  var aramaForm = document.getElementById('filtreAramaForm');
+  var aramaInput = document.getElementById('filtreArama');
+  var aramaBtn = document.getElementById('filtreAraBtn');
+  var blokSel = document.getElementById('filtreBlok');
+  var durumSel = document.getElementById('filtreDurum');
 
   function uygula() {
-    var blok = (document.getElementById('filtreBlok') || {}).value || '';
-    var durum = (document.getElementById('filtreDurum') || {}).value || '';
-    var arama = ((document.getElementById('filtreArama') || {}).value || '').toLowerCase().trim();
+    var blok = (blokSel && blokSel.value) || '';
+    var durum = (durumSel && durumSel.value) || '';
+    var arama = ((aramaInput && aramaInput.value) || '').toLowerCase().trim();
     var gosterilen = 0;
     if (!tbody) return;
     var satirlar = tbody.querySelectorAll('tr');
@@ -344,13 +351,23 @@
     if (sayac) sayac.textContent = gosterilen + ' / ' + satirToplam + ' kayıt';
   }
 
-  inputs.forEach(function (el) {
-    var ev = el.tagName === 'INPUT' ? 'input' : 'change';
-    el.addEventListener(ev, uygula);
-  });
+  // Blok ve Durum: aninda filtrele
+  if (blokSel) blokSel.addEventListener('change', uygula);
+  if (durumSel) durumSel.addEventListener('change', uygula);
+
+  // Arama: sadece Ara butonu veya Enter ile
+  function aramaTetikle(e) {
+    if (e) e.preventDefault();
+    uygula();
+  }
+  if (aramaBtn) aramaBtn.addEventListener('click', aramaTetikle);
+  if (aramaForm) aramaForm.addEventListener('submit', aramaTetikle);
+
   if (sifirla) {
     sifirla.addEventListener('click', function () {
-      inputs.forEach(function (el) { el.value = ''; });
+      if (blokSel) blokSel.value = '';
+      if (durumSel) durumSel.value = '';
+      if (aramaInput) aramaInput.value = '';
       uygula();
     });
   }

@@ -369,6 +369,17 @@ img { max-width: 100%; display: block; }
 .btn-outline { border-color: var(--renk-ana); color: var(--renk-ana); background: transparent; }
 .btn-outline:hover { background: var(--renk-ana); color: #fff; }
 .btn-block { width: 100%; }
+.btn-sm { padding: 6px 12px; font-size: 0.82rem; }
+.btn-ghost {
+  background: transparent;
+  color: var(--metin);
+  border: 1px solid var(--kenarlik);
+}
+.btn-ghost:hover {
+  background: #eef2f7;
+  border-color: var(--renk-ana);
+  color: var(--renk-ana);
+}
 
 /* ---------- Alert ---------- */
 .alert {
@@ -1928,6 +1939,19 @@ body.menu-open .nav-toggle { opacity: 0; pointer-events: none; }
   box-shadow: 0 0 0 3px rgba(31, 58, 95, 0.15);
 }
 .rapor-filtre-arama { flex: 1 1 220px; min-width: 180px; }
+.rapor-filtre-arama-satir {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+.rapor-filtre-arama-satir input[type="search"] {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.rapor-filtre-arama-satir button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
 .rapor-filtre-eylem {
   display: flex;
   gap: 8px;
