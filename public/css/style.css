@@ -1397,3 +1397,202 @@ body.menu-open .nav-toggle { opacity: 0; pointer-events: none; }
   .ek-filtre { min-width: 100%; }
   .ek-tablo thead tr:nth-child(2) th { top: 30px; }
 }
+
+/* ============================================================
+   EK ÖDENEK MODÜLÜ — KOMPAKT TABLO (yatay scroll yok)
+   ============================================================ */
+.ek-tablo-wrap {
+  max-height: 75vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: 1px solid var(--kenar, #e0e0e0);
+  border-radius: 6px;
+  background: #fff;
+}
+.ek-tablo {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  table-layout: fixed;
+}
+.ek-tablo thead th {
+  background: #2c3e50;
+  color: #fff;
+  padding: 6px 4px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.72rem;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  border-right: 1px solid rgba(255,255,255,0.15);
+}
+.ek-tablo tbody td {
+  padding: 5px 6px;
+  border-bottom: 1px solid #f0f0f0;
+  border-right: 1px solid #f5f5f5;
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ek-tablo tbody tr:hover { background: #f8fbff; }
+.ek-tablo tbody tr:nth-child(even) { background: #fafbfc; }
+.ek-tablo tbody tr:nth-child(even):hover { background: #f0f6fc; }
+.ek-tablo tfoot td {
+  background: #ecf0f1;
+  padding: 7px 6px;
+  font-weight: 700;
+  border-top: 2px solid #2c3e50;
+  text-align: center;
+}
+
+/* Sütun genişlikleri */
+.ek-th-ad, .ek-td-ad { width: 22%; text-align: left !important; }
+.ek-th-blok, .ek-td-blok { width: 4%; text-align: center; }
+.ek-th-daire, .ek-td-daire { width: 4%; text-align: center; }
+.ek-th-taksit, .ek-td-taksit { width: 9%; text-align: center; }
+.ek-th-para, .ek-td-odeme { width: 9%; text-align: right; }
+.ek-th-durum, .ek-td-durum { width: 5%; text-align: center; }
+
+/* Taksit başlık (T1 / 400₺) */
+.ek-th-taksit-no { font-size: 0.85rem; font-weight: 700; }
+.ek-th-taksit-tutar { font-size: 0.65rem; opacity: 0.85; font-weight: 400; }
+
+/* Taksit butonu */
+.ek-taksit-form { display: inline; margin: 0; padding: 0; }
+.ek-taksit-btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  width: 100%;
+  min-height: 32px;
+  padding: 3px 4px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 600;
+  transition: all 0.15s;
+  background: transparent;
+}
+.ek-taksit-btn:hover { transform: scale(1.05); }
+.ek-taksit-ikon { font-size: 0.95rem; line-height: 1; }
+.ek-taksit-tarih { font-size: 0.6rem; opacity: 0.8; }
+.ek-taksit-odendi {
+  background: #d4edda;
+  color: #155724;
+  border-color: #c3e6cb;
+}
+.ek-taksit-odendi:hover { background: #c3e6cb; }
+.ek-taksit-bekliyor {
+  background: #fff3cd;
+  color: #856404;
+  border-color: #ffeeba;
+}
+.ek-taksit-bekliyor:hover { background: #ffeeba; }
+.ek-taksit-yok { color: #ccc; font-size: 0.9rem; }
+
+/* Durum badge */
+.ek-badge {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  line-height: 22px;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-align: center;
+}
+.ek-badge-tamam { background: #28a745; color: #fff; }
+.ek-badge-kismi { background: #ffc107; color: #fff; }
+.ek-badge-hic { background: #dc3545; color: #fff; }
+
+/* Para renkleri */
+.rapor-yesil-para { color: #28a745; font-weight: 600; }
+.rapor-kirmizi-para { color: #dc3545; font-weight: 600; }
+
+/* ============ BLOK BAZLI ÖZET KARTLARI ============ */
+.ek-blok-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.ek-blok-kart {
+  display: block;
+  padding: 12px 14px;
+  background: #fff;
+  border: 1px solid #e0e6ed;
+  border-radius: 8px;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.ek-blok-kart:hover {
+  border-color: #2c3e50;
+  box-shadow: 0 4px 12px rgba(44,62,80,0.12);
+  transform: translateY(-2px);
+}
+.ek-blok-aktif {
+  border-color: #2c3e50;
+  background: #eef4fc;
+  box-shadow: 0 0 0 2px rgba(44,62,80,0.15);
+}
+.ek-blok-baslik {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 2px;
+}
+.ek-blok-sayi {
+  font-size: 0.75rem;
+  color: #6c757d;
+  margin-bottom: 8px;
+}
+.ek-blok-bar {
+  height: 6px;
+  background: #e9ecef;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.ek-blok-bar-dolu {
+  height: 100%;
+  background: linear-gradient(90deg, #28a745, #20c997);
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+.ek-blok-alt {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+}
+.ek-blok-oran {
+  font-weight: 700;
+  color: #2c3e50;
+  font-size: 0.95rem;
+}
+.ek-blok-detay {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: #6c757d;
+  border-top: 1px solid #f0f0f0;
+  padding-top: 4px;
+  margin-top: 4px;
+}
+.ek-blok-detay strong { color: #2c3e50; }
+
+/* Mobil uyum */
+@media (max-width: 768px) {
+  .ek-blok-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .ek-tablo { font-size: 0.72rem; }
+  .ek-th-ad, .ek-td-ad { width: 28%; }
+  .ek-th-taksit, .ek-td-taksit { width: 8%; }
+}

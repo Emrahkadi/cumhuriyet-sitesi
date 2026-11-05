@@ -1029,6 +1029,7 @@ app.get('/aidat-raporu', uyeGerekli, ah(async (req, res) => {
 const ekOdenekTaksitHaritasi = async (planId) => {
   const satirlar = (await q(
     `SELECT s.id AS malik_id, s.blok, s.daire, s.isim_soyisim,
+            s.bilgi, s.eksik, s.bilgi_iletisim, s.yakinlik, s.iletisim,
             t.id AS taksit_id, t.taksit_no, t.donem, t.tutar, t.odendi, t.odeme_tarihi
      FROM sakinler s
      LEFT JOIN ek_odenek_taksitler t ON t.malik_id = s.id AND t.plan_id = $1
@@ -1045,9 +1046,19 @@ const ekOdenekTaksitHaritasi = async (planId) => {
   const harita = new Map();
   for (const r of satirlar) {
     if (!harita.has(r.malik_id)) {
+      // İsim bul: isim_soyisim > bilgi > eksik > bilgi_iletisim > yakinlik > iletisim
+      const adSoyad = (
+        (r.isim_soyisim && r.isim_soyisim.trim()) ||
+        (r.bilgi && r.bilgi.trim()) ||
+        (r.eksik && r.eksik.trim()) ||
+        (r.bilgi_iletisim && r.bilgi_iletisim.trim()) ||
+        (r.yakinlik && r.yakinlik.trim()) ||
+        (r.iletisim && r.iletisim.trim()) ||
+        ''
+      ).trim();
       harita.set(r.malik_id, {
         malik_id: r.malik_id,
-        ad_soyad: (r.isim_soyisim || '').trim(),
+        ad_soyad: adSoyad,
         blok: (r.blok || '').trim(),
         daire: (r.daire || '').trim(),
         taksitler: {}
@@ -1205,9 +1216,24 @@ app.get('/yonetim/ek-odenek', adminGerekli, ah(async (req, res) => {
     return { sira: i + 1, tutar, odenen, bekleyen: toplam - odenen, toplam };
   });
 
+  // Blok bazli ozet (filtre uygulanmamis tum malikler uzerinden)
+  const blokOzet = {};
+  for (const s of hesaplanan) {
+    const b = s.blok || 'Diğer';
+    if (!blokOzet[b]) blokOzet[b] = { blok: b, malik: 0, tahsilat: 0, tahakkuk: 0, odenen: 0, tamam: 0 };
+    if (s.toplam_tutar > 0) {
+      blokOzet[b].malik += 1;
+      blokOzet[b].tahakkuk += s.toplam_tutar;
+      blokOzet[b].tahsilat += s.odenen_tutar;
+      if (s.odenen_tutar > 0) blokOzet[b].odenen += 1;
+      if (s.tamamlandi) blokOzet[b].tamam += 1;
+    }
+  }
+  const blokOzetListe = Object.values(blokOzet).sort((a, b) => a.blok.localeCompare(b.blok, 'tr'));
+
   res.render('admin/ek-odenek', {
     aktifSayfa: 'ek-odenek',
-    planlar, plan, satirlar, bloklar, taksitOzet,
+    planlar, plan, satirlar, bloklar, taksitOzet, blokOzet: blokOzetListe,
     ozet: {
       toplam_tahsilat: toplamTahsilat,
       toplam_tahakkuk: toplamTahakkuk,
