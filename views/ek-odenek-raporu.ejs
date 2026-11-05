@@ -101,6 +101,51 @@
           Kat Maliki Ödeme Durumu
           <small class="rapor-plan-etiket">📋 <%= plan.ad %></small>
         </h2>
+
+        <% if (satirlar.length) { %>
+          <%
+            // Filtre dropdown'lari icin benzersiz blok listesi
+            var _blokListesi = [];
+            var _blokSet = {};
+            satirlar.forEach(function (s) {
+              var _b = String(s.blok || '').trim();
+              if (_b && !_blokSet[_b]) {
+                _blokSet[_b] = true;
+                _blokListesi.push(_b);
+              }
+            });
+            _blokListesi.sort();
+          %>
+          <div class="rapor-filtre-bar" id="raporFiltreBar">
+            <div class="rapor-filtre">
+              <label for="filtreBlok">Blok</label>
+              <select id="filtreBlok" data-filtre="blok">
+                <option value="">Tümü (<%= _blokListesi.length %>)</option>
+                <% _blokListesi.forEach(function (b) { %>
+                  <option value="<%= b %>"><%= b %> Bloku</option>
+                <% }); %>
+              </select>
+            </div>
+            <div class="rapor-filtre">
+              <label for="filtreDurum">Durum</label>
+              <select id="filtreDurum" data-filtre="durum">
+                <option value="">Tümü</option>
+                <option value="tamam">✅ Tamamlandı</option>
+                <option value="kismi">⏳ Kısmi Ödeme</option>
+                <option value="odenmedi">❌ Ödenmedi</option>
+              </select>
+            </div>
+            <div class="rapor-filtre rapor-filtre-arama">
+              <label for="filtreArama">Ad, Daire veya Blok</label>
+              <input type="search" id="filtreArama" data-filtre="arama" placeholder="🔍 Ara..." autocomplete="off">
+            </div>
+            <div class="rapor-filtre-eylem">
+              <button type="button" class="btn btn-ghost btn-sm" id="filtreSifirla">↺ Sıfırla</button>
+              <span class="rapor-filtre-sayi" id="filtreSayi"><%= satirlar.length %> / <%= satirlar.length %> kayıt</span>
+            </div>
+          </div>
+        <% } %>
+
         <% if (!satirlar.length) { %>
           <p class="empty-state">Kayıt bulunmuyor.</p>
         <% } else { %>
@@ -130,7 +175,9 @@
               </thead>
               <tbody>
                 <% satirlar.forEach(function(s) { %>
-                  <tr>
+                  <% var _durum = s.tamamlandi ? 'tamam' : (s.odenen_tutar > 0 ? 'kismi' : 'odenmedi'); %>
+                  <% var _aramaMetni = ((s.ad_soyad || '') + ' ' + (s.blok || '') + ' ' + (s.daire || '')).toLowerCase(); %>
+                  <tr data-blok="<%= s.blok || '' %>" data-durum="<%= _durum %>" data-arama="<%= _aramaMetni %>">
                     <td data-label="Ad Soyad" class="rapor-ad"><%= s.ad_soyad || '—' %></td>
                     <td data-label="Blok" class="rapor-daire"><%= s.blok || '—' %></td>
                     <td data-label="Daire" class="rapor-daire"><%= s.daire || '—' %></td>
@@ -261,6 +308,54 @@
     <% } %>
   </div>
 </section>
+
+<!-- Rapor filtreleme (blok / durum / arama) -->
+<script>
+(function () {
+  var bar = document.getElementById('raporFiltreBar');
+  if (!bar) return;
+  var satirToplam = 0;
+  var tbody = document.querySelector('.rapor-tablo tbody');
+  if (tbody) {
+    satirToplam = tbody.querySelectorAll('tr').length;
+  }
+  var sayac = document.getElementById('filtreSayi');
+  var sifirla = document.getElementById('filtreSifirla');
+  var inputs = bar.querySelectorAll('[data-filtre]');
+
+  function uygula() {
+    var blok = (document.getElementById('filtreBlok') || {}).value || '';
+    var durum = (document.getElementById('filtreDurum') || {}).value || '';
+    var arama = ((document.getElementById('filtreArama') || {}).value || '').toLowerCase().trim();
+    var gosterilen = 0;
+    if (!tbody) return;
+    var satirlar = tbody.querySelectorAll('tr');
+    satirlar.forEach(function (tr) {
+      var trBlok = tr.getAttribute('data-blok') || '';
+      var trDurum = tr.getAttribute('data-durum') || '';
+      var trArama = tr.getAttribute('data-arama') || '';
+      var ok = true;
+      if (blok && trBlok !== blok) ok = false;
+      if (durum && trDurum !== durum) ok = false;
+      if (arama && trArama.indexOf(arama) === -1) ok = false;
+      tr.style.display = ok ? '' : 'none';
+      if (ok) gosterilen++;
+    });
+    if (sayac) sayac.textContent = gosterilen + ' / ' + satirToplam + ' kayıt';
+  }
+
+  inputs.forEach(function (el) {
+    var ev = el.tagName === 'INPUT' ? 'input' : 'change';
+    el.addEventListener(ev, uygula);
+  });
+  if (sifirla) {
+    sifirla.addEventListener('click', function () {
+      inputs.forEach(function (el) { el.value = ''; });
+      uygula();
+    });
+  }
+})();
+</script>
 
 <!-- Mobil rapor sekmeleri (Bina Bina / Genel Liste) -->
 <script>
