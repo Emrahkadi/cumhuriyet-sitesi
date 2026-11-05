@@ -23,8 +23,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
-  <link rel="preload" as="style" href="/css/style.css?v=28" />
-  <link rel="stylesheet" href="/css/style.css?v=28" />
+  <link rel="preload" as="style" href="/css/style.css?v=29" />
+  <link rel="stylesheet" href="/css/style.css?v=29" />
   <script>
     // PWA Service Worker kaydı
     if ('serviceWorker' in navigator) {
@@ -134,10 +134,8 @@
           <a href="/hakkinda" class="<%= aktifSayfa === 'hakkinda' ? 'active' : '' %>">Hakkımızda</a>
           <a href="/kentsel-donusum" class="<%= aktifSayfa === 'kentsel-donusum' ? 'active' : '' %>">Kentsel Dönüşüm</a>
           <a href="/iletisim" class="<%= aktifSayfa === 'iletisim' ? 'active' : '' %>">İletişim</a>
-          <% if (uye) { %>
-            <a href="/anketler" class="<%= aktifSayfa === 'anketler' ? 'active' : '' %>">📊 Anketler</a>
-            <a href="/ek-odenek-raporu" class="<%= aktifSayfa === 'ek-odenek-raporu' ? 'active' : '' %>">🏦 Ek Ödenek Raporu</a>
-          <% } %>
+          <%# Anketler ve Ek Ödenek Raporu, Hesabım menüsünde yer alır.
+              Üst bar tek satırda kalsın diye burada tekrarlanmazlar. %>
         </div>
 
         <% if (uye) { %>

@@ -1,0 +1,31 @@
+<%
+  // Tek kat malikinin mobil kart görünümü (genel liste + bina bina ortak kullanilir)
+  var _s = s;
+  var _durum = _s.tamamlandi
+    ? { cls: 'badge-onayli', txt: 'Tamamlandı' }
+    : (_s.odenen_tutar > 0
+        ? { cls: 'badge-bekliyor', txt: 'Kısmi' }
+        : { cls: 'badge-onemli', txt: 'Ödenmedi' });
+%>
+<div class="rapor-mobil-kart">
+  <div class="rapor-mobil-kart-ust">
+    <span class="rapor-mobil-ad"><%= _s.ad_soyad || '—' %></span>
+    <span class="badge <%= _durum.cls %>"><%= _durum.txt %></span>
+  </div>
+  <div class="rapor-mobil-kart-blok">Blok <%= _s.blok || '—' %> · Daire <%= _s.daire || '—' %></div>
+
+  <div class="rapor-mobil-taksitler">
+    <% _s.taksitler.forEach(function (tk, i) { %>
+      <div class="rapor-mobil-taksit">
+        <span class="rapor-mobil-taksit-no"><%= i + 1 %>. Taksit</span>
+        <span class="rapor-mobil-taksit-durum <%= tk ? (tk.odendi ? 'odendi' : 'bekliyor') : 'yok' %>"><%= tk ? (tk.odendi ? '✔ Ödendi' : 'Bekliyor') : '—' %></span>
+        <span class="rapor-mobil-taksit-tarih"><%= (tk && tk.odeme_tarihi) ? String(tk.odeme_tarihi).split('-').reverse().join('.') : '—' %></span>
+      </div>
+    <% }); %>
+  </div>
+
+  <div class="rapor-mobil-kart-alt">
+    <span>Ödediği <strong class="rapor-yesil-para"><%= _s.odenen_tutar.toLocaleString('tr-TR', { minimumFractionDigits: 0 }) %> ₺</strong></span>
+    <span>Kalan <strong class="<%= _s.kalan_tutar > 0 ? 'rapor-kirmizi-para' : 'rapor-yesil-para' %>"><%= _s.kalan_tutar.toLocaleString('tr-TR', { minimumFractionDigits: 0 }) %> ₺</strong></span>
+  </div>
+</div>

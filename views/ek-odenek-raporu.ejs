@@ -16,6 +16,23 @@
       </div>
     <% } else { %>
 
+      <%
+        // Mobil "Bina Bina" sekmesi icin blok bazli gruplama.
+        // Satirlar zaten blok/daire duzeninde gelir.
+        var _blokGruplari = [];
+        var _blokMap = {};
+        satirlar.forEach(function (s) {
+          var _b = String(s.blok || '').trim() || 'Diğer';
+          if (!_blokMap[_b]) {
+            _blokMap[_b] = { blok: _b, satirlar: [], odenen: 0, kalan: 0 };
+            _blokGruplari.push(_blokMap[_b]);
+          }
+          _blokMap[_b].satirlar.push(s);
+          _blokMap[_b].odenen += s.odenen_tutar;
+          _blokMap[_b].kalan += s.kalan_tutar;
+        });
+      %>
+
       <!-- ============ ÖZET KARTLARI ============ -->
       <div class="rapor-ozet-grid">
         <div class="rapor-ozet">
@@ -79,7 +96,7 @@
       <% } %>
 
       <!-- ============ ANA TABLO: AD SOYAD | BLOK | DAIRE | 4 TAKSIT ============ -->
-      <div class="admin-panel-box">
+      <div class="admin-panel-box rapor-genel-tablo">
         <h2>
           Kat Maliki Ödeme Durumu
           <small class="rapor-plan-etiket">📋 <%= plan.ad %></small>
@@ -170,9 +187,51 @@
         <% } %>
       </div>
 
+      <!-- ============ MÖBİL GÖRİNÜM: BİNA BİNA + GENEL LİSTE ============ -->
+      <div class="rapor-mobil-sekmeler" role="tablist" aria-label="Rapor görénüm">
+        <button type="button" class="rapor-sekme aktif" id="sekmeBina" role="tab" aria-selected="true" aria-controls="panelBina" data-sekme="bina">🏢 Bina Bina</button>
+        <button type="button" class="rapor-sekme" id="sekmeListe" role="tab" aria-selected="false" aria-controls="panelListe" data-sekme="liste">📋 Genel Liste</button>
+      </div>
+
+      <!-- Bina Bina: her blok icindeki malikler -->
+      <div class="rapor-sekme-panel aktif" id="panelBina" role="tabpanel" aria-labelledby="sekmeBina">
+        <% if (_blokGruplari.length) { %>
+          <% _blokGruplari.forEach(function (g) { %>
+            <div class="rapor-bina-blok">
+              <div class="rapor-bina-blok-ust">
+                <span class="rapor-bina-blok-ad"><%= g.blok %> Bloku</span>
+                <span class="rapor-bina-blok-ozet"><%= g.satirlar.length %> kat maliki</span>
+                <span class="rapor-bina-blok-ozet rapor-yesil-para"><%= g.odenen.toLocaleString('tr-TR', { minimumFractionDigits: 0 }) %> ₺</span>
+                <span class="rapor-bina-blok-ozet <%= g.kalan > 0 ? 'rapor-kirmizi-para' : 'rapor-yesil-para' %>"><%= g.kalan.toLocaleString('tr-TR', { minimumFractionDigits: 0 }) %> ₺ kalan</span>
+              </div>
+              <div class="rapor-bina-blok-liste">
+                <% g.satirlar.forEach(function (s) { %>
+                  <%- include('partials/rapor-mobil-kart', { s: s }) %>
+                <% }); %>
+              </div>
+            </div>
+          <% }); %>
+        <% } else { %>
+          <p class="empty-state">Kayıt bulunmuyor.</p>
+        <% } %>
+      </div>
+
+      <!-- Genel Liste: tum malikler tek liste -->
+      <div class="rapor-sekme-panel" id="panelListe" role="tabpanel" aria-labelledby="sekmeListe" hidden>
+        <% if (satirlar.length) { %>
+          <div class="rapor-genel-liste">
+            <% satirlar.forEach(function (s) { %>
+              <%- include('partials/rapor-mobil-kart', { s: s }) %>
+            <% }); %>
+          </div>
+        <% } else { %>
+          <p class="empty-state">Kayıt bulunmuyor.</p>
+        <% } %>
+      </div>
+
       <!-- ============ BLOK BAZLI ÖZET ============ -->
       <% if (blokOzet.length) { %>
-        <div class="admin-panel-box">
+        <div class="admin-panel-box rapor-blok-tablo">
           <h2>Blok Bazlı Tahsilat</h2>
           <div class="table-wrap">
             <table class="admin-table responsive-table">
@@ -202,5 +261,29 @@
     <% } %>
   </div>
 </section>
+
+<!-- Mobil rapor sekmeleri (Bina Bina / Genel Liste) -->
+<script>
+(function () {
+  var sekmeler = document.querySelectorAll('.rapor-sekme');
+  if (!sekmeler.length) return;
+  sekmeler.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var hedef = btn.getAttribute('data-sekme');
+      sekmeler.forEach(function (b) {
+        var aktif = b === btn;
+        b.classList.toggle('aktif', aktif);
+        b.setAttribute('aria-selected', aktif ? 'true' : 'false');
+      });
+      document.querySelectorAll('.rapor-sekme-panel').forEach(function (p) {
+        var goster = p.id === (hedef === 'bina' ? 'panelBina' : 'panelListe');
+        p.classList.toggle('aktif', goster);
+        if (goster) { p.removeAttribute('hidden'); }
+        else { p.setAttribute('hidden', ''); }
+      });
+    });
+  });
+})();
+</script>
 
 <%- include('partials/footer') %>
