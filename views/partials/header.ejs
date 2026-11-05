@@ -23,8 +23,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
-<link rel="preload" as="style" href="/css/style.css?v=36" />
-    <link rel="stylesheet" href="/css/style.css?v=36" />
+<link rel="preload" as="style" href="/css/style.css?v=37" />
+    <link rel="stylesheet" href="/css/style.css?v=37" />
   <script>
     // PWA Service Worker kaydı
     if ('serviceWorker' in navigator) {
@@ -350,43 +350,4 @@
       guncelle();
     })();
 
-    // PWA install banner + iOS için "Add to Home Screen" ipucu
-    (function() {
-      var kapaliAnahtar = 'pwa-install-banner-kapali';
-      var kapatildi = false;
-      try { kapatildi = localStorage.getItem(kapaliAnahtar) === '1'; } catch (e) {}
-      if (kapatildi) return;
-      // Sadece standalone değilse veya ilk ziyarette
-      var standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-      if (standalone) return;
-      // 3 saniye sonra göster (sayfa yüklendikten sonra)
-      setTimeout(function() {
-        var banner = document.createElement('div');
-        banner.className = 'pwa-install-banner';
-        banner.id = 'pwaInstallBanner';
-        var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-        if (isIOS) {
-          banner.innerHTML =
-            '<span class="pwa-banner-icon">📱</span>' +
-            '<div class="pwa-banner-text">' +
-              '<strong>Uygulamayı Ana Ekrana Ekleyin</strong>' +
-              'Safari paylaş menüsünden <strong>\"Ana Ekrana Ekle\"</strong> seçeneğine dokunun.' +
-            '</div>' +
-            '<button type="button" class="pwa-banner-close" aria-label="Kapat">×</button>';
-        } else {
-          banner.innerHTML =
-            '<span class="pwa-banner-icon">📲</span>' +
-            '<div class="pwa-banner-text">' +
-              '<strong>Cumhuriyet Sitesi Uygulaması</strong>' +
-              'Hızlı erişim için tarayıcı menüsünden <strong>\"Ana Ekrana Ekle\"</strong> deneyin.' +
-            '</div>' +
-            '<button type="button" class="pwa-banner-close" aria-label="Kapat">×</button>';
-        }
-        document.body.appendChild(banner);
-        banner.querySelector('.pwa-banner-close').addEventListener('click', function() {
-          try { localStorage.setItem(kapaliAnahtar, '1'); } catch (e) {}
-          banner.remove();
-        });
-      }, 3000);
-    })();
   </script>

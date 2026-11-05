@@ -59,11 +59,11 @@ img { max-width: 100%; display: block; }
   z-index: 1001;
   min-width: 0;
 }
-.logo { display: flex; align-items: center; gap: 10px; font-size: 1.1rem; min-width: 0; flex-shrink: 0; }
-.logo-img { height: 80px; width: 80px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.logo { display: flex; align-items: center; gap: 14px; font-size: 1.25rem; min-width: 0; flex-shrink: 0; padding-left: 4px; }
+.logo-img { height: 96px; width: 96px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
 .logo-text strong { color: var(--renk-ana); }
 /* Logo yazısı: hiçbir koşulda kesilmesin */
-.logo-text { white-space: nowrap; overflow: visible; flex-shrink: 0; }
+.logo-text { white-space: nowrap; overflow: visible; flex-shrink: 0; font-size: 1.15rem; line-height: 1.15; }
 
 /* Nav: linkler ve kullanıcı işlemleri ayrı gruplar halinde.
    Linkler sarma (wrap) yapabilir, kullanıcı öğeleri ASLA kırpılmaz. */
@@ -1068,9 +1068,9 @@ button, .btn, a {
 @media (max-width: 860px) {
   /* Header: mobil menüye geçiş */
   .site-header { position: sticky; top: 0; }
-  .header-inner { min-height: 96px; height: auto; }
-  .logo-img { height: 80px; width: 80px; }
-  .logo-text { font-size: 1rem; }
+  .header-inner { min-height: 112px; height: auto; }
+  .logo-img { height: 96px; width: 96px; }
+  .logo-text { font-size: 1.1rem; }
   .nav-toggle {
     display: flex;
     width: 44px; height: 44px;
