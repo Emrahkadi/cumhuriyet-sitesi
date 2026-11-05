@@ -104,11 +104,15 @@
 
         <% if (satirlar.length) { %>
           <%
+            // Blok adini normalize et: "A Bloku" -> "A"
+            function blokAdi(b) {
+              return String(b || '').trim().replace(/\s*Bloku\s*$/i, '');
+            }
             // Filtre dropdown'lari icin benzersiz blok listesi
             var _blokListesi = [];
             var _blokSet = {};
             satirlar.forEach(function (s) {
-              var _b = String(s.blok || '').trim();
+              var _b = blokAdi(s.blok);
               if (_b && !_blokSet[_b]) {
                 _blokSet[_b] = true;
                 _blokListesi.push(_b);
@@ -122,7 +126,7 @@
               <select id="filtreBlok" data-filtre="blok">
                 <option value="">Tümü (<%= _blokListesi.length %>)</option>
                 <% _blokListesi.forEach(function (b) { %>
-                  <option value="<%= b %>"><%= b %> Bloku</option>
+                  <option value="<%= b %>"><%= b %></option>
                 <% }); %>
               </select>
             </div>
@@ -180,7 +184,7 @@
                 <% satirlar.forEach(function(s) { %>
                   <% var _durum = s.tamamlandi ? 'tamam' : (s.odenen_tutar > 0 ? 'kismi' : 'odenmedi'); %>
                   <% var _aramaMetni = ((s.ad_soyad || '') + ' ' + (s.blok || '') + ' ' + (s.daire || '')).toLowerCase(); %>
-                  <tr data-blok="<%= s.blok || '' %>" data-durum="<%= _durum %>" data-arama="<%= _aramaMetni %>">
+                  <tr data-blok="<%= blokAdi(s.blok) %>" data-durum="<%= _durum %>" data-arama="<%= _aramaMetni %>">
                     <td data-label="Ad Soyad" class="rapor-ad"><%= s.ad_soyad || '—' %></td>
                     <td data-label="Blok" class="rapor-daire"><%= s.blok || '—' %></td>
                     <td data-label="Daire" class="rapor-daire"><%= s.daire || '—' %></td>
