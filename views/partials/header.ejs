@@ -23,8 +23,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
-  <link rel="preload" as="style" href="/css/style.css?v=27" />
-  <link rel="stylesheet" href="/css/style.css?v=27" />
+  <link rel="preload" as="style" href="/css/style.css?v=28" />
+  <link rel="stylesheet" href="/css/style.css?v=28" />
   <script>
     // PWA Service Worker kaydı
     if ('serviceWorker' in navigator) {
@@ -142,33 +142,6 @@
 
         <% if (uye) { %>
           <div class="nav-user">
-            <div class="nav-bell-wrapper">
-              <button type="button" id="navBellBtn" class="nav-bell" title="Mesajlarım" aria-haspopup="true" aria-expanded="false">
-                🔔<% if (okunmamisMesajSayisi > 0) { %><span class="nav-badge"><%= okunmamisMesajSayisi %></span><% } %>
-              </button>
-              <div class="nav-bell-dropdown" id="navBellDropdown" hidden>
-                <div class="nav-bell-header">
-                  <strong>Mesajlarım</strong>
-                  <a href="/mesajlarim">Tümü →</a>
-                </div>
-                <% if (okunmamisMesajSayisi === 0) { %>
-                  <div class="nav-bell-empty">Okunmamış mesaj yok</div>
-                <% } else { %>
-                  <ul class="nav-bell-list">
-                    <% okunmamisMesajlar.forEach(function(m) { %>
-                      <li>
-                        <a href="/mesajlarim#m<%= m.id %>">
-                          <strong><%= m.baslik %></strong>
-                          <span><%= (m.mesaj || '').replace(/<[^>]+>/g, '').slice(0, 80) %><%= (m.mesaj || '').length > 80 ? '…' : '' %></span>
-                          <small><%= m.olusturma_tarihi %></small>
-                        </a>
-                      </li>
-                    <% }); %>
-                  </ul>
-                <% } %>
-              </div>
-            </div>
-
             <%
               // Hesabim menusu icin avatar bas harfleri (kullanicinin kendi adindan)
               var _ad = String(uye.ad_soyad || '').trim();
@@ -203,7 +176,12 @@
                   <a class="nav-account-item <%= aktifSayfa === 'panel' ? 'active' : '' %>" href="/panel">📊 Panelim</a>
                   <a class="nav-account-item" href="/aidatlarim">💰 Aidatlarım</a>
                   <a class="nav-account-item" href="/ek-odenek-raporu">🏦 Ek Ödenek Raporu</a>
-                  <a class="nav-account-item" href="/mesajlarim">✉️ Mesajlarım</a>
+                  <a class="nav-account-item nav-account-mesaj" href="/mesajlarim">
+                    <span class="nav-account-item-ikon">✉️ Mesajlarım</span>
+                    <% if (okunmamisMesajSayisi > 0) { %>
+                      <span class="nav-account-mesaj-sayi"><%= okunmamisMesajSayisi %></span>
+                    <% } %>
+                  </a>
                   <a class="nav-account-item" href="/anketler">🗳️ Anketler</a>
                 </div>
 
@@ -329,25 +307,6 @@
     if (window.innerWidth > 860) kapat();
   });
 })();
-
-// Bildirim dropdown açma/kapama
-    (function() {
-      var btn = document.getElementById('navBellBtn');
-      var dd = document.getElementById('navBellDropdown');
-      if (!btn || !dd) return;
-      btn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        var goster = dd.hasAttribute('hidden');
-        if (goster) { dd.removeAttribute('hidden'); btn.setAttribute('aria-expanded', 'true'); }
-        else { dd.setAttribute('hidden', ''); btn.setAttribute('aria-expanded', 'false'); }
-      });
-      document.addEventListener('click', function(e) {
-        if (!dd.contains(e.target) && e.target !== btn) {
-          dd.setAttribute('hidden', '');
-          btn.setAttribute('aria-expanded', 'false');
-        }
-      });
-    })();
 
     // Push bildirim butonu davranışı
     (function() {
