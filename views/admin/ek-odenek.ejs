@@ -197,7 +197,7 @@
               <% }); %>
               <th class="ek-th-para">ÖDEDİĞİ</th>
               <th class="ek-th-para">KALAN</th>
-              <th class="ek-th-durum">DURUM</th>
+              <th class="ek-th-durum">D</th>
             </tr>
           </thead>
           <tbody>
@@ -222,8 +222,12 @@
                           </button>
                         </form>
                       <% } %>
+                      <div class="ek-td-tarih" title="<%= tk.odeme_tarihi || 'Henüz ödenmedi' %>">
+                        <%= tk.odeme_tarihi ? tk.odeme_tarihi : '—' %>
+                      </div>
                     <% } else { %>
                       <span class="ek-taksit-yok">—</span>
+                      <div class="ek-td-tarih">—</div>
                     <% } %>
                   </td>
                 <% }); %>

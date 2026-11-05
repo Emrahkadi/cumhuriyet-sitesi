@@ -925,10 +925,35 @@ app.get('/panel', uyeGerekli, ah(async (req, res) => {
 //  Admin düzenler, site sakinleri salt-okunur görüntüler.
 // =====================================================================
 
+// Bir isim alanının gerçek kat maliki adı taşıyıp taşımadığını kontrol eder.
+// "X", "-", "Bilinmiyor" gibi yer tutucular geçerli isim sayılmaz.
+const GECERSIZ_ISIMLER = new Set([
+  'X', 'XX', '-', '--', '---', '?', '??', 'N/A', 'NA', 'YOK', 'YOKTUR',
+  'BILINMIYOR', 'BİLİNMEYEN', 'BELIRLI DEGIL', 'BELİRLİ DEĞİL',
+  'TANIMSIZ', 'ISIMSIZ', 'İSİMSİZ', 'BOS', 'BOŞ', 'NULL', 'UNDEFINED'
+]);
+
+const gecerliIsimMi = (deger) => {
+  if (deger === null || deger === undefined) return false;
+  const v = String(deger).trim();
+  if (!v) return false;
+  if (GECERSIZ_ISIMLER.has(v.toLocaleUpperCase('tr-TR'))) return false;
+  // Tamamen rakamdan oluşan bir değer isim değildir (telefon numarası vb.)
+  if (/^\d+$/.test(v.replace(/\s/g, ''))) return false;
+  return true;
+};
+
 // Ek ödenek taksitlerini sakinler (kat malikleri) ile birleştirip
 // taksit no -> kayıt haritası oluşturur.
 // NOT: Excel import artığı olan "TOPLAM" satırları (blok veya daire = TOPLAM)
 // ve sayısal isimler haricî tutulur.
+//
+// İsim önceliği:
+//   1) Sakin Bilgileri & Notlar (malik_bilgileri.malik)  -> güncel kaynak
+//   2) sakinler.isim_soyisim (yer tutucu değilse)
+//   3) sakinler.bilgi > eksik > bilgi_iletisim > yakinlik > iletisim
+// malik_bilgileri blok+daire ile birebir eşleşir (300/300), bu yüzden
+// A blok daire 12 gibi "X" kayıtlar gerçek isimlerle gösterilir.
 const ekOdenekTaksitHaritasi = async (planId) => {
   const satirlar = (await q(
     `SELECT s.id AS malik_id, s.blok, s.daire, s.isim_soyisim,
@@ -945,18 +970,39 @@ const ekOdenekTaksitHaritasi = async (planId) => {
     [planId]
   )).rows;
 
+  // Güncel sakin adları: "Sakin Bilgileri & Notlar" (malik_bilgileri) tablosu.
+  // blok+daire bazında harita; aynı dairede birden fazla kayıt varsa
+  // geçerli (yer tutucu olmayan) ilk kayıt kullanılır.
+  const guncelAdlar = new Map();
+  try {
+    const malikRows = (await q(
+      `SELECT blok, daire, malik FROM malik_bilgileri
+       WHERE COALESCE(TRIM(malik), '') <> ''`
+    )).rows;
+    for (const m of malikRows) {
+      if (!gecerliIsimMi(m.malik)) continue;
+      const anahtar = `${String(m.blok || '').trim().toLocaleUpperCase('tr-TR')}|${String(m.daire || '').trim()}`;
+      if (!guncelAdlar.has(anahtar)) guncelAdlar.set(anahtar, String(m.malik).trim());
+    }
+  } catch (e) {
+    console.warn('Ek ödenek: malik_bilgileri okunamadı, sakinler kullanılacak:', e.message);
+  }
+
   // Malik bazinda grupla
   const harita = new Map();
   for (const r of satirlar) {
     if (!harita.has(r.malik_id)) {
-      // İsim bul: isim_soyisim > bilgi > eksik > bilgi_iletisim > yakinlik > iletisim
+      // İsim önceliği: güncel Sakin Bilgileri > sakinler alanları
+      const anahtar = `${String(r.blok || '').trim().toLocaleUpperCase('tr-TR')}|${String(r.daire || '').trim()}`;
+      const guncelAd = guncelAdlar.get(anahtar);
       const adSoyad = (
-        (r.isim_soyisim && r.isim_soyisim.trim()) ||
-        (r.bilgi && r.bilgi.trim()) ||
-        (r.eksik && r.eksik.trim()) ||
-        (r.bilgi_iletisim && r.bilgi_iletisim.trim()) ||
-        (r.yakinlik && r.yakinlik.trim()) ||
-        (r.iletisim && r.iletisim.trim()) ||
+        (gecerliIsimMi(guncelAd) ? String(guncelAd).trim() : '') ||
+        (gecerliIsimMi(r.isim_soyisim) ? r.isim_soyisim.trim() : '') ||
+        (gecerliIsimMi(r.bilgi) ? r.bilgi.trim() : '') ||
+        (gecerliIsimMi(r.eksik) ? r.eksik.trim() : '') ||
+        (gecerliIsimMi(r.bilgi_iletisim) ? r.bilgi_iletisim.trim() : '') ||
+        (gecerliIsimMi(r.yakinlik) ? r.yakinlik.trim() : '') ||
+        (gecerliIsimMi(r.iletisim) ? r.iletisim.trim() : '') ||
         ''
       ).trim();
       harita.set(r.malik_id, {
