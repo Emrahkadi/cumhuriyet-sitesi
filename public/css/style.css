@@ -59,11 +59,11 @@ img { max-width: 100%; display: block; }
   z-index: 1001;
   min-width: 0;
 }
-.logo { display: flex; align-items: center; gap: 14px; font-size: 1.25rem; min-width: 0; flex-shrink: 0; padding-left: 4px; }
-.logo-img { height: 96px; width: 96px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.logo { display: flex; align-items: center; gap: 10px; font-size: 1.25rem; min-width: 0; flex-shrink: 0; padding-left: 4px; }
+.logo-img { height: 76px; width: 76px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
 .logo-text strong { color: var(--renk-ana); }
 /* Logo yazısı: hiçbir koşulda kesilmesin */
-.logo-text { white-space: nowrap; overflow: visible; flex-shrink: 0; font-size: 1.15rem; line-height: 1.15; }
+.logo-text { white-space: nowrap; overflow: visible; flex-shrink: 0; font-size: 1.05rem; line-height: 1.15; }
 
 /* Nav: linkler ve kullanıcı işlemleri ayrı gruplar halinde.
    Linkler sarma (wrap) yapabilir, kullanıcı öğeleri ASLA kırpılmaz. */
@@ -93,12 +93,12 @@ img { max-width: 100%; display: block; }
   white-space: nowrap;
 }
 .main-nav a {
-  padding: 8px 10px;
+  padding: 8px 9px;
   border-radius: 8px;
   font-weight: 500;
   color: var(--metin);
   transition: all 0.2s;
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   white-space: nowrap;
 }
 .main-nav a:hover { background: var(--arkaplan); color: var(--renk-ana); }
@@ -140,11 +140,16 @@ img { max-width: 100%; display: block; }
    .nav-links ise Hesabım'a yer bırakacak şekilde margin-right ile
    daraltılır. Böylece nav linkleri ASLA Hesabım'ın altına girmez. */
 @media (min-width: 861px) {
-  .header-inner { position: relative; }
-  .main-nav { flex-wrap: nowrap; }
+  .header-inner { position: relative; flex-wrap: nowrap; }
+  .main-nav { flex-wrap: nowrap; min-width: 0; }
   .nav-links {
-    flex-wrap: nowrap;
-    flex-shrink: 0;
+    /* Nav linkleri ASLA logo üzerine taşmamalı.
+       Alan daraldığında linkler sarmalanır, sola taşmaz. */
+    flex-wrap: wrap;
+    flex-shrink: 1;
+    min-width: 0;
+    row-gap: 4px;
+    justify-content: flex-end;
     margin-right: 168px; /* Hesabım butonu genişliği + boşluk */
   }
   .nav-user {
@@ -1069,8 +1074,8 @@ button, .btn, a {
   /* Header: mobil menüye geçiş */
   .site-header { position: sticky; top: 0; }
   .header-inner { min-height: 112px; height: auto; }
-  .logo-img { height: 96px; width: 96px; }
-  .logo-text { font-size: 1.1rem; }
+  .logo-img { height: 76px; width: 76px; }
+  .logo-text { font-size: 1.05rem; }
   .nav-toggle {
     display: flex;
     width: 44px; height: 44px;
@@ -1146,7 +1151,7 @@ button, .btn, a {
   .nav-links a.nav-ek-odene .ek-odene-kisa { display: none; }
   /* Hesabım yazısı drawer'da tekrar gorunur */
   .nav-account-name { display: inline-block; }
-  .logo-text { display: block; }
+  .logo-text { display: inline; white-space: nowrap; }
 
   /* Drawer kapatma butonu (X) kaldırıldı - artık sadece toggle ve overlay kullanılıyor */
   .nav-close { display: none !important; }
@@ -1470,19 +1475,29 @@ body.menu-open .nav-toggle { opacity: 0; pointer-events: none; }
    NOT: min-width 861px - 860px ve altı drawer modunda bu kurallar
    devre dışı kalır, drawer kendi düzenini kullanır. */
 @media (min-width: 861px) {
-  @media (max-width: 1180px) {
-    .logo-text { display: none; }
-  }
   @media (max-width: 1080px) {
+    .logo-text { font-size: 0.95rem; }
     .nav-account-name { display: none; }
     .nav-links { margin-right: 88px !important; }
     /* Ek Ödenek Raporu etiketi kısalır */
     .nav-links a.nav-ek-odene .ek-odene-tam { display: none; }
     .nav-links a.nav-ek-odene .ek-odene-kisa { display: inline; }
   }
+  @media (max-width: 1160px) {
+    /* Ara genişliklerde nav linkleri sıkışır, tek satır korunur */
+    .main-nav a { padding: 7px 7px !important; font-size: 0.8rem !important; }
+    .nav-links { gap: 2px !important; }
+  }
+  @media (max-width: 1120px) {
+    /* Ara genişliklerde nav linkleri sıkışır, tek satır korunur */
+    .main-nav a { padding: 5px 5px !important; font-size: 0.74rem !important; }
+    .nav-links { gap: 0 !important; margin-right: 70px !important; }
+    .logo-text { font-size: 0.85rem; }
+    .logo-img { height: 62px !important; width: 62px !important; }
+  }
   @media (max-width: 1000px) {
-    .main-nav a { padding: 6px 6px !important; font-size: 0.8rem !important; }
-    .nav-links { gap: 1px !important; margin-right: 78px !important; }
+    .main-nav a { padding: 5px 4px !important; font-size: 0.72rem !important; }
+    .nav-links { gap: 0 !important; margin-right: 70px !important; }
   }
   @media (max-width: 960px) {
     .main-nav a { padding: 5px 5px !important; font-size: 0.76rem !important; }
